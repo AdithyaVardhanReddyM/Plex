@@ -1,7 +1,18 @@
 "use client";
 
-import { Avatar, Bar, Check, Collapse, Connector, Stage, States, type Act } from './stage/kit'
-import { Bot, ShieldCheck, ShoppingBag } from 'lucide-react'
+// Import each kit part from its own module: the kit's index pulls in every
+// stylesheet (phones, keyboards), which Next would bundle into this page.
+import { Stage } from './stage/kit/stage'
+import type { Act } from './stage/kit/act'
+import { Bar } from './stage/kit/window'
+import { Avatar } from './stage/kit/parts/Avatar'
+import { Check } from './stage/kit/parts/Check'
+import { Collapse } from './stage/kit/motion/Collapse'
+import { Connector } from './stage/kit/motion/Connector'
+import { States } from './stage/kit/motion/States'
+import { useHydrated } from '@/components/client-only'
+import { useState } from 'react'
+import { Bot, RotateCcw, ShieldCheck, ShoppingBag } from 'lucide-react'
 import './hero-demo.css'
 
 // Plex's landing hero (built and filmed in the Stageshow playground as
@@ -105,7 +116,9 @@ export function HeroDemo() {
                       </span>
                     </div>
                     <span className="ph-allowed" data-in={s.step >= 3 || undefined}>
-                      <ShieldCheck size={12} strokeWidth={2.2} />
+                      <span className="ph-ico ph-ico--12">
+                        <ShieldCheck size={12} strokeWidth={2.2} />
+                      </span>
                       Allowed
                     </span>
                   </li>
@@ -146,7 +159,9 @@ export function HeroDemo() {
               <div className="ph-receipt__in">
                 <div className="ph-receipt__head" style={{ ['--i' as string]: 0 }}>
                   <span className="ph-receipt__kind">
-                    <ShoppingBag size={14} strokeWidth={1.9} />
+                    <span className="ph-ico ph-ico--14">
+                      <ShoppingBag size={14} strokeWidth={1.9} />
+                    </span>
                     Receipt
                   </span>
                   <span className="ph-state" data-paid={s.paid || undefined}>
@@ -195,5 +210,27 @@ export function HeroDemo() {
         )
       }}
     </Stage>
+  )
+}
+
+/** The hero plays once as it scrolls in; Replay remounts it at the story's start. */
+export function HeroWithReplay() {
+  const [run, setRun] = useState(0)
+  // Client only: the stage measures itself, so a server render buys nothing
+  const hydrated = useHydrated()
+  return (
+    <div className="flex flex-col items-end gap-2">
+      <div className="w-full">
+        {hydrated ? <HeroDemo key={run} /> : <div className="aspect-[640/420] w-full rounded-[18px] bg-sunken" />}
+      </div>
+      <button
+        type="button"
+        onClick={() => setRun((n) => n + 1)}
+        className="inline-flex h-8 items-center gap-1.5 rounded-sm px-2.5 text-[13px] font-medium text-muted transition-colors hover:bg-sunken hover:text-ink"
+      >
+        <RotateCcw className="size-3.5" strokeWidth={1.9} />
+        Replay
+      </button>
+    </div>
   )
 }

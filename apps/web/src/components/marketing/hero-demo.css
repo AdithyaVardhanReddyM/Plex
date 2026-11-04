@@ -144,6 +144,11 @@
     transition: width 1s var(--ph-ease) 0.1s;
   }
 
+  /* Icons sit in even boxes, so they never land on a half pixel */
+  .ph-ico { display: flex; flex: none; align-items: center; justify-content: center; }
+  .ph-ico--12 { width: 14px; height: 14px; }
+  .ph-ico--14 { width: 16px; height: 16px; }
+
   .ph-allowed {
     display: inline-flex;
     align-items: center;

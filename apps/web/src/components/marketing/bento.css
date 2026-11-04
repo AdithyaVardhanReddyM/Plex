@@ -1,0 +1,152 @@
+/* Bento pictures: Plex's tokens through Stageshow's, scoped to each stage. */
+.pb-tasks,
+.pb-ledger {
+  & .ss-stage {
+    --pb-green-50: var(--color-green-50, #ecfbf3);
+    --pb-green-200: var(--color-green-200, #a5ecc8);
+    --pb-green-400: var(--color-green-400, #3ecf8e);
+    --pb-green-500: var(--color-green-500, #1fb978);
+    --pb-green-700: var(--color-green-700, #0f774c);
+    --pb-steel-400: var(--color-steel-400, #7393bd);
+    --pb-ink: var(--color-ink, #0c1512);
+    --pb-ink-2: var(--color-ink-2, #34403c);
+    --pb-muted: var(--color-muted, #5f6b67);
+    --pb-faint: var(--color-faint, #8d9893);
+    --pb-line: var(--color-line, #e2e7e5);
+    --pb-sunken: var(--color-sunken, #eff2f1);
+    --pb-surface: var(--color-surface, #fff);
+
+    --ss-font: var(--font-geist-sans, ui-sans-serif), system-ui, -apple-system, sans-serif;
+    --ss-accent: var(--pb-green-500);
+    --ss-success: var(--pb-green-500);
+
+    overflow: hidden;
+    background: var(--color-canvas, #f6f8f7);
+    font: 13px/1.4 var(--ss-font);
+    color: var(--pb-ink);
+  }
+}
+
+/* ── Tasks: the task's proof checks, the payout straddling its edge ───── */
+
+.pb-tasks {
+  .pb-task {
+    position: absolute;
+    top: 28px;
+    left: 32px;
+    width: 560px;
+    height: 280px;
+    overflow: hidden;
+    border-radius: 12px;
+    background: var(--pb-surface);
+    box-shadow: var(--ss-shadow-ground), 0 0 0 1px var(--pb-line);
+  }
+
+  .pb-task__head { padding: 18px 20px 14px; border-bottom: 1px solid var(--pb-line); }
+  .pb-task__title { font-size: 15px; line-height: 1.35; font-weight: 600; letter-spacing: -0.01em; }
+  .pb-task__meta { margin-top: 4px; font-size: 12px; line-height: 1.3; color: var(--pb-muted); }
+
+  .pb-checks { display: grid; margin: 0; padding: 6px 20px 0; list-style: none; }
+  .pb-check {
+    display: grid;
+    grid-template-columns: 16px auto minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    height: 40px;
+    border-bottom: 1px solid var(--pb-sunken);
+  }
+  .pb-check--filler { grid-template-columns: 16px auto; }
+  .pb-check__label { font-size: 13px; font-weight: 500; color: var(--pb-ink); }
+  .pb-check__detail { font-size: 12.5px; color: var(--pb-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .pb-paid {
+    position: absolute;
+    bottom: 32px;
+    left: 444px;
+    width: 272px;
+    display: grid;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 12px;
+    background: var(--pb-surface);
+    box-shadow: var(--ss-shadow-satellite), 0 0 0 1px var(--pb-line);
+  }
+
+  .pb-paid__verdict {
+    width: fit-content;
+    padding: 3px 8px;
+    border-radius: 99px;
+    background: var(--pb-green-50);
+    box-shadow: inset 0 0 0 1px var(--pb-green-200);
+    color: var(--pb-green-700);
+    font-size: 11.5px;
+    font-weight: 500;
+  }
+
+  .pb-paid__who { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+  .pb-paid__name { font-size: 13.5px; line-height: 1.3; font-weight: 600; }
+  .pb-paid__sub { margin-top: 2px; font-size: 12px; line-height: 1.3; color: var(--pb-muted); }
+  .pb-paid__amount { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+  & .ss-stage[data-layout='compact'] .pb-task { left: 16px; top: 20px; width: 326px; height: 420px; }
+  & .ss-stage[data-layout='compact'] .pb-check__detail { display: none; }
+  & .ss-stage[data-layout='compact'] .pb-check { grid-template-columns: 16px auto; }
+  & .ss-stage[data-layout='compact'] .pb-paid { left: 56px; bottom: 16px; width: 286px; }
+}
+
+/* ── Ledger: an agent-built view of the month ──────────────────────────── */
+
+.pb-ledger {
+  .pb-board {
+    position: absolute;
+    top: 28px;
+    left: 32px;
+    right: 32px;
+    height: 280px;
+    padding: 16px 20px 0;
+    border-radius: 12px;
+    background: var(--pb-surface);
+    box-shadow: var(--ss-shadow-ground), 0 0 0 1px var(--pb-line);
+  }
+
+  /* Adi's question, as a sent message on the right */
+  .pb-board__ask {
+    display: flex;
+    align-items: center;
+    width: fit-content;
+    height: 34px;
+    margin-left: auto;
+    padding: 0 14px;
+    border-radius: 17px 17px 4px 17px;
+    background: var(--pb-sunken);
+    font-size: 13px;
+    color: var(--pb-ink-2);
+  }
+
+  .pb-board__title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-top: 18px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .pb-board__total { font-size: 15px; font-variant-numeric: tabular-nums; }
+
+  .pb-bars { display: grid; gap: 4px; margin: 10px 0 0; padding: 0; list-style: none; }
+  .pb-bar {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr) 64px;
+    align-items: center;
+    gap: 12px;
+    height: 30px;
+  }
+  .pb-bar__name { font-size: 12.5px; color: var(--pb-muted); }
+  .pb-bar__track { display: block; height: 10px; border-radius: 99px; background: var(--pb-sunken); overflow: hidden; }
+  .pb-bar__fill { display: block; height: 100%; border-radius: inherit; background: var(--pb-green-400); }
+  .pb-bar__fill[data-tone='steel'] { background: var(--pb-steel-400); }
+  .pb-bar__amount { justify-self: end; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  & .ss-stage[data-layout='compact'] .pb-board { top: 20px; left: 16px; right: 16px; height: 300px; padding: 14px 16px 0; }
+  & .ss-stage[data-layout='compact'] .pb-bar { grid-template-columns: 64px minmax(0, 1fr) 56px; gap: 10px; }
+}
