@@ -119,19 +119,10 @@ function Raised({ data }: { data: CausePage }) {
   const open = data.tasks.filter((t) => t.open);
   return (
     <Card className="p-5 sm:p-6">
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-        <div>
-          <div className="text-[13px] font-medium text-muted">Raised</div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <Amount cents={data.cause.raisedCents} size="xl" />
-            <span className="tabular text-[14px] text-muted">of {formatCents(data.cause.goalCents)}</span>
-          </div>
-        </div>
-        {data.unit ? (
-          <div className="max-w-[260px] text-[13.5px] leading-snug text-ink-2 sm:text-right">
-            <span className="tabular font-semibold text-ink">{formatCents(data.unit.cents)}</span> {data.unit.label}
-          </div>
-        ) : null}
+      <div className="text-[13px] font-medium text-muted">Raised</div>
+      <div className="mt-2 flex items-baseline gap-2">
+        <Amount cents={data.cause.raisedCents} size="xl" />
+        <span className="tabular text-[14px] text-muted">of {formatCents(data.cause.goalCents)}</span>
       </div>
       <RaisedBar raisedCents={data.cause.raisedCents} goalCents={data.cause.goalCents} className="mt-5" />
       <div className="mt-5 grid grid-cols-3 gap-4 border-t border-line pt-4">
