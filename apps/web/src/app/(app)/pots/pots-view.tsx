@@ -78,7 +78,7 @@ export function PotsView() {
           : Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[132px] w-full rounded-lg" />)}
       </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
         {selected ? (
           <RulesCard
             key={selected._id}

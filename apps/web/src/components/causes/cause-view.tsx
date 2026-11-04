@@ -44,6 +44,7 @@ export function CauseView({
 
   return (
     <div className="animate-rise">
+      <title>{`${data.cause.name} · Plex`}</title>
       <Header data={data} variant={variant} />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
@@ -149,7 +150,10 @@ function Tasks({ data, onFund }: { data: CausePage; onFund: (id: Id<"tasks">) =>
     <section>
       <SectionTitle title="Impact tasks" aside="Paid local work, checked by proof" />
       <div className="space-y-3">
-        {data.tasks.map((t) => {
+        {/* Open shifts first (soonest first), then finished ones, newest first. */}
+        {[...data.tasks]
+          .sort((a, b) => (a.done === b.done ? (a.done ? b.windowStart - a.windowStart : a.windowStart - b.windowStart) : a.done ? 1 : -1))
+          .map((t) => {
           const fullyFunded = t.fundedCents >= t.costCents;
           const fundable = t.open && !fullyFunded && ["open", "assigned"].includes(t.status);
           return (
@@ -191,13 +195,20 @@ function Tasks({ data, onFund }: { data: CausePage; onFund: (id: Id<"tasks">) =>
                       {t.done ? "people paid" : "spots taken"} · {formatCents(t.perSpotCents)} each
                     </div>
                   </div>
-                  <div>
-                    <RaisedBar raisedCents={t.fundedCents} goalCents={t.costCents} thin className="mt-0.5" />
-                    <div className="mt-1.5 text-[12.5px] text-muted">
-                      <span className="tabular font-medium text-ink-2">{formatCents(t.fundedCents)}</span> of{" "}
-                      {formatCents(t.costCents)} funded
+                  {t.done ? (
+                    <div className="self-end text-[12.5px] text-muted">
+                      <span className="tabular font-medium text-ink-2">{formatCents(t.filled * t.perSpotCents)}</span> paid
+                      through PayPal Payouts
                     </div>
-                  </div>
+                  ) : (
+                    <div>
+                      <RaisedBar raisedCents={t.fundedCents} goalCents={t.costCents} thin className="mt-0.5" />
+                      <div className="mt-1.5 text-[12.5px] text-muted">
+                        <span className="tabular font-medium text-ink-2">{formatCents(t.fundedCents)}</span> of{" "}
+                        {formatCents(t.costCents)} funded
+                      </div>
+                    </div>
+                  )}
                 </div>
                 {fundable ? (
                   <Button variant="brand" size="sm" onClick={() => onFund(t._id)}>

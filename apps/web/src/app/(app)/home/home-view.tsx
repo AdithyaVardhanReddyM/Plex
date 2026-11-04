@@ -90,7 +90,7 @@ export function HomeView() {
           />
           <div className="px-2 pt-2 pb-2">
             {receipts
-              ? receipts.slice(0, 7).map((r) => <ReceiptRow key={r._id} receipt={r} href={`/receipts/${r._id}`} />)
+              ? receipts.slice(0, 10).map((r) => <ReceiptRow key={r._id} receipt={r} href={`/receipts/${r._id}`} />)
               : Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="flex items-center gap-3 px-3 py-3">
                     <Skeleton className="size-8 rounded-full" />

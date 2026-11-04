@@ -33,7 +33,8 @@ export const run = internalMutation({
       }
     }
 
-    const now = Date.now();
+    // On the half hour, so seeded task windows read "2–6pm", not "2:39–6:39pm".
+    const now = Math.floor(Date.now() / (HOUR / 2)) * (HOUR / 2);
     const ago = (days: number, hours = 0) => now - days * DAY - hours * HOUR;
 
     // ── People ──────────────────────────────────────────────────────────────

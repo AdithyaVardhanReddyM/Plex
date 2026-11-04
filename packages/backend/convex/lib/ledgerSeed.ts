@@ -37,7 +37,8 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
     .withIndex("by_slug", (q) => q.eq("slug", "lake-merritt-shoreline"))
     .unique();
 
-  const now = Date.now();
+  // On the hour, so past shifts read "9am–1pm", not "9:39am–1:39pm".
+  const now = Math.floor(Date.now() / HOUR) * HOUR;
   const ago = (days: number, hours = 0) => now - days * DAY - hours * HOUR;
 
   /** A receipt with a backdated, multi-step timeline. */
@@ -356,8 +357,8 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
     }
 
     const shifts: Array<[string, number, Doc<"users">[], number]> = [
-      ["Thursday cleanup, north shore", 15, [rosa, luis], 0.96],
-      ["Saturday cleanup, boathouse to Pergola", 10, [rosa, luis, kenji], 0.93],
+      ["Cleanup, north shore", 15, [rosa, luis], 0.96],
+      ["Cleanup, boathouse to Pergola", 10, [rosa, luis, kenji], 0.93],
       ["Storm-drain clearing after the rain", 5, [luis, kenji], 0.9],
     ];
     for (const [title, day, workers, conf] of shifts) {

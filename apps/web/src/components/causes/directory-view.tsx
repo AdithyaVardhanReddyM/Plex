@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { ArrowRight, BadgeCheck, HeartHandshake, Lock, Plus } from "lucide-react";
+import { ArrowRight, HeartHandshake, Lock, Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { api } from "@/lib/convex";
 import { Avatar, Card, EmptyState, PageHeader, Skeleton } from "@/components/ui/primitives";
@@ -78,7 +78,7 @@ export function DirectoryView() {
                   </div>
                   {c.unit ? (
                     <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-3.5 text-[13px] text-ink-2">
-                      <span>
+                      <span className="min-w-0 truncate">
                         <span className="tabular font-semibold text-ink">{formatCents(c.unit.cents)}</span> {c.unit.label}
                       </span>
                       <ArrowRight className="size-4 flex-none text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-ink" strokeWidth={1.9} />
@@ -126,10 +126,7 @@ function YourGiving({ giving }: { giving: Giving }) {
             className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 transition-colors hover:bg-canvas"
           >
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5 truncate text-[14px] font-medium text-ink">
-                {r.taskDone ? <BadgeCheck className="size-4 flex-none text-green-600" strokeWidth={1.9} /> : null}
-                <span className="truncate">{r.taskTitle ?? r.causeName}</span>
-              </div>
+              <div className="truncate text-[14px] font-medium text-ink">{r.taskTitle ?? r.causeName}</div>
               <div className="truncate text-[12.5px] text-muted">
                 {r.taskDone ? "Proof passed · see the Proof Reel" : r.taskTitle ? r.causeName : "Given to the cause"} ·{" "}
                 {relativeTime(r.at)}

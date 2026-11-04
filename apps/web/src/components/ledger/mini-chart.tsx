@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AgCharts } from "ag-charts-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import { formatCents } from "@/lib/utils";
@@ -30,6 +30,20 @@ export function MiniChart({
   width?: number;
 }) {
   const t = useTokens();
+  // Without a fixed width, measure the box: AG Charts otherwise starts at its
+  // 300px default and can overrun a narrow card.
+  const box = useRef<HTMLDivElement>(null);
+  const [measured, setMeasured] = useState<number>();
+  useLayoutEffect(() => {
+    if (width || !box.current) return;
+    const el = box.current;
+    const update = () => setMeasured(Math.floor(el.getBoundingClientRect().width) || undefined);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [width]);
+  const chartWidth = width ?? measured;
   const options = useMemo<AgCartesianChartOptions>(() => {
     const fill = color ?? t.green[500];
     const data = values.map((v, i) => ({ i: labels?.[i] ?? String(i), v: v / 100 }));
@@ -37,7 +51,7 @@ export function MiniChart({
       theme: plexChartTheme(t),
       data,
       height,
-      width,
+      width: chartWidth,
       padding: { top: 2, right: 0, bottom: 0, left: 0 },
       animation: { enabled: false },
       series: [
@@ -68,6 +82,10 @@ export function MiniChart({
       },
       legend: { enabled: false },
     };
-  }, [values, labels, color, type, height, width, t]);
-  return <AgCharts options={options} style={{ height, width: width ?? "100%" }} />;
+  }, [values, labels, color, type, height, chartWidth, t]);
+  return (
+    <div ref={box} style={{ height, width: width ?? "100%" }}>
+      {chartWidth ? <AgCharts options={options} style={{ height, width: chartWidth }} /> : null}
+    </div>
+  );
 }

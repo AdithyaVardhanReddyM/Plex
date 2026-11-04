@@ -84,7 +84,7 @@ function PotGauge({ pot }: { pot: Pot }) {
         <Ring ratio={month} color={accent} />
       </div>
 
-      <div className="mt-4">
+      <div className="mt-4 min-w-0">
         <MiniChart
           values={pot.daily.map((d) => d.cents)}
           labels={pot.daily.map((d) => new Date(d.day).toLocaleDateString("en-US", { month: "short", day: "numeric" }))}

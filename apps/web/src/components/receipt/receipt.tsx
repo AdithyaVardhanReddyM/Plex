@@ -82,7 +82,7 @@ export function ReceiptRow({ receipt, href }: { receipt: Receipt; href?: string 
         <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] leading-snug text-muted">
           <span className="truncate">
             {KIND[receipt.kind].label}
-            {receipt.agentLabel ? ` · ${receipt.agentLabel}` : ""}
+            {receipt.agentLabel ? <span className="hidden sm:inline"> · {receipt.agentLabel}</span> : null}
           </span>
           <span className="text-faint">·</span>
           <span className="flex-none">{relativeTime(receipt.occurredAt)}</span>
@@ -208,15 +208,15 @@ export function ReceiptCard({ receipt, className }: { receipt: Receipt; classNam
       <div className="border-t border-line bg-canvas/60 px-5 py-3.5">
         <ol className="space-y-2">
           {receipt.timeline.map((t, i) => (
-            <li key={i} className="grid grid-cols-[12px_minmax(0,1fr)_auto] items-center gap-3 text-[13px]">
+            <li key={i} className="grid grid-cols-[12px_minmax(0,1fr)_auto] items-start gap-3 text-[13px] leading-[1.4]">
               <span
                 className={cn(
-                  "size-2 rounded-full",
+                  "mt-[6px] size-2 rounded-full",
                   i === receipt.timeline.length - 1 ? "bg-green-500" : "bg-line-strong",
                 )}
               />
-              <span className="truncate text-ink-2">{t.label}</span>
-              <span className="tabular text-faint">{shortDate(t.at)}</span>
+              <span className="text-pretty text-ink-2">{t.label}</span>
+              <span className="tabular whitespace-nowrap text-faint">{shortDate(t.at)}</span>
             </li>
           ))}
         </ol>

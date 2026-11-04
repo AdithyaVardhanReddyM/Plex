@@ -171,7 +171,7 @@ export function NewTaskView() {
         actions={<PersonaSwitch />}
       />
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex flex-col gap-5">
           <Card className="p-5">
             <Label htmlFor="brief">What do you need done?</Label>

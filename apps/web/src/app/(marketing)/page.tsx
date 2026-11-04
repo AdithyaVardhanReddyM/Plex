@@ -34,13 +34,10 @@ const STEPS = [
 ];
 
 const APIS = [
-  { name: "Orders v2", use: "Authorize, then capture: task funding, agent checkout, donations" },
-  { name: "Payouts", use: "Paying workers, creators and field partners when proof passes" },
-  { name: "Invoicing", use: "Dinner splits and freelance-style tasks, with reminders" },
-  { name: "Subscriptions", use: "Recurring donations and plans an agent may never start alone" },
-  { name: "Refunds and Disputes", use: "Money returned when proof fails, disputes shown in the Ledger" },
-  { name: "Webhooks", use: "Receipts advance as PayPal confirms each step" },
-  { name: "Transaction Search", use: "Reconciling the Ledger against PayPal's own records" },
+  { name: "Orders v2", use: "Tasks authorize at posting, then capture on approval or void on cancel; donations capture at once" },
+  { name: "Payouts", use: "Paying the worker the moment their proof is approved, tracked until it lands" },
+  { name: "Refunds", use: "Returning captured task money when the work isn't done" },
+  { name: "Webhooks", use: "Receipts advance as PayPal confirms approvals, captures and payouts, with signatures verified" },
 ];
 
 export default function Landing() {

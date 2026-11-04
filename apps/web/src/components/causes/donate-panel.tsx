@@ -249,7 +249,7 @@ export function DonatePanel({
             </div>
             {data.unit && onceCents >= data.unit.cents ? (
               <p className="text-[12.5px] leading-relaxed text-muted">
-                That&apos;s {Math.floor(onceCents / data.unit.cents) === 1 ? "one shift" : `${Math.floor(onceCents / data.unit.cents)} shifts`} of paid local work.
+                That&apos;s {Math.floor(onceCents / data.unit.cents) === 1 ? "one shift" : `${Math.floor(onceCents / data.unit.cents)} shifts`} of paid local work.{" "}
                 {data.org.name} assigns it to the next shift that needs it.
               </p>
             ) : null}

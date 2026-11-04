@@ -3,6 +3,9 @@ import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/primitives";
 import { ReceiptDetail } from "./receipt-detail";
 
+// Live Convex data rendered in the browser; see (app)/layout.tsx.
+export const instant = false;
+
 export const metadata: Metadata = { title: "Receipt" };
 
 // Next 16 + cacheComponents: dynamic params are request data, so they are

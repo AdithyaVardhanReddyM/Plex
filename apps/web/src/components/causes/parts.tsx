@@ -127,6 +127,38 @@ export function Stat({ value, label, className }: { value: React.ReactNode; labe
 }
 
 /** A real map of where the work happens (OpenStreetMap), with a link out. */
+/**
+ * A static map: OpenStreetMap tiles around the point, the point at the center.
+ * Plain images, so it renders anywhere an iframe embed might be blocked.
+ */
+function TileMap({ lat, lng }: { lat: number; lng: number }) {
+  const z = 15;
+  const n = 2 ** z;
+  const fx = ((lng + 180) / 360) * n;
+  const r = (lat * Math.PI) / 180;
+  const fy = ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * n;
+  const tiles: Array<[number, number]> = [];
+  for (let ty = Math.floor(fy) - 1; ty <= Math.floor(fy) + 1; ty++)
+    for (let tx = Math.floor(fx) - 3; tx <= Math.floor(fx) + 3; tx++) tiles.push([tx, ty]);
+  return (
+    <div aria-hidden className="absolute top-1/2 left-1/2 [filter:saturate(0.55)_contrast(0.96)]">
+      {tiles.map(([tx, ty]) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={`${tx}-${ty}`}
+          src={`https://tile.openstreetmap.org/${z}/${tx}/${ty}.png`}
+          alt=""
+          width={256}
+          height={256}
+          loading="lazy"
+          className="absolute max-w-none select-none"
+          style={{ left: (tx - fx) * 256, top: (ty - fy) * 256 }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function LocationMap({
   label,
   lat,
@@ -139,23 +171,20 @@ export function LocationMap({
   className?: string;
 }) {
   const hasPoint = typeof lat === "number" && typeof lng === "number";
-  const d = 0.012;
-  const src = hasPoint
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${lng! - d * 1.6}%2C${lat! - d}%2C${lng! + d * 1.6}%2C${lat! + d}&layer=mapnik&marker=${lat}%2C${lng}`
-    : null;
   const href = hasPoint
     ? `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`
     : `https://www.openstreetmap.org/search?query=${encodeURIComponent(label)}`;
   return (
     <div className={cn("overflow-hidden rounded-lg border border-line bg-surface shadow-card", className)}>
-      {src ? (
-        <div className="relative h-48 bg-sunken">
-          <iframe
-            title={`Map of ${label}`}
-            src={src}
-            loading="lazy"
-            className="absolute inset-0 size-full border-0 [filter:saturate(0.55)_contrast(0.96)]"
-          />
+      {hasPoint ? (
+        <div className="relative h-48 overflow-hidden bg-sunken">
+          <TileMap lat={lat!} lng={lng!} />
+          <span className="absolute top-1/2 left-1/2 flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-green-600 text-white shadow-float ring-4 ring-surface/80">
+            <MapPin className="size-4" strokeWidth={1.9} />
+          </span>
+          <span className="absolute right-1.5 bottom-1 rounded-sm bg-surface/80 px-1.5 text-[10.5px] text-muted">
+            © OpenStreetMap
+          </span>
         </div>
       ) : null}
       <div className="flex items-center justify-between gap-3 px-4 py-3">
