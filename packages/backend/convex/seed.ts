@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import type { Id, TableNames } from "./_generated/dataModel";
 import { advanceReceipt, writeReceipt } from "./lib/receipts";
+import { seedLedgerHistory } from "./lib/ledgerSeed";
 
 /**
  * The demo world (docs/Plex-Project-Plan.md §9). All brands, people and the
@@ -12,6 +13,7 @@ import { advanceReceipt, writeReceipt } from "./lib/receipts";
 const TABLES: TableNames[] = [
   "users", "agents", "pots", "approvals", "receipts", "tasks", "applications",
   "proofs", "causes", "donations", "campaigns", "campaignEntries", "splits", "webhookEvents",
+  "ledgerAsks", "ledgerWidgets", "ledgerActions",
 ];
 
 const HOUR = 3_600_000;
@@ -810,6 +812,8 @@ export const run = internalMutation({
         .find((d) => d.donorId === adi);
       if (held && gift) await ctx.db.patch(gift._id, { receiptId: held._id });
     }
+
+    await seedLedgerHistory(ctx);
 
     return `Seeded the demo world: Adi, ${donors.length} donors, 6 tasks, ${coffees.length + 14} receipts.`;
   },

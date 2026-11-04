@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { vRole, vWidgetSpec } from "./lib/ledgerSpec";
 
 /**
  * Plex data model.
@@ -493,4 +494,46 @@ export default defineSchema({
     verified: v.boolean(),
     processedAt: v.optional(v.number()),
   }).index("by_eventId", ["eventId"]),
+  // ── Plex Ledger ────────────────────────────────────────────────────────────
+
+  /** Questions asked of the Ledger (web, Plex for Mac or MCP) and the Analyst's answer. */
+  ledgerAsks: defineTable({
+    ownerId: v.id("users"),
+    role: vRole,
+    question: v.string(),
+    via: v.union(v.literal("web"), v.literal("mac"), v.literal("mcp")),
+    status: v.union(v.literal("thinking"), v.literal("done"), v.literal("error")),
+    answer: v.optional(v.string()),
+    widgets: v.optional(v.array(vWidgetSpec)),
+    followUps: v.optional(v.array(v.string())),
+    engine: v.optional(v.union(v.literal("gemini"), v.literal("heuristic"))),
+    engineNote: v.optional(v.string()), // e.g. "No Gemini key: deterministic parser"
+  }).index("by_owner", ["ownerId"]),
+
+  /** Widgets pinned to a role's dashboard, usually built by the Analyst. */
+  ledgerWidgets: defineTable({
+    ownerId: v.id("users"),
+    role: vRole,
+    spec: vWidgetSpec,
+    askId: v.optional(v.id("ledgerAsks")),
+    question: v.optional(v.string()),
+    order: v.number(),
+  }).index("by_owner_role", ["ownerId", "role"]),
+
+  /**
+   * Actions requested from the dashboard (reminders, payouts, refunds), always
+   * after a confirmation. The real payout and refund flows live in Tasks; the
+   * Ledger records the request and hands it over.
+   */
+  ledgerActions: defineTable({
+    ownerId: v.id("users"),
+    role: vRole,
+    tool: v.union(v.literal("send_reminder"), v.literal("release_payout"), v.literal("refund")),
+    targetLabel: v.string(),
+    amountCents: v.optional(v.number()),
+    receiptId: v.optional(v.id("receipts")),
+    splitId: v.optional(v.id("splits")),
+    status: v.union(v.literal("handed_off"), v.literal("done")),
+    note: v.string(),
+  }).index("by_owner", ["ownerId"]),
 });
