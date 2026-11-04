@@ -8,7 +8,8 @@ import { getViewer, userByHandle } from "./viewer";
  * Signed-in users always act as themselves. Guests explore the demo world
  * as Adi (the poster) by default, and may switch to one of the seeded demo
  * workers (`as: "rosa"`) to try the other side: apply, upload proof, get
- * paid. Only demo people can be borrowed this way, never real accounts.
+ * paid, or to the demo NGO (`as: "lakeside-commons"`) to approve its impact
+ * shifts. Only demo people and orgs can be borrowed, never real accounts.
  */
 export async function getActor(
   ctx: QueryCtx | MutationCtx,
@@ -18,7 +19,7 @@ export async function getActor(
   if (!viewer) return null;
   if (!as || !viewer.isGuest || as === viewer.user.handle) return viewer;
   const persona = await userByHandle(ctx, as);
-  if (!persona || !persona.isDemo || persona.kind !== "person") return viewer;
+  if (!persona || !persona.isDemo || persona.kind === "brand") return viewer;
   return { user: persona, isGuest: true };
 }
 

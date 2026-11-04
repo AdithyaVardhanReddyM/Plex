@@ -81,24 +81,27 @@ export function lookupPlace(text: string) {
   return PLACES.find((p) => p.match.test(text));
 }
 
-/** Window helper: "Today, 2–6pm" style label from two timestamps. */
+/**
+ * The demo world lives in the Bay Area, so task windows are shown in the
+ * place's own time zone (as Causes does), wherever the viewer is.
+ */
+export const PLACE_TZ = "America/Los_Angeles";
+
+/** Window helper: "Today, 2–6pm" style label from two timestamps, in PLACE_TZ. */
 export function windowLabel(start: number, end: number, now = Date.now()): string {
+  const dayKey = (ms: number) => new Date(ms).toLocaleDateString("en-CA", { timeZone: PLACE_TZ });
   const day = (ms: number) => {
-    const d = new Date(ms);
-    const today = new Date(now);
-    const tomorrow = new Date(now + 86_400_000);
-    if (d.toDateString() === today.toDateString()) return "Today";
-    if (d.toDateString() === tomorrow.toDateString()) return "Tomorrow";
-    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+    if (dayKey(ms) === dayKey(now)) return "Today";
+    if (dayKey(ms) === dayKey(now + 86_400_000)) return "Tomorrow";
+    return new Date(ms).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: PLACE_TZ });
   };
   const time = (ms: number) =>
     new Date(ms)
-      .toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+      .toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: PLACE_TZ })
       .replace(":00", "")
       .replace(" ", "")
       .toLowerCase();
-  const sameDay = new Date(start).toDateString() === new Date(end).toDateString();
-  return sameDay
+  return dayKey(start) === dayKey(end)
     ? `${day(start)}, ${time(start)}–${time(end)}`
     : `${day(start)} ${time(start)} – ${day(end)} ${time(end)}`;
 }

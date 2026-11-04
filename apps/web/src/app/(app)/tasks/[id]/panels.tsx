@@ -26,7 +26,7 @@ import { api } from "@/lib/convex";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Avatar, Badge, Card, CardHeader, Input, Label, Textarea } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
-import { useAs } from "@/components/tasks/persona";
+import { isPosterPersona, useAs } from "@/components/tasks/persona";
 import { useFund } from "@/components/tasks/use-fund";
 import { useRun } from "@/components/tasks/use-run";
 import {
@@ -623,7 +623,7 @@ export function ApplyCard({ data }: { data: TaskPage }) {
       <CardHeader
         title="Take this task"
         description={
-          me.handle === "adi"
+          isPosterPersona(me)
             ? "Switch “Acting as” to a demo worker to apply."
             : `Applying as ${me.name}. Match ranks you against the others.`
         }
@@ -646,7 +646,7 @@ export function ApplyCard({ data }: { data: TaskPage }) {
           <span className="text-[12.5px] text-muted">Posted at {formatCents(task.fundingCents)}, held by PayPal.</span>
           <Button
             onClick={() => run("apply", () => apply({ taskId: task._id, askCents: Math.round(Number(ask) * 100), message, as }))}
-            disabled={!!busy || me.handle === "adi" || !Number(ask)}
+            disabled={!!busy || isPosterPersona(me) || !Number(ask)}
           >
             {busy === "apply" ? <Loader2 className="animate-spin" /> : <ArrowRight />} Apply
           </Button>

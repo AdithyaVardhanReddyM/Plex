@@ -219,7 +219,10 @@ export const get = query({
   },
 });
 
-/** Demo workers a guest can act as, for the worker side of the flow. */
+/**
+ * Demo people a guest can act as: Adi and the NGO post, the workers take
+ * tasks. Adi first, then the NGO, then the workers.
+ */
 export const personas = query({
   args: {},
   handler: async (ctx) => {
@@ -227,10 +230,14 @@ export const personas = query({
       .query("users")
       .withIndex("by_kind", (q) => q.eq("kind", "person"))
       .collect();
+    const orgs = await ctx.db
+      .query("users")
+      .withIndex("by_kind", (q) => q.eq("kind", "org"))
+      .collect();
+    const adi = people.filter((p) => p.isDemo && p.handle === "adi");
+    const workers = people.filter((p) => p.isDemo && p.handle !== "adi" && (p.tasksCompleted ?? 0) > 0);
     return Promise.all(
-      people
-        .filter((p) => p.isDemo && (p.handle === "adi" || (p.tasksCompleted ?? 0) > 0))
-        .map((p) => personCard(ctx, p._id)),
+      [...adi, ...orgs.filter((o) => o.isDemo), ...workers].map((p) => personCard(ctx, p._id)),
     ).then((cards) => cards.filter(Boolean) as PersonCard[]);
   },
 });

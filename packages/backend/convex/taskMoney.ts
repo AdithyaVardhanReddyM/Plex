@@ -294,13 +294,15 @@ export const beginRelease = internalMutation({
           verdict.confidence * 100,
         )}% · ${checks.filter((c) => c.passed).length} of ${checks.length} checks${verdict.model === "heuristic" ? " · heuristic" : ""}`
       : "No verdict";
+    // People by first name; an org (Lakeside Commons) keeps its whole name.
+    const posterShort = !poster ? "The poster" : poster.kind === "person" ? poster.name.split(" ")[0] : poster.name;
     const ruleText = auto
       ? `Proof passed at ${Math.round((verdict?.confidence ?? 0) * 100)}% · auto-release was on`
       : t.status === "disputed"
         ? `${poster?.name ?? "The poster"} released it after the worker contested`
         : verdict?.result === "pass"
-          ? `Proof passed · ${poster?.name.split(" ")[0] ?? "the poster"} approved with one tap`
-          : `${poster?.name.split(" ")[0] ?? "The poster"} approved it after reviewing the proof`;
+          ? `Proof passed · ${posterShort} approved with one tap`
+          : `${posterShort} approved it after reviewing the proof`;
 
     let payoutReceiptId = t.payoutReceiptId;
     if (!payoutReceiptId) {

@@ -108,7 +108,8 @@ export function proofNeeded(spec: Task["proofSpec"]): string {
     .join(" + ");
 }
 
-export function timeLeft(task: Pick<Task, "windowStart" | "windowEnd">, now = Date.now()) {
+export function timeLeft(task: Pick<Task, "windowStart" | "windowEnd" | "status">, now = Date.now()) {
+  if (["paid", "approved", "cancelled", "refunded"].includes(task.status)) return "Done";
   if (now < task.windowStart) return `Opens ${relativeTime(task.windowStart, now)}`;
   if (now < task.windowEnd) return `Ends ${relativeTime(task.windowEnd, now)}`;
   return `Ended ${relativeTime(task.windowEnd, now)}`;

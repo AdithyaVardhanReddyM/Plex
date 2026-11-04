@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 /**
  * Tasks is two-sided. Guests explore as Adi, the poster; the switcher lets
  * them act as a seeded demo worker (Rosa, Luis…) to apply, upload proof and
- * get paid. Signed-in users are always themselves (the backend ignores `as`).
+ * get paid, or as the demo NGO to approve its impact shifts. Signed-in users are always themselves (the backend ignores `as`).
  */
 
 const KEY = "plex.tasks.as";
@@ -64,6 +64,11 @@ export function usePersona() {
   return useContext(PersonaContext);
 }
 
+/** Adi and demo orgs post tasks; everyone else is a worker. */
+export function isPosterPersona(p: { handle: string; kind: string }) {
+  return p.handle === "adi" || p.kind !== "person";
+}
+
 /** "Acting as" switcher. Hidden for signed-in users. */
 export function PersonaSwitch({ className }: { className?: string }) {
   const { as, setAs } = usePersona();
@@ -89,7 +94,7 @@ export function PersonaSwitch({ className }: { className?: string }) {
   if (!viewer?.isGuest || !people) return null;
   const current = people.find((p) => p.handle === (as ?? "adi")) ?? people.find((p) => p.handle === "adi");
   if (!current) return null;
-  const isPoster = current.handle === "adi";
+  const isPoster = isPosterPersona(current);
 
   return (
     <div ref={ref} className={cn("relative", className)}>
@@ -123,7 +128,7 @@ export function PersonaSwitch({ className }: { className?: string }) {
                 type="button"
                 role="menuitemradio"
                 aria-checked={active}
-                aria-label={`${p.name}, ${p.handle === "adi" ? "poster" : "worker"}`}
+                aria-label={`${p.name}, ${isPosterPersona(p) ? "poster" : "worker"}`}
                 onClick={() => {
                   setAs(p.handle);
                   setOpen(false);
@@ -137,7 +142,11 @@ export function PersonaSwitch({ className }: { className?: string }) {
                 <span className="min-w-0">
                   <span className="block truncate text-[13px] font-medium text-ink">{p.name}</span>
                   <span className="block truncate text-[12px] text-muted">
-                    {p.handle === "adi" ? "Poster · your account" : `Worker · ${p.area ?? "Plex"}`}
+                    {p.handle === "adi"
+                      ? "Poster · your account"
+                      : p.kind === "org"
+                        ? "Poster · posts its impact shifts"
+                        : `Worker · ${p.area ?? "Plex"}`}
                   </span>
                 </span>
                 {active ? <Check className="size-4 text-green-600" strokeWidth={1.9} /> : <span />}
