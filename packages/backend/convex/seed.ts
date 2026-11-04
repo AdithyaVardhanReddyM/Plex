@@ -459,18 +459,37 @@ export const run = internalMutation({
     }
     await ctx.db.patch(cause, { unitCents: 4_500, unitLabel: "pays one person for a 3-hour shift" });
 
-    // Shifts happen at real local hours (Pacific time, UTC-8 in November) on
-    // the weekday their title names.
-    const PT_OFFSET = 8 * HOUR;
-    const ptMidnight = (ms: number) => {
-      const d = new Date(ms - PT_OFFSET);
-      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) + PT_OFFSET;
+    // Shifts happen at real local hours in Pacific time (daylight time
+    // included) on the weekday their title names.
+    const ptParts = (ms: number) =>
+      Object.fromEntries(
+        new Intl.DateTimeFormat("en-US", {
+          timeZone: "America/Los_Angeles",
+          hourCycle: "h23",
+          year: "numeric",
+          month: "numeric",
+          day: "numeric",
+          hour: "numeric",
+          minute: "numeric",
+          weekday: "short",
+        })
+          .formatToParts(ms)
+          .map((x) => [x.type, x.value]),
+      ) as Record<string, string>;
+    const ptDate = (ms: number) => {
+      const p = ptParts(ms);
+      return Date.UTC(+p.year, +p.month - 1, +p.day);
     };
-    const ptDow = new Date(now - PT_OFFSET).getUTCDay();
-    const nextDay = (dow: number, hour: number) =>
-      ptMidnight(now) + (((dow - ptDow + 7) % 7) || 7) * DAY + hour * HOUR;
-    const lastDay = (dow: number, hour: number) =>
-      ptMidnight(now) - (((ptDow - dow + 7) % 7) || 7) * DAY + hour * HOUR;
+    // Wall-clock hour on a PT date (as UTC midnight) to an instant.
+    const ptAt = (date: number, hour: number) => {
+      const guess = date + hour * HOUR;
+      const p = ptParts(guess);
+      const offset = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - guess;
+      return guess - offset;
+    };
+    const ptDow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(ptParts(now).weekday);
+    const nextDay = (dow: number, hour: number) => ptAt(ptDate(now) + (((dow - ptDow + 7) % 7) || 7) * DAY, hour);
+    const lastDay = (dow: number, hour: number) => ptAt(ptDate(now) - (((ptDow - dow + 7) % 7) || 7) * DAY, hour);
     await ctx.db.patch(cleanupTask, { windowStart: nextDay(6, 9), windowEnd: nextDay(6, 12) });
 
     const marisol = await person("marisol", "Marisol Vega", "#A4508B", {
@@ -619,7 +638,7 @@ export const run = internalMutation({
       taskId: pastTask,
       workerId: marisol,
       items: [0, 1, 2].map((i) => ({
-        specIndex: i, capturedAt: pastStart + (i === 0 ? 10 : 3 * HOUR - 20 * 60_000 + i * 60_000), lat: 37.8093, lng: -122.2498,
+        specIndex: i, capturedAt: pastStart + (i === 0 ? 0 : 2 * HOUR + 50 * 60_000 + (i - 1) * 60_000), lat: 37.8093, lng: -122.2498,
       })),
       note: "Eleven bags from the Pergola to the boathouse. Most of it was takeout packaging by the benches.",
       status: "pass",
