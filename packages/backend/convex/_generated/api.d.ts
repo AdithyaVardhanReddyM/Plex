@@ -10,6 +10,7 @@
 
 import type * as applications from "../applications.js";
 import type * as campaigns from "../campaigns.js";
+import type * as causeBuilder from "../causeBuilder.js";
 import type * as causes from "../causes.js";
 import type * as donations from "../donations.js";
 import type * as http from "../http.js";
@@ -44,6 +45,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   applications: typeof applications;
   campaigns: typeof campaigns;
+  causeBuilder: typeof causeBuilder;
   causes: typeof causes;
   donations: typeof donations;
   http: typeof http;

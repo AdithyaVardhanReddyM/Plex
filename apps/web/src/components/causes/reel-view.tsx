@@ -120,7 +120,7 @@ export function ReelView({ donationId }: { donationId: string }) {
                     </span>
                   </div>
                   <figcaption className="tabular mt-1.5 truncate text-[11.5px] text-muted">
-                    {m.capturedAt ? placeTime(m.capturedAt) : m.description}
+                    {m.capturedAt ? placeTime(m.capturedAt).split(" · ")[1] : m.description}
                   </figcaption>
                 </figure>
               ))}

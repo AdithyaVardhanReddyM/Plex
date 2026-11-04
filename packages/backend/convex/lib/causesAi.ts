@@ -130,29 +130,45 @@ export async function draftCause(text: string): Promise<CauseDraft> {
 /** No model: split the NGO's own sentences into a page, and pull tasks from lines with "$" and a count. */
 export function heuristicDraft(text: string): CauseDraft {
   const clean = text.replace(/\r/g, "").trim();
-  const paragraphs = clean
+  const lines = clean.split("\n");
+  const firstLine = (lines[0] ?? "").replace(/^#+\s*/, "").trim();
+  // A short first line with no full stop is the organization's title.
+  const hasTitle = firstLine.length > 0 && firstLine.length <= 80 && !/[.!?]$/.test(firstLine);
+  const body = hasTitle ? lines.slice(1).join("\n").trim() : clean;
+  const paragraphs = body
     .split(/\n{2,}/)
     .map((p) => p.replace(/\s+/g, " ").trim())
     .filter((p) => p.length > 30);
-  const sentences = clean.replace(/\s+/g, " ").split(/(?<=[.!?])\s+/).filter(Boolean);
+  const sentences = body.replace(/\s+/g, " ").split(/(?<=[.!?])\s+/).filter(Boolean);
   const first = sentences[0] ?? "";
-  const name = (clean.split("\n")[0] ?? "").replace(/^#+\s*/, "").slice(0, 80) || "New cause";
+  const name = (hasTitle ? firstLine : first.split(/[,.]/)[0]!.slice(0, 80)) || "New cause";
 
   const tasks: CauseDraft["tasks"] = [];
-  for (const line of clean.split(/\n|(?<=[.!?])\s+/)) {
-    const money = line.match(/\$\s?(\d+(?:\.\d{1,2})?)/);
+  const paraList = body.split(/\n{2,}|\n/).map((p) => p.trim()).filter(Boolean);
+  for (const para of paraList) {
+    const money = para.match(/\$\s?(\d+(?:\.\d{1,2})?)/);
     if (!money) continue;
-    const spots = Number(line.match(/(\d+)\s*(?:people|persons|volunteers|workers|spots)/i)?.[1] ?? 1);
-    const hours = Number(line.match(/(\d+(?:\.\d)?)\s*(?:hours|hrs|h)\b/i)?.[1] ?? 0) || undefined;
+    const spots = Number(para.match(/(\d+)\s*(?:people|persons|volunteers|workers|spots)/i)?.[1] ?? 1);
+    const hours = Number(para.match(/(\d+(?:\.\d)?)\s*(?:hours|hrs|h)\b/i)?.[1] ?? 0) || undefined;
     let cents = Math.round(Number(money[1]) * 100);
-    if (/an hour|per hour|\/hr|\/hour/i.test(line) && hours) cents = cents * hours;
+    if (/an hour|per hour|\/hr|\/hour/i.test(para) && hours) cents = cents * hours;
+    const proofText = para.match(/proof:\s*([^.]+)/i)?.[1];
+    const proof = proofText
+      ? proofText
+          .replace(/^(a\s+)?photos?\s+of\s+/i, "")
+          .split(/,\s*|\s+and\s+/)
+          .map((p) => p.replace(/^the\s+/i, "").trim())
+          .filter(Boolean)
+          .map((p) => `Photo: ${p}`)
+      : ["Before photo at the marked spot", "After photo, same spot and angle"];
+    const sentence = para.split(/(?<=[.!?])\s+/).find((s) => s.includes("$")) ?? para;
     tasks.push({
-      title: line.replace(/[:.]+$/, "").slice(0, 70),
-      description: line.trim(),
+      title: sentence.split(":")[0]!.replace(/[.]+$/, "").slice(0, 70),
+      description: para.replace(/\s*proof:[^.]+\.?/i, "").trim(),
       payoutCents: cents,
       spots: Math.min(Math.max(spots, 1), 50),
       hours,
-      proof: ["Before photo at the marked spot", "After photo, same spot and angle"],
+      proof: proof.slice(0, 4),
     });
     if (tasks.length >= 3) break;
   }
@@ -163,7 +179,10 @@ export function heuristicDraft(text: string): CauseDraft {
   return {
     name,
     tagline: first.slice(0, 160),
-    story: (paragraphs.length ? paragraphs : sentences).slice(0, 4),
+    story: (paragraphs.length ? paragraphs : sentences)
+      .map((p) => p.replace(/\s*proof:[^.]+\.?/i, "").trim())
+      .filter(Boolean)
+      .slice(0, 4),
     locationLabel: clean.match(/\b(?:in|at|near)\s+([A-Z][\w'’]+(?:[ ,]+[A-Z][\w'’]+){0,3})/)?.[1] ?? "",
     tags: [],
     tasks,

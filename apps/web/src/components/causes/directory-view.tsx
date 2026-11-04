@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { ArrowRight, BadgeCheck, HeartHandshake, Lock } from "lucide-react";
+import { ArrowRight, BadgeCheck, HeartHandshake, Lock, Plus } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import { api } from "@/lib/convex";
 import { Avatar, Card, EmptyState, PageHeader, Skeleton } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
@@ -20,6 +21,11 @@ export function DirectoryView() {
       <PageHeader
         title="Causes"
         description="Donations here buy specific, paid units of local work. A neighbor does the job, proof comes back, and only then is anyone paid."
+        actions={
+          <Link href="/causes/new" className={buttonVariants({ variant: "secondary" })}>
+            <Plus /> Build a cause page
+          </Link>
+        }
       />
 
       {giving && giving.rows.length ? <YourGiving giving={giving} /> : null}
