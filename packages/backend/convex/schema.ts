@@ -278,11 +278,18 @@ export default defineSchema({
     campaignId: v.optional(v.id("campaigns")),
     spots: v.optional(v.number()), // impact tasks: "4 people x 3 hours"
     tags: v.array(v.string()),
+    // Added by Tasks: funding bookkeeping and the agents that wrote it
+    potId: v.optional(v.id("pots")), // the poster's pot that funds it (Errands)
+    fundingReceiptId: v.optional(v.id("receipts")),
+    payoutReceiptId: v.optional(v.id("receipts")),
+    policyNote: v.optional(v.string()), // what the policy engine said at funding
+    writerModel: v.optional(v.string()), // "gemini-2.5-flash" | "heuristic"
   })
     .index("by_status", ["status"])
     .index("by_poster", ["posterId"])
     .index("by_assignee", ["assigneeId"])
-    .index("by_cause", ["causeId"]),
+    .index("by_cause", ["causeId"])
+    .index("by_orderId", ["funding.orderId"]),
 
   applications: defineTable({
     taskId: v.id("tasks"),
@@ -292,6 +299,7 @@ export default defineSchema({
     message: v.string(),
     matchScore: v.optional(v.number()), // 0-100 from the Match agent
     matchReason: v.optional(v.string()),
+    matchModel: v.optional(v.string()),
     status: v.union(
       v.literal("pending"),
       v.literal("accepted"),
@@ -336,6 +344,26 @@ export default defineSchema({
     ),
     decision: v.optional(
       v.union(v.literal("approved"), v.literal("rejected"), v.literal("contested")),
+    ),
+    // Added by Tasks: checks resolving live, the contest path
+    progress: v.optional(
+      v.array(
+        v.object({
+          check: v.string(),
+          status: v.union(v.literal("pending"), v.literal("pass"), v.literal("fail"), v.literal("unsure")),
+          detail: v.optional(v.string()),
+        }),
+      ),
+    ),
+    challengeConfirmed: v.optional(v.boolean()), // worker says the code is in a photo
+    rejectReason: v.optional(v.string()),
+    contestNote: v.optional(v.string()),
+    mediation: v.optional(
+      v.object({
+        summary: v.string(),
+        recommendation: v.union(v.literal("release"), v.literal("partial"), v.literal("refund")),
+        model: v.string(),
+      }),
     ),
   })
     .index("by_task", ["taskId"])
