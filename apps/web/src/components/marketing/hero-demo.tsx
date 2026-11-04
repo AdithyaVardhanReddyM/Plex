@@ -1,0 +1,199 @@
+"use client";
+
+import { Avatar, Bar, Check, Collapse, Connector, Stage, States, type Act } from './stage/kit'
+import { Bot, ShieldCheck, ShoppingBag } from 'lucide-react'
+import './hero-demo.css'
+
+// Plex's landing hero (built and filmed in the Stageshow playground as
+// examples/plex-hero; see REHEARSAL.md beside this file): an agent pays inside a limit, and the payment comes
+// with a Receipt. Cursorless, played once as it scrolls into view (after
+// payout-flow): the agent run works through three steps, then slides aside
+// as the Receipt arrives carrying the user's words, the rule and PayPal's id.
+
+type S = { step: number; paid: boolean }
+const START: S = { step: 0, paid: false }
+const POSTER: S = { step: 7, paid: true }
+
+const WHY = 'Reorder the team’s usual from Kettle Corner.'
+
+const script = async (a: Act<S>) => {
+  await a.wait(700)
+  a.mark('found')
+  a.put({ step: 1 }) // the order is found
+  await a.wait(1300)
+  a.mark('rule')
+  a.put({ step: 2 }) // checking the Food rule
+  await a.wait(1100)
+  a.put({ step: 3 }) // inside the limit: allowed
+  await a.wait(1300)
+  a.mark('pay')
+  a.put({ step: 4 }) // paying with PayPal
+  await a.wait(900)
+  a.mark('receipt')
+  a.put({ step: 5 }) // the run slides aside, the Receipt arrives
+  await a.wait(1500)
+  a.mark('paid')
+  a.put({ paid: true, step: 6 }) // captured: both sides settle, the line draws
+  await a.wait(1400)
+  a.put({ step: 7 }) // the note lands
+}
+
+export function HeroDemo() {
+  return (
+    <Stage<S>
+      width={640}
+      height={420}
+      compact={{ below: 600, width: 358, height: 640 }}
+      initial={START}
+      poster={POSTER}
+      play="once"
+      script={script}
+      className="ph"
+    >
+      {(s, rect, layout) => {
+        const compact = layout === 'compact'
+        const row = rect('pay-row')
+        const card = rect('receipt')
+        return (
+          <>
+            <div className="ph-wash" />
+
+            {/* Plex for Mac lives in the notch: its panel, not a full window */}
+            <section className="ph-run" data-aside={s.step >= 5 || undefined}>
+              <div className="ph-run__head">
+                <span className="ph-run__icon">
+                  <Bot size={14} strokeWidth={1.9} />
+                </span>
+                <span className="ph-run__name">Plex for Mac</span>
+                <span className="ph-run__status" data-done={s.paid || undefined}>
+                  <States align="end" value={s.paid ? 'done' : 'working'} states={{ working: 'Working', done: 'Done' }} />
+                </span>
+              </div>
+              <div className="ph-run__body">
+                <div className="ph-ask">
+                  <Avatar name="Adi Reddy" tone="accent" size={24} className="ph-ask__avatar" />
+                  <div className="ph-ask__text">
+                    <div className="ph-ask__who">Adi asked</div>
+                    <div className="ph-ask__words">{WHY}</div>
+                  </div>
+                </div>
+
+                <ol className="ph-steps">
+                  <Collapse open={s.step >= 1} reveal="drop">
+                  <li className="ph-step">
+                    <Check on={s.step >= 1} size={16} />
+                    <div className="ph-step__main">
+                      <div className="ph-step__title">Found the usual order</div>
+                      <div className="ph-step__sub">2 oat flat whites, banana bread</div>
+                    </div>
+                    <span className="ph-step__meta">$18.40</span>
+                  </li>
+                  </Collapse>
+
+                  <Collapse open={s.step >= 2} reveal="drop">
+                  <li className="ph-step">
+                    <Check on={s.step >= 3} pending={s.step === 2} size={16} />
+                    <div className="ph-step__main">
+                      <div className="ph-step__title">
+                        <States align="start" value={s.step >= 3 ? 'ok' : 'checking'} states={{ checking: 'Checking the Food pot', ok: 'Food: up to $40 a day' }} />
+                      </div>
+                      <div className="ph-step__sub">
+                        <States align="start" value={s.step >= 3 ? 'after' : 'before'} states={{ before: '$13 of $40 spent today', after: '$31.40 of $40 spent today' }} />
+                      </div>
+                      <span className="ph-gauge">
+                        <span className="ph-gauge__fill" style={{ width: s.step >= 3 ? '78.5%' : '32.5%' }} />
+                      </span>
+                    </div>
+                    <span className="ph-allowed" data-in={s.step >= 3 || undefined}>
+                      <ShieldCheck size={12} strokeWidth={2.2} />
+                      Allowed
+                    </span>
+                  </li>
+                  </Collapse>
+
+                  <Collapse open={s.step >= 4} reveal="drop">
+                  <li className="ph-step" data-target="pay-row">
+                    <Check on={s.paid} pending={s.step >= 4 && !s.paid} size={16} />
+                    <div className="ph-step__main">
+                      <div className="ph-step__title">
+                        <States align="start" value={s.paid ? 'paid' : 'paying'} states={{ paying: 'Paying with PayPal', paid: 'Paid with PayPal' }} />
+                      </div>
+                      <div className="ph-step__sub ph-mono" data-in={s.paid || undefined}>
+                        Capture 7XK29481LM
+                      </div>
+                    </div>
+                    <span className="ph-step__meta">$18.40</span>
+                  </li>
+                  </Collapse>
+                </ol>
+
+                {/* What runs on below the crop: earlier runs, quiet */}
+                <div className="ph-later" data-crop>
+                  {[64, 48, 56, 44, 60, 52, 40, 58, 46, 62, 50, 42, 54, 48].map((w, i) => (
+                    <div key={i} className="ph-later__row">
+                      <Bar w={14} h={14} r={7} tone={2} />
+                      <Bar w={`${w}%`} h={6} tone={2} />
+                      <Bar w={34} h={6} tone={2} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* The Receipt: arrives with the payment, carrying the why, the rule and PayPal's id */}
+            <section className="ph-receipt" data-target="receipt" data-in={s.step >= 5 || undefined}>
+              <div className="ph-foil" />
+              <div className="ph-receipt__in">
+                <div className="ph-receipt__head" style={{ ['--i' as string]: 0 }}>
+                  <span className="ph-receipt__kind">
+                    <ShoppingBag size={14} strokeWidth={1.9} />
+                    Receipt
+                  </span>
+                  <span className="ph-state" data-paid={s.paid || undefined}>
+                    <States value={s.paid ? 'paid' : 'pending'} states={{ pending: 'Pending', paid: 'Paid' }} />
+                  </span>
+                </div>
+                <div className="ph-receipt__payee" style={{ ['--i' as string]: 1 }}>
+                  <span>Kettle Corner</span>
+                  <span className="ph-amount">
+                    <span className="ph-amount__sign">−</span>$18.40
+                  </span>
+                </div>
+                <dl className="ph-lines" style={{ ['--i' as string]: 2 }}>
+                  <div className="ph-line">
+                    <dt>Why</dt>
+                    <dd>“{WHY}”</dd>
+                  </div>
+                  <div className="ph-line">
+                    <dt>Allowed by your rule</dt>
+                    <dd>Food: up to $40 a day</dd>
+                  </div>
+                  <div className="ph-line">
+                    <dt>PayPal</dt>
+                    <dd className="ph-mono">
+                      <States align="start" value={s.paid ? 'paid' : 'auth'} states={{ auth: 'Authorizing', paid: 'Captured · 7XK29481LM' }} />
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </section>
+
+            {row.width > 0 && card.width > 0 && (
+              <Connector
+                show={s.step >= 6}
+                from={compact ? { x: row.x + 30, y: row.y + row.height + 4 } : { x: row.x + row.width + 6, y: row.y + row.height / 2 }}
+                to={compact ? { x: row.x + 30, y: card.y } : { x: card.x, y: row.y + row.height / 2 }}
+                route={compact ? 'v' : 'straight'}
+                className="ph-link"
+              />
+            )}
+
+            <div className="ph-note" data-in={s.step >= 7 || undefined} style={{ left: card.x, top: card.y + card.height + 14 }}>
+              Filed to your Ledger
+            </div>
+          </>
+        )
+      }}
+    </Stage>
+  )
+}
