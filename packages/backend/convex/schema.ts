@@ -385,7 +385,14 @@ export default defineSchema({
     workersPaidCount: v.number(),
     tags: v.array(v.string()),
     status: v.union(v.literal("draft"), v.literal("live"), v.literal("closed")),
-  }).index("by_slug", ["slug"]),
+    // "$45 pays one person for a 3-hour shift": the cause's unit of work
+    unitCents: v.optional(v.number()),
+    unitLabel: v.optional(v.string()), // "pays one person for a 3-hour shift"
+    sourceText: v.optional(v.string()), // what the NGO pasted into the page builder
+    draftedBy: v.optional(v.string()), // "gemini-2.5-flash" or "template"
+  })
+    .index("by_slug", ["slug"])
+    .index("by_status", ["status"]),
 
   donations: defineTable({
     causeId: v.id("causes"),
@@ -397,7 +404,43 @@ export default defineSchema({
     source: v.union(v.literal("direct"), v.literal("saved_for_good"), v.literal("campaign")),
     paypalOrderId: v.optional(v.string()),
     receiptId: v.optional(v.id("receipts")),
-  }).index("by_cause", ["causeId"]),
+    paypalCaptureId: v.optional(v.string()),
+    checkoutId: v.optional(v.id("donationCheckouts")),
+    message: v.optional(v.string()), // the donor's own words, if any
+    reelCaption: v.optional(v.string()), // Proof Reel caption (AI or template)
+    reelCaptionBy: v.optional(v.string()),
+  })
+    .index("by_cause", ["causeId"])
+    .index("by_task", ["taskId"])
+    .index("by_donor", ["donorId"])
+    .index("by_checkout", ["checkoutId"]),
+
+  /** One PayPal order, possibly split across several causes. */
+  donationCheckouts: defineTable({
+    donorId: v.optional(v.id("users")),
+    donorLabel: v.string(), // shown on the donor wall
+    message: v.optional(v.string()),
+    returnSlug: v.string(), // the cause page the donor started from
+    allocations: v.array(
+      v.object({
+        causeId: v.id("causes"),
+        taskId: v.optional(v.id("tasks")),
+        amountCents: v.number(),
+      }),
+    ),
+    totalCents: v.number(),
+    currency: v.string(),
+    status: v.union(
+      v.literal("created"),
+      v.literal("approving"),
+      v.literal("completed"),
+      v.literal("failed"),
+    ),
+    paypalOrderId: v.optional(v.string()),
+    paypalCaptureId: v.optional(v.string()),
+    payerName: v.optional(v.string()), // from PayPal, after capture
+    error: v.optional(v.string()),
+  }).index("by_order", ["paypalOrderId"]),
 
   // ── Campaigns (pay per result) ─────────────────────────────────────────────
 

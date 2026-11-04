@@ -9,9 +9,13 @@
  */
 
 import type * as applications from "../applications.js";
+import type * as campaigns from "../campaigns.js";
+import type * as causes from "../causes.js";
+import type * as donations from "../donations.js";
 import type * as http from "../http.js";
 import type * as lib_actor from "../lib/actor.js";
 import type * as lib_ai from "../lib/ai.js";
+import type * as lib_causesAi from "../lib/causesAi.js";
 import type * as lib_money from "../lib/money.js";
 import type * as lib_policy from "../lib/policy.js";
 import type * as lib_policyAi from "../lib/policyAi.js";
@@ -35,9 +39,13 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   applications: typeof applications;
+  campaigns: typeof campaigns;
+  causes: typeof causes;
+  donations: typeof donations;
   http: typeof http;
   "lib/actor": typeof lib_actor;
   "lib/ai": typeof lib_ai;
+  "lib/causesAi": typeof lib_causesAi;
   "lib/money": typeof lib_money;
   "lib/policy": typeof lib_policy;
   "lib/policyAi": typeof lib_policyAi;

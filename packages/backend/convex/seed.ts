@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import type { Id, TableNames } from "./_generated/dataModel";
-import { writeReceipt } from "./lib/receipts";
+import { advanceReceipt, writeReceipt } from "./lib/receipts";
 
 /**
  * The demo world (docs/Plex-Project-Plan.md §9). All brands, people and the
@@ -446,6 +446,222 @@ export const run = internalMutation({
       });
     }
 
+    // ── Causes: more of the demo world ──────────────────────────────────────
+    // (Plex Causes session) The unit of work, two more causes with Impact
+    // Tasks, and a finished shift whose proof passed, so Proof Reels have
+    // something real to show. No media is seeded: proof photos only ever come
+    // from a worker's upload.
+    if (reset) {
+      for (const doc of await ctx.db.query("donationCheckouts").collect()) await ctx.db.delete(doc._id);
+    }
+    await ctx.db.patch(cause, { unitCents: 4_500, unitLabel: "pays one person for a 3-hour shift" });
+
+    const marisol = await person("marisol", "Marisol Vega", "#A4508B", {
+      area: "Eastlake, Oakland",
+      bio: "Lives two blocks from the lake. Weekend cleanup shifts.",
+      skills: ["Cleanup", "Outdoors"],
+      rating: 4.9,
+      proofPassRate: 1,
+      tasksCompleted: 11,
+    });
+    const dwayne = await person("dwayne", "Dwayne Harris", "#4F7CAC", {
+      area: "West Oakland",
+      bio: "Retired city gardener. Trees and irrigation.",
+      skills: ["Watering", "Gardening"],
+      rating: 4.8,
+      proofPassRate: 0.97,
+      tasksCompleted: 29,
+    });
+
+    const fridgeOrg = await ctx.db.insert("users", {
+      handle: "mission-fridge",
+      name: "Mission Fridge Collective",
+      kind: "org",
+      avatarColor: "#B5652B",
+      bio: "Neighbors running three free community fridges on 24th St since 2020.",
+      area: "Mission, San Francisco",
+      isDemo: true,
+    });
+    const canopyOrg = await ctx.db.insert("users", {
+      handle: "west-oakland-canopy",
+      name: "West Oakland Canopy",
+      kind: "org",
+      avatarColor: "#3E7D4F",
+      bio: "Plants and waters street trees with block captains in West Oakland.",
+      area: "West Oakland, CA",
+      isDemo: true,
+    });
+
+    const fridgeCause = await ctx.db.insert("causes", {
+      orgId: fridgeOrg,
+      slug: "mission-community-fridges",
+      name: "Stocked community fridges on 24th St",
+      tagline: "Pays neighbors to restock and clean three free fridges, with a photo and a temperature reading each shift.",
+      story: [
+        "Three free fridges on 24th St are emptied most days by 2pm. Grocers donate surplus each morning, but someone has to collect it, sort it and keep the fridges clean and cold.",
+        "Mission Fridge Collective pays neighbors $15 an hour for two-hour restock shifts, so the work doesn't depend on who has a free afternoon.",
+        "**Where the money goes:** $30 pays one person for a 2-hour restock and clean. The food itself is donated.",
+        "**How you'll know:** each shift ends with a photo of the stocked shelves and the thermometer, checked by Plex before anyone is paid.",
+      ].join("\n\n"),
+      location: { label: "24th St & Folsom, San Francisco", lat: 37.7527, lng: -122.4146 },
+      coverHue: 32,
+      goalCents: 240_000,
+      raisedCents: 91_000,
+      donorsCount: 41,
+      workersPaidCount: 12,
+      tags: ["Food", "Local jobs", "San Francisco"],
+      status: "live",
+      unitCents: 3_000,
+      unitLabel: "pays one person for a 2-hour restock shift",
+    });
+    const treesCause = await ctx.db.insert("causes", {
+      orgId: canopyOrg,
+      slug: "west-oakland-street-trees",
+      name: "Watered street trees in West Oakland",
+      tagline: "Pays local people to water young street trees through their first three dry seasons.",
+      story: [
+        "Young street trees need about 15 gallons a week through the dry months for their first three years. Without it, many don't make it to year four.",
+        "West Oakland Canopy pays residents to walk a watering route with a cart and a tank, about 30 trees in two and a half hours.",
+        "**Where the money goes:** $40 pays one person to water one route of 30 trees. Water and carts are covered by the city.",
+        "**How you'll know:** a photo of each route's first and last tree, with the watering tag filled in, checked before anyone is paid.",
+      ].join("\n\n"),
+      location: { label: "Mandela Pkwy, West Oakland", lat: 37.8125, lng: -122.2905 },
+      coverHue: 118,
+      goalCents: 360_000,
+      raisedCents: 126_000,
+      donorsCount: 52,
+      workersPaidCount: 9,
+      tags: ["Environment", "Local jobs", "Oakland"],
+      status: "live",
+      unitCents: 4_000,
+      unitLabel: "pays one person to water a route of 30 trees",
+    });
+
+    const impact = (x: {
+      posterId: Id<"users">; causeId: Id<"causes">; title: string; brief: string; description: string;
+      location: { label: string; lat: number; lng: number; radiusM: number }; start: number; hours: number;
+      cents: number; spots: number; proof: Array<[string, string]>; code: string; tags: string[];
+      status?: "open" | "paid"; funded?: "captured" | "released"; assigneeId?: Id<"users">;
+    }) =>
+      ctx.db.insert("tasks", {
+        posterId: x.posterId, postedVia: "web", title: x.title, brief: x.brief, description: x.description,
+        category: "impact", location: x.location, windowStart: x.start, windowEnd: x.start + x.hours * HOUR,
+        payout: { kind: "fixed", amountCents: x.cents }, currency: "USD",
+        proofSpec: x.proof.map(([label, description]) => ({ label, description, type: "photo" as const })),
+        verificationMode: "auto", challengeCode: x.code, status: x.status ?? "open",
+        funding: { state: x.funded ?? "captured", orderId: `SEED-ORDER-${x.code}`, captureId: `SEED-CAP-${x.code}` },
+        causeId: x.causeId, spots: x.spots, tags: x.tags, assigneeId: x.assigneeId,
+      });
+
+    await impact({
+      posterId: lakeside, causeId: cause, title: "Sunday storm-drain sweep, north shore",
+      brief: "Clear the 6 storm-drain grates on the north shore before Monday's rain: 2 people × 3 hours, $15 an hour each.",
+      description: "Meet at the Grand Ave boat launch at 10am. Clear litter from the six marked storm-drain grates between the launch and Children's Fairyland. Before and after photo at each grate.",
+      location: { label: "Grand Ave boat launch, Oakland", lat: 37.8098, lng: -122.2552, radiusM: 400 },
+      start: now + 3 * DAY, hours: 3, cents: 4_500, spots: 2, code: "harbor-51",
+      proof: [["Before", "Each marked grate before you start"], ["After", "The same grate after clearing"]],
+      tags: ["Impact", "Outdoors", "Sunday"],
+    });
+    await impact({
+      posterId: fridgeOrg, causeId: fridgeCause, title: "Tuesday restock and clean, 24th St fridges",
+      brief: "Collect donations from 3 grocers, restock and wipe down the fridges: 2 people × 2 hours, $15 an hour.",
+      description: "Pick up the crates at Mission Market and La Palma at 8am, sort out anything past date, restock the three fridges and wipe the shelves. Photo of each stocked fridge with its thermometer.",
+      location: { label: "24th St & Folsom, San Francisco", lat: 37.7527, lng: -122.4146, radiusM: 300 },
+      start: now + 1 * DAY, hours: 2, cents: 3_000, spots: 2, code: "meadow-24",
+      proof: [["Stocked shelves", "Each fridge, door open, after restocking"], ["Thermometer", "The reading inside each fridge"]],
+      tags: ["Impact", "Food", "Tuesday"],
+    });
+    await impact({
+      posterId: canopyOrg, causeId: treesCause, title: "Water 30 young trees on Mandela Pkwy",
+      brief: "Walk the Mandela Pkwy route with the water cart: 3 routes, $40 each.",
+      description: "Collect the cart at the 18th St yard. Give each of the 30 tagged trees 15 gallons and initial its watering tag. Photo of the first and last tree on your route, tag visible.",
+      location: { label: "Mandela Pkwy & 18th St, Oakland", lat: 37.8125, lng: -122.2905, radiusM: 600 },
+      start: now + 2 * DAY, hours: 3, cents: 4_000, spots: 3, code: "juniper-38",
+      proof: [["First tree", "The first tree on your route, tag filled in"], ["Last tree", "The last tree, tag filled in"]],
+      tags: ["Impact", "Outdoors", "Weekend"],
+    });
+
+    // A finished shift: proof passed, three people paid. This is Adi's Proof Reel.
+    const pastStart = ago(5, -9); // last Saturday, 9am
+    const pastTask = await impact({
+      posterId: lakeside, causeId: cause, title: "Saturday shoreline cleanup, north shore",
+      brief: "Lake shore cleanup, Saturday: 3 people × 3 hours, $15 an hour each.",
+      description: "Meet at the Pergola at 9am. Three hours clearing litter along the north shore to the boathouse. Before and after photo at the marked post, and the filled bags at the pickup point.",
+      location: { label: "Lake Merritt Pergola, Oakland", lat: 37.8093, lng: -122.2498, radiusM: 300 },
+      start: pastStart, hours: 3, cents: 4_500, spots: 3, code: "cobalt-19",
+      proof: [["Before", "The marked stretch before you start"], ["After", "The same spot, same angle, after the shift"], ["Bags", "The filled bags at the pickup point"]],
+      tags: ["Impact", "Outdoors", "Saturday"], status: "paid", funded: "released", assigneeId: marisol,
+    });
+    for (const w of [marisol, rosa, luis]) {
+      await ctx.db.insert("applications", {
+        taskId: pastTask, applicantId: w, viaAgent: false, askCents: 4_500,
+        message: "I'll be there at 9.", matchScore: 88, matchReason: "Local · strong proof record", status: "accepted",
+      });
+    }
+    const pastProof = await ctx.db.insert("proofs", {
+      taskId: pastTask,
+      workerId: marisol,
+      items: [0, 1, 2].map((i) => ({
+        specIndex: i, capturedAt: pastStart + (i === 0 ? 10 : 3 * HOUR - 20 * 60_000 + i * 60_000), lat: 37.8093, lng: -122.2498,
+      })),
+      note: "Eleven bags from the Pergola to the boathouse. Most of it was takeout packaging by the benches.",
+      status: "pass",
+      verdict: {
+        result: "pass",
+        confidence: 0.94,
+        summary: "Before and after photos match the marked post, taken 2 h 50 min apart inside the window. Eleven filled bags at the pickup point. The challenge word is on paper in the after photo.",
+        checks: [
+          { check: "Same spot, before and after", passed: true, detail: "Matching angle on the marked post" },
+          { check: "Taken in the window", passed: true, detail: "9:00am and 11:50am on Saturday" },
+          { check: "At the location", passed: true, detail: "Within 120 m of the Pergola" },
+          { check: "Challenge word", passed: true, detail: "“cobalt-19” on paper in the after photo" },
+          { check: "Original photos", passed: true, detail: "No match with earlier submissions" },
+        ],
+        model: "gemini-2.5-flash",
+      },
+      decision: "approved",
+    });
+    const paidAt = pastStart + 4 * HOUR;
+    for (const [w, name] of [[marisol, "Marisol Vega"], [rosa, "Rosa Delgado"], [luis, "Luis Ortega"]] as const) {
+      await writeReceipt(ctx, {
+        kind: "payout", amountCents: 4_500, currency: "USD", ownerId: lakeside, payerId: lakeside,
+        payerLabel: "Lakeside Commons", payeeId: w, payeeLabel: name,
+        why: "Lake shore cleanup, Saturday: 3 people × 3 hours, $15 an hour each.", taskId: pastTask, causeId: cause,
+        rule: { source: "proof", text: "Proof passed · 5 of 5 checks · paid automatically" },
+        evidence: { proofId: pastProof, verdict: "Pass · 94% · 5 of 5 checks" },
+        state: "released", occurredAt: paidAt, timelineLabel: "Released through PayPal Payouts",
+        paypal: { payoutBatchId: "SEED-BATCH-NORTHSHORE" },
+      });
+    }
+    for (const [label, cents, donor] of [["Adi Reddy", 4_500, adi], ["Leah M.", 4_500, undefined], ["Ines P.", 4_500, undefined]] as const) {
+      const receiptId = donor
+        ? await writeReceipt(ctx, {
+            kind: "donation", amountCents: cents, currency: "USD", ownerId: donor, payerId: donor, payerLabel: label,
+            payeeId: lakeside, payeeLabel: "Lakeside Commons", why: "Fund one shift at the lake",
+            rule: { source: "donor", text: "You chose this shift. Plex holds the money until its proof passes." },
+            state: "held", occurredAt: ago(9, 4), timelineLabel: "Held by Plex until the shift's proof passes",
+            causeId: cause, taskId: pastTask, category: "Giving", potId: giving,
+          })
+        : undefined;
+      if (receiptId) {
+        await advanceReceipt(ctx, receiptId, "released", "Released: the shift's proof passed", {
+          evidence: { proofId: pastProof, verdict: "Pass · 94% · 5 of 5 checks" },
+        });
+      }
+      await ctx.db.insert("donations", {
+        causeId: cause, donorId: donor, donorLabel: label, amountCents: cents, taskId: pastTask,
+        recurring: false, source: "direct", receiptId,
+      });
+    }
+
+    // A few gifts to the other causes, for their feeds.
+    for (const [c, label, cents] of [
+      [fridgeCause, "Tomas R.", 3_000], [fridgeCause, "Anonymous", 6_000], [fridgeCause, "June L.", 1_500],
+      [treesCause, "Priya N.", 4_000], [treesCause, "Ruth A.", 8_000], [treesCause, "Anonymous", 2_000],
+    ] as const) {
+      await ctx.db.insert("donations", { causeId: c, donorLabel: label, amountCents: cents, recurring: false, source: "direct" });
+    }
+
     // ── Adi's ledger: three weeks of receipts ───────────────────────────────
     const mac = "Plex for Mac";
     type R = Parameters<typeof writeReceipt>[1];
@@ -585,6 +801,15 @@ export const run = internalMutation({
       ruleText: "Ask before anything over $50",
       status: "pending",
     });
+
+    // ── Causes: link Adi's seeded shift gift to its receipt ─────────────────
+    {
+      const held = (await ctx.db.query("receipts").withIndex("by_task", (q) => q.eq("taskId", cleanupTask)).collect())
+        .find((x) => x.kind === "donation" && x.payerId === adi);
+      const gift = (await ctx.db.query("donations").withIndex("by_task", (q) => q.eq("taskId", cleanupTask)).collect())
+        .find((d) => d.donorId === adi);
+      if (held && gift) await ctx.db.patch(gift._id, { receiptId: held._id });
+    }
 
     return `Seeded the demo world: Adi, ${donors.length} donors, 6 tasks, ${coffees.length + 14} receipts.`;
   },
