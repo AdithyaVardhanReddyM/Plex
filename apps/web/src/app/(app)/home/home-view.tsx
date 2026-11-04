@@ -3,28 +3,15 @@
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
-import { ArrowRight, Bot, Coffee, HeartHandshake, MapPin, ShoppingBag, Lock, PiggyBank, ShieldCheck } from "lucide-react";
+import { ArrowRight, Bot, ListChecks, Lock, ShieldCheck } from "lucide-react";
 import { api } from "@/lib/convex";
 import type { Doc } from "@/lib/convex";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge, Card, CardHeader, PageHeader, Skeleton } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
 import { ReceiptRow } from "@/components/receipt/receipt";
-import { cn, formatCents } from "@/lib/utils";
-
-const POT_ICON: Record<string, React.ReactNode> = {
-  coffee: <Coffee />,
-  "shopping-bag": <ShoppingBag />,
-  "map-pin": <MapPin />,
-  "heart-handshake": <HeartHandshake />,
-};
-
-const POT_TINT: Record<string, { bar: string; chip: string }> = {
-  green: { bar: "bg-green-500", chip: "bg-green-50 text-green-700" },
-  blue: { bar: "bg-steel-500", chip: "bg-steel-50 text-steel-600" },
-  teal: { bar: "bg-green-400", chip: "bg-green-50 text-green-700" },
-  steel: { bar: "bg-steel-400", chip: "bg-steel-50 text-steel-600" },
-};
+import { PotGauge, PotIcon, type Pot } from "@/components/pots/pot-meta";
+import { formatCents, relativeTime } from "@/lib/utils";
 
 function greeting() {
   const h = new Date().getHours();
@@ -36,6 +23,7 @@ export function HomeView() {
   const receipts = useQuery(api.receipts.list, { limit: 40 });
   const pots = useQuery(api.pots.list);
   const approvals = useQuery(api.pots.pendingApprovals);
+  const tasks = useQuery(api.pots.myOpenTasks);
 
   const [weekAgo] = useState(() => Date.now() - 7 * 24 * 3_600_000);
   const week = receipts?.filter((r) => r.occurredAt >= weekAgo) ?? [];
@@ -112,42 +100,35 @@ export function HomeView() {
                 ))}
           </div>
         </Card>
-        <RulesCard pots={pots} />
+        <div className="flex min-w-0 flex-col gap-4">
+          <TasksCard tasks={tasks} />
+          <RulesCard pots={pots} />
+        </div>
       </div>
     </div>
   );
 }
 
-function PotStrip({ pots }: { pots: (Doc<"pots"> & { ruleLines: string[] })[] | undefined }) {
+function PotStrip({ pots }: { pots: Pot[] | undefined }) {
   return (
     <div className="grid grid-cols-2 gap-px border-t border-line bg-line @[640px]:grid-cols-4">
       {(pots ?? Array.from({ length: 4 }).map(() => null)).map((p, i) => (
         <Link
           key={p?._id ?? i}
           href="/pots"
-          className="group min-w-0 bg-surface px-5 py-4 transition-colors hover:bg-canvas"
+          className="group min-w-0 bg-surface px-4 py-4 transition-colors hover:bg-canvas @[420px]:px-5"
         >
           {p ? (
             <>
               <div className="flex items-center gap-2">
-                <span className={cn("flex size-6 items-center justify-center rounded-[7px] [&_svg]:size-3.5", POT_TINT[p.color]?.chip)}>
-                  {POT_ICON[p.icon] ?? <PiggyBank />}
-                </span>
-                <span className="text-[13px] font-medium text-ink-2">{p.name}</span>
+                <PotIcon pot={p} />
+                <span className="truncate text-[13px] font-medium text-ink-2">{p.name}</span>
               </div>
-              <div className="mt-3 flex items-baseline justify-between gap-2">
-                <Amount cents={p.spentMonthCents} size="md" />
-                <span className="text-[12px] text-faint">of {formatCents(p.monthlyBudgetCents)}</span>
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-sunken">
-                <div
-                  className={cn("h-full rounded-full transition-[width] duration-700", POT_TINT[p.color]?.bar)}
-                  style={{ width: `${Math.min(100, (p.spentMonthCents / p.monthlyBudgetCents) * 100)}%` }}
-                />
-              </div>
+              <Amount cents={p.spentMonthCents} size="md" className="mt-3" />
+              <PotGauge pot={p} bare className="mt-2" />
             </>
           ) : (
-            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-[86px] w-full" />
           )}
         </Link>
       ))}
@@ -212,7 +193,7 @@ function ApprovalsCard({
   );
 }
 
-function RulesCard({ pots }: { pots: (Doc<"pots"> & { ruleLines: string[] })[] | undefined }) {
+function RulesCard({ pots }: { pots: Pot[] | undefined }) {
   return (
     <Card>
       <CardHeader title="Your rules" description="Written in your words, enforced in code." />
@@ -228,6 +209,81 @@ function RulesCard({ pots }: { pots: (Doc<"pots"> & { ruleLines: string[] })[] |
         <Link href="/pots" className="inline-flex items-center gap-1 text-[13px] font-medium text-green-700 hover:text-green-800">
           Edit limits <ArrowRight className="size-3.5" />
         </Link>
+      </div>
+    </Card>
+  );
+}
+
+// ── Tasks you posted ─────────────────────────────────────────────────────────
+
+type OpenTask = NonNullable<ReturnType<typeof useQuery<typeof api.pots.myOpenTasks>>>[number];
+
+const TASK_STATUS: Record<string, { label: string; tone: "outline" | "steel" | "green" }> = {
+  open: { label: "Open", tone: "outline" },
+  assigned: { label: "Assigned", tone: "steel" },
+  submitted: { label: "Proof in", tone: "green" },
+  verifying: { label: "Checking proof", tone: "steel" },
+  approved: { label: "Approved", tone: "green" },
+};
+
+function payoutCents(p: OpenTask["payout"]) {
+  if (p.kind === "fixed") return p.amountCents;
+  if (p.kind === "per_unit") return p.amountCents * p.maxUnits;
+  return p.capCents;
+}
+
+function TasksCard({ tasks }: { tasks: OpenTask[] | undefined }) {
+  const [now] = useState(() => Date.now());
+  return (
+    <Card>
+      <CardHeader
+        title="Tasks you posted"
+        description="Paid only when the proof passes."
+        action={
+          <Link href="/tasks" className="text-[13px] font-medium text-green-700 hover:text-green-800">
+            All tasks
+          </Link>
+        }
+      />
+      <div className="px-2 pt-2 pb-2">
+        {tasks === undefined ? (
+          <Skeleton className="m-3 h-20" />
+        ) : !tasks.length ? (
+          <div className="flex flex-col items-center px-4 py-8 text-center">
+            <ListChecks className="size-5 text-faint" strokeWidth={1.9} />
+            <div className="mt-2 text-[14px] font-medium text-ink">Nothing in flight</div>
+            <div className="mt-0.5 text-[13px] text-muted">Post a task and pay only for verified work.</div>
+          </div>
+        ) : (
+          <ul>
+            {tasks.slice(0, 4).map((t) => {
+              const status = TASK_STATUS[t.status] ?? TASK_STATUS.open!;
+              return (
+                <li key={t._id}>
+                  <Link
+                    href="/tasks"
+                    className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-sunken/70"
+                  >
+                    <div className="min-w-0">
+                      <div className="line-clamp-2 text-[14px] font-medium leading-snug text-ink">{t.title}</div>
+                      <div className="mt-1 flex min-w-0 items-center text-[12.5px] text-muted">
+                        <span className="truncate">
+                          {t.fundingState === "authorized" || t.fundingState === "captured" ? "Funds held" : "Unfunded"}
+                          {" · "}
+                          {t.windowEnd > now ? `due ${relativeTime(t.windowEnd)}` : `ended ${relativeTime(t.windowEnd)}`}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="tabular text-[13px] font-semibold text-ink">{formatCents(payoutCents(t.payout))}</span>
+                      <Badge tone={status.tone}>{status.label}</Badge>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </Card>
   );

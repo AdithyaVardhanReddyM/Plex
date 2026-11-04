@@ -46,7 +46,16 @@ export function PotIcon({ pot, size = 24, className }: { pot: Pick<Doc<"pots">, 
 }
 
 /** Spend against the monthly budget. The label sits under the bar so it never clips. */
-export function PotGauge({ pot, className }: { pot: Doc<"pots">; className?: string }) {
+export function PotGauge({
+  pot,
+  className,
+  bare,
+}: {
+  pot: Doc<"pots">;
+  className?: string;
+  /** Leave the spent figure out of the label, when it is shown big above the bar. */
+  bare?: boolean;
+}) {
   const pct = pot.monthlyBudgetCents > 0 ? Math.min(100, (pot.spentMonthCents / pot.monthlyBudgetCents) * 100) : 0;
   return (
     <div className={className}>
@@ -65,8 +74,8 @@ export function PotGauge({ pot, className }: { pot: Doc<"pots">; className?: str
       </div>
       <div className="tabular mt-2 flex items-baseline justify-between gap-2 text-[12px] text-muted">
         <span className="truncate">
-          <span className="font-medium text-ink-2">{formatCents(pot.spentMonthCents)}</span> of{" "}
-          {formatCents(pot.monthlyBudgetCents)}
+          {bare ? null : <span className="font-medium text-ink-2">{formatCents(pot.spentMonthCents)} </span>}
+          of {formatCents(pot.monthlyBudgetCents)}
         </span>
         <span className="flex-none text-faint">{Math.round(pct)}%</span>
       </div>
