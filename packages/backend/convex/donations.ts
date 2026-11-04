@@ -342,13 +342,14 @@ export const releaseForTask = internalMutation({
 
 /** The donations from one checkout, for the thanks page. */
 export const forCheckout = query({
-  args: { checkoutId: v.id("donationCheckouts") },
-  handler: async (ctx, { checkoutId }) => {
-    const checkout = await ctx.db.get(checkoutId);
+  args: { checkoutId: v.string() },
+  handler: async (ctx, args) => {
+    const checkoutId = ctx.db.normalizeId("donationCheckouts", args.checkoutId);
+    const checkout = checkoutId ? await ctx.db.get(checkoutId) : null;
     if (!checkout) return null;
     const donations = await ctx.db
       .query("donations")
-      .withIndex("by_checkout", (q) => q.eq("checkoutId", checkoutId))
+      .withIndex("by_checkout", (q) => q.eq("checkoutId", checkout._id))
       .collect();
     const rows = await Promise.all(
       donations.map(async (d) => {
@@ -440,9 +441,10 @@ async function reelData(
 
 /** The Proof Reel for one donation: built only from receipts and real proof media. */
 export const reel = query({
-  args: { donationId: v.id("donations") },
-  handler: async (ctx, { donationId }) => {
-    const donation = await ctx.db.get(donationId);
+  args: { donationId: v.string() },
+  handler: async (ctx, args) => {
+    const donationId = ctx.db.normalizeId("donations", args.donationId);
+    const donation = donationId ? await ctx.db.get(donationId) : null;
     if (!donation) return null;
     const data = await reelData(ctx, donation);
     if (!data) return null;
@@ -456,7 +458,7 @@ export const reel = query({
         _id: donation._id,
         amountCents: donation.amountCents,
         donorLabel: donorWallLabel(donation.donorLabel),
-        at: donation._creationTime,
+        at: receipt?.occurredAt ?? donation._creationTime,
         message: donation.message ?? null,
       },
       cause: { name: cause.name, slug: cause.slug, coverHue: cause.coverHue, location: cause.location },

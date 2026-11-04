@@ -60,6 +60,7 @@ export const forCause = query({
       spentCents: campaign.spentCents,
       totalViews: board.reduce((s, b) => s + b.views, 0),
       totalEarnedCents: board.reduce((s, b) => s + b.earnedCents, 0),
+      totalPaidCents: board.reduce((s, b) => s + b.paidCents, 0),
       board,
     };
   },

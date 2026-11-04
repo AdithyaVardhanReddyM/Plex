@@ -458,6 +458,20 @@ export const run = internalMutation({
     }
     await ctx.db.patch(cause, { unitCents: 4_500, unitLabel: "pays one person for a 3-hour shift" });
 
+    // Shifts happen at real local hours (Pacific time, UTC-8 in November) on
+    // the weekday their title names.
+    const PT_OFFSET = 8 * HOUR;
+    const ptMidnight = (ms: number) => {
+      const d = new Date(ms - PT_OFFSET);
+      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) + PT_OFFSET;
+    };
+    const ptDow = new Date(now - PT_OFFSET).getUTCDay();
+    const nextDay = (dow: number, hour: number) =>
+      ptMidnight(now) + (((dow - ptDow + 7) % 7) || 7) * DAY + hour * HOUR;
+    const lastDay = (dow: number, hour: number) =>
+      ptMidnight(now) - (((ptDow - dow + 7) % 7) || 7) * DAY + hour * HOUR;
+    await ctx.db.patch(cleanupTask, { windowStart: nextDay(6, 9), windowEnd: nextDay(6, 12) });
+
     const marisol = await person("marisol", "Marisol Vega", "#A4508B", {
       area: "Eastlake, Oakland",
       bio: "Lives two blocks from the lake. Weekend cleanup shifts.",
@@ -560,7 +574,7 @@ export const run = internalMutation({
       brief: "Clear the 6 storm-drain grates on the north shore before Monday's rain: 2 people × 3 hours, $15 an hour each.",
       description: "Meet at the Grand Ave boat launch at 10am. Clear litter from the six marked storm-drain grates between the launch and Children's Fairyland. Before and after photo at each grate.",
       location: { label: "Grand Ave boat launch, Oakland", lat: 37.8098, lng: -122.2552, radiusM: 400 },
-      start: now + 3 * DAY, hours: 3, cents: 4_500, spots: 2, code: "harbor-51",
+      start: nextDay(0, 10), hours: 3, cents: 4_500, spots: 2, code: "harbor-51",
       proof: [["Before", "Each marked grate before you start"], ["After", "The same grate after clearing"]],
       tags: ["Impact", "Outdoors", "Sunday"],
     });
@@ -569,22 +583,22 @@ export const run = internalMutation({
       brief: "Collect donations from 3 grocers, restock and wipe down the fridges: 2 people × 2 hours, $15 an hour.",
       description: "Pick up the crates at Mission Market and La Palma at 8am, sort out anything past date, restock the three fridges and wipe the shelves. Photo of each stocked fridge with its thermometer.",
       location: { label: "24th St & Folsom, San Francisco", lat: 37.7527, lng: -122.4146, radiusM: 300 },
-      start: now + 1 * DAY, hours: 2, cents: 3_000, spots: 2, code: "meadow-24",
+      start: nextDay(2, 8), hours: 2, cents: 3_000, spots: 2, code: "meadow-24",
       proof: [["Stocked shelves", "Each fridge, door open, after restocking"], ["Thermometer", "The reading inside each fridge"]],
       tags: ["Impact", "Food", "Tuesday"],
     });
     await impact({
-      posterId: canopyOrg, causeId: treesCause, title: "Water 30 young trees on Mandela Pkwy",
+      posterId: canopyOrg, causeId: treesCause, title: "Saturday watering route, Mandela Pkwy",
       brief: "Walk the Mandela Pkwy route with the water cart: 3 routes, $40 each.",
       description: "Collect the cart at the 18th St yard. Give each of the 30 tagged trees 15 gallons and initial its watering tag. Photo of the first and last tree on your route, tag visible.",
       location: { label: "Mandela Pkwy & 18th St, Oakland", lat: 37.8125, lng: -122.2905, radiusM: 600 },
-      start: now + 2 * DAY, hours: 3, cents: 4_000, spots: 3, code: "juniper-38",
+      start: nextDay(6, 8), hours: 3, cents: 4_000, spots: 3, code: "juniper-38",
       proof: [["First tree", "The first tree on your route, tag filled in"], ["Last tree", "The last tree, tag filled in"]],
       tags: ["Impact", "Outdoors", "Weekend"],
     });
 
     // A finished shift: proof passed, three people paid. This is Adi's Proof Reel.
-    const pastStart = ago(5, -9); // last Saturday, 9am
+    const pastStart = lastDay(6, 9); // last Saturday, 9am
     const pastTask = await impact({
       posterId: lakeside, causeId: cause, title: "Saturday shoreline cleanup, north shore",
       brief: "Lake shore cleanup, Saturday: 3 people × 3 hours, $15 an hour each.",
