@@ -348,12 +348,12 @@ export const run = internalMutation({
       posterId: adi,
       postedVia: "mac",
       agentLabel: "Plex for Mac",
-      title: "Pick up a repaired bike wheel from Valencia Cyclery",
+      title: "Pick up a repaired bike wheel from Spoke & Ember Cycles",
       brief: "Someone grab my wheel from the bike shop before 6.",
       description:
-        "Pick up a repaired rear wheel (ticket #4471, already paid) from Valencia Cyclery and drop it at the front desk of 2400 Folsom St. Photo of the ticket at pickup and the wheel at the desk.",
+        "Pick up a repaired rear wheel (ticket #4471, already paid) from Spoke & Ember Cycles and drop it at the front desk of 2400 Folsom St. Photo of the ticket at pickup and the wheel at the desk.",
       category: "local",
-      location: { label: "Valencia Cyclery → 2400 Folsom St", lat: 37.7556, lng: -122.4211, radiusM: 800 },
+      location: { label: "Spoke & Ember Cycles → 2400 Folsom St", lat: 37.7556, lng: -122.4211, radiusM: 800 },
       windowStart: now + 1 * HOUR,
       windowEnd: now + 6 * HOUR,
       payout: { kind: "fixed", amountCents: 2_200 },
@@ -401,7 +401,7 @@ export const run = internalMutation({
       taskId: menusTask,
       workerId: rosa,
       items: [0, 1, 2].map((i) => ({ specIndex: i, capturedAt: ago(0, 3 - i), lat: 37.7524, lng: -122.4147 + i * 0.001 })),
-      note: "La Palma, El Farolito and Taqueria Vallarta. All menus current as of today.",
+      note: "Taquería Luna, El Comal Rojo and Casa Nopal. All menus current as of today.",
       status: "pass",
       verdict: {
         result: "pass",
@@ -607,7 +607,7 @@ export const run = internalMutation({
     await impact({
       posterId: fridgeOrg, causeId: fridgeCause, title: "Tuesday restock and clean, 24th St fridges",
       brief: "Collect donations from 3 grocers, restock and wipe down the fridges: 2 people × 2 hours, $15 an hour.",
-      description: "Pick up the crates at Mission Market and La Palma at 8am, sort out anything past date, restock the three fridges and wipe the shelves. Photo of each stocked fridge with its thermometer.",
+      description: "Pick up the crates at Mission Market and Casa Nopal at 8am, sort out anything past date, restock the three fridges and wipe the shelves. Photo of each stocked fridge with its thermometer.",
       location: { label: "24th St & Folsom, San Francisco", lat: 37.7527, lng: -122.4146, radiusM: 300 },
       start: nextDay(2, 8), hours: 2, cents: 3_000, spots: 2, code: "meadow-24",
       proof: [["Stocked shelves", "Each fridge, door open, after restocking"], ["Thermometer", "The reading inside each fridge"]],

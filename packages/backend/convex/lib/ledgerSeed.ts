@@ -110,10 +110,10 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
       tags: ["Remote", "Accessibility"],
     },
     {
-      title: "Return a package at the UPS store on Mission",
-      brief: "Drop my return at the UPS store before it closes and send the receipt.",
+      title: "Return a package at the shipping store on Mission",
+      brief: "Drop my return at the shipping store before it closes and send the receipt.",
       worker: rosa, cents: 1_500, daysAgo: 3, category: "local", via: "mac",
-      area: { label: "UPS Store, Mission St", lat: 37.7609, lng: -122.4194 },
+      area: { label: "Shipping store, Mission St", lat: 37.7609, lng: -122.4194 },
       spec: ["Drop-off receipt"],
       outcome: "pass", confidence: 0.98,
       summary: "Drop-off receipt photographed at the counter, tracking number readable.",
