@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+/*
+ * Plex design tokens. Light only.
+ * Ground: cool off-white. Ink: green-black. Brand: database green (Supabase /
+ * Neon family) for money that moved, metallic steel blue for money that's held
+ * and for the receipt's foil edge. Use the tokens, never raw hex, in components.
+ */
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+
+  /* Ground and surfaces */
+  --color-canvas: #f6f8f7;
+  --color-surface: #ffffff;
+  --color-sunken: #eff2f1;
+  --color-line: #e2e7e5;
+  --color-line-strong: #cfd7d4;
+
+  /* Ink */
+  --color-ink: #0c1512;
+  --color-ink-2: #34403c;
+  --color-muted: #5f6b67;
+  --color-faint: #8d9893;
+
+  /* Brand green: 500 is the signal, 600/700 carry text on white */
+  --color-green-50: #ecfbf3;
+  --color-green-100: #d2f6e3;
+  --color-green-200: #a5ecc8;
+  --color-green-300: #6edcaa;
+  --color-green-400: #3ecf8e;
+  --color-green-500: #1fb978;
+  --color-green-600: #12975f;
+  --color-green-700: #0f774c;
+  --color-green-800: #0d5a3b;
+  --color-green-900: #0a3f2a;
+
+  /* Metallic steel blue */
+  --color-steel-50: #f1f5fa;
+  --color-steel-100: #e1e9f3;
+  --color-steel-200: #c4d3e6;
+  --color-steel-300: #9cb4d2;
+  --color-steel-400: #7393bd;
+  --color-steel-500: #5376a5;
+  --color-steel-600: #3f5f8c;
+  --color-steel-700: #314b71;
+  --color-steel-800: #253957;
+  --color-steel-900: #18263b;
+
+  /* Money states */
+  --color-held: var(--color-steel-600);
+  --color-released: var(--color-green-600);
+  --color-refunded: #b26b12;
+  --color-refunded-bg: #fdf3e2;
+  --color-disputed: #c2412d;
+  --color-disputed-bg: #fdecea;
+
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+
+  --shadow-card: 0 1px 2px rgb(12 21 18 / 0.04), 0 1px 1px rgb(12 21 18 / 0.03);
+  --shadow-raised: 0 1px 2px rgb(12 21 18 / 0.05), 0 8px 24px -8px rgb(12 21 18 / 0.12);
+  --shadow-float: 0 2px 4px rgb(12 21 18 / 0.04), 0 24px 48px -16px rgb(24 38 59 / 0.22);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-rise: rise 420ms var(--ease-out-soft) both;
+  --animate-shimmer: shimmer 2.2s linear infinite;
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shimmer {
+    from { background-position: -200% 0; }
+    to { background-position: 200% 0; }
+  }
+}
+
+:root {
+  color-scheme: light;
+  /* Brushed-metal gradient for the receipt's edge and the logo */
+  --metal: linear-gradient(135deg, #eef3f9 0%, #b8c8dc 28%, #6f8db3 52%, #c9d7e8 74%, #f3f6fa 100%);
+  --metal-soft: linear-gradient(135deg, #f6f9fc 0%, #dbe5f0 45%, #c1d0e2 60%, #eef3f8 100%);
+  --brand: linear-gradient(135deg, #3ecf8e 0%, #1fb978 45%, #3f5f8c 100%);
+}
+
+html {
+  background: var(--color-canvas);
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-green-200);
+  color: var(--color-ink);
+}
+
+/* Amounts and IDs line up */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* A faint grid on the canvas, used behind hero areas */
+.grid-ground {
+  background-image:
+    linear-gradient(to right, rgb(12 21 18 / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(12 21 18 / 0.045) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* The receipt's perforated foot */
+.perforation {
+  background-image: radial-gradient(circle at 8px 0, var(--color-canvas) 5px, transparent 5.5px);
+  background-size: 16px 10px;
+  background-repeat: repeat-x;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-sunken) 0%, #f7f9f8 50%, var(--color-sunken) 100%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

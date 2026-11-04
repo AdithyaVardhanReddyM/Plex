@@ -1,0 +1,17 @@
+{
+  "name": "plex",
+  "private": true,
+  "description": "Plex — agents, with receipts. A money layer for the agent era, built on PayPal.",
+  "license": "MIT",
+  "packageManager": "pnpm@10.19.0",
+  "engines": { "node": ">=20.19" },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @plex/backend --filter @plex/web dev",
+    "dev:web": "pnpm --filter @plex/web dev",
+    "dev:backend": "pnpm --filter @plex/backend dev",
+    "build": "pnpm --filter @plex/web build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "seed": "pnpm --filter @plex/backend seed"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "@plex/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "convex dev",
+    "setup": "convex dev --once",
+    "seed": "convex run seed:run",
+    "typecheck": "tsc --noEmit -p convex"
+  },
+  "exports": {
+    "./api": "./convex/_generated/api.js",
+    "./dataModel": "./convex/_generated/dataModel.d.ts",
+    "./*": "./convex/*.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^4.0.111",
+    "@plex/paypal": "workspace:*",
+    "ai": "^7.0.162",
+    "convex": "^1.49.0",
+    "zod": "^4.6.7"
+  }
+}
