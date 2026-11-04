@@ -510,7 +510,11 @@ export const applyPayoutStatus = internalMutation({
       if (r.state !== "paid") await advanceReceipt(ctx, receiptId, "paid", `Landed in ${worker}'s PayPal`, patch);
     } else if (s === "UNCLAIMED") {
       const label = `Waiting for ${worker} to claim it (no PayPal account on this email yet)`;
-      if (!already(label)) await ctx.db.patch(receiptId, { timeline: [...r.timeline, { at: Date.now(), label, state: r.state }] });
+      if (!already(label))
+        await ctx.db.patch(receiptId, {
+          timeline: [...r.timeline, { at: Date.now(), label, state: r.state }],
+          paypal: itemId ? { ...r.paypal, payoutItemId: itemId } : r.paypal,
+        });
     } else if (["FAILED", "RETURNED", "BLOCKED", "DENIED", "REFUNDED", "REVERSED"].includes(s)) {
       if (r.state !== "declined") await advanceReceipt(ctx, receiptId, "declined", `PayPal: payout ${s.toLowerCase()}`, patch);
     }

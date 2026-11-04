@@ -120,7 +120,16 @@ export const checkContext = internalQuery({
     const mediaTypes: Record<string, string> = {};
     for (const it of proof.items)
       if (it.storageId) mediaTypes[it.storageId] = (await ctx.db.system.get(it.storageId))?.contentType ?? "image/jpeg";
-    const reused = proof.items.filter((it) => it.phash && seen.has(it.phash)).map((it) => it.specIndex);
+    // Reused from another submission, or the same photo twice in this one.
+    const within = new Set<string>();
+    const reused = proof.items
+      .filter((it) => {
+        if (!it.phash) return false;
+        const dup = seen.has(it.phash) || within.has(it.phash);
+        within.add(it.phash);
+        return dup;
+      })
+      .map((it) => it.specIndex);
     return { proof, task, reused, mediaTypes };
   },
 });
@@ -285,7 +294,7 @@ export const check = internalAction({
         "Original photos",
         reused.length ? "fail" : "pass",
         reused.length
-          ? `${reused.length} photo${reused.length > 1 ? "s" : ""} already used in an earlier submission`
+          ? `${reused.length} photo${reused.length > 1 ? "s were" : " was"} already used, here or in an earlier submission`
           : "None of these photos was submitted before",
       );
     }
@@ -339,6 +348,7 @@ function heuristicVision(task: Doc<"tasks">, proof: Doc<"proofs">): z.infer<type
   };
 }
 
+const quote = (s?: string) => clip((s ?? "").trim().replace(/[.!]+$/, ""), 90);
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 // ── Decisions: reject, contest, mediate ─────────────────────────────────────
 
@@ -435,7 +445,7 @@ export const mediate = internalAction({
           summary: [
             `The spec asked for ${task.proofSpec.map((s) => s.label.toLowerCase()).join(", ")}.`,
             `The proof engine passed ${checks.filter((k) => k.passed).length} of ${checks.length} checks${hard.length ? `; it failed ${hard.map((k) => k.check.toLowerCase()).join(" and ")}` : ""}.`,
-            `The poster said “${clip(proof.rejectReason ?? "", 90)}”; the worker replied “${clip(proof.contestNote ?? "", 90)}”.`,
+            `The poster said “${quote(proof.rejectReason)}” and the worker replied “${quote(proof.contestNote)}”`,
           ].join(" "),
           recommendation: hard.length ? ("refund" as const) : soft.length ? ("partial" as const) : ("release" as const),
         };
