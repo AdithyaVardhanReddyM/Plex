@@ -248,13 +248,15 @@ export const check = internalAction({
     else {
       const slack = 15 * MIN;
       const outside = times.filter((t) => t < task.windowStart - slack || t > task.windowEnd + slack);
-      const first = Math.min(...times), last = Math.max(...times);
+      const now = Date.now();
+      const ago = (t: number) => Math.max(0, Math.round((now - t) / MIN));
+      const oldest = ago(Math.min(...times)), newest = ago(Math.max(...times));
       await put(
         "Taken in the window",
         outside.length ? "fail" : "pass",
         outside.length
           ? `${outside.length} of ${times.length} taken outside the window`
-          : `Captured ${clock(first)}${last - first > MIN ? `–${clock(last)}` : ""}, inside the window`,
+          : `Taken ${oldest === newest ? `${oldest}` : `${newest}–${oldest}`} min before upload, inside the window`,
       );
     }
 
@@ -338,9 +340,6 @@ function heuristicVision(task: Doc<"tasks">, proof: Doc<"proofs">): z.infer<type
 }
 
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
-const clock = (ms: number) =>
-  new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" }).toLowerCase().replace(" ", "");
-
 // ── Decisions: reject, contest, mediate ─────────────────────────────────────
 
 async function fundingReceiptId(ctx: MutationCtx, task: Doc<"tasks">): Promise<Id<"receipts"> | undefined> {

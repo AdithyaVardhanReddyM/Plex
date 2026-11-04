@@ -442,9 +442,10 @@ export const createDraft = mutation({
     verificationMode,
     tags: v.array(v.string()),
     writerModel: v.optional(v.string()),
+    as: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const { user } = await requireActor(ctx);
+  handler: async (ctx, { as, ...args }) => {
+    const { user } = await requireActor(ctx, as);
     if (!args.title.trim()) throw new Error("Give the task a title.");
     if (!Number.isInteger(args.payoutCents) || args.payoutCents < 100)
       throw new Error("Payout must be at least $1.");
@@ -481,9 +482,9 @@ export const createDraft = mutation({
 
 /** Cancels a task nobody has been paid for. Funded tasks refund via taskMoney. */
 export const cancelDraft = mutation({
-  args: { id: v.id("tasks") },
-  handler: async (ctx, { id }) => {
-    const { user } = await requireActor(ctx);
+  args: { id: v.id("tasks"), as: v.optional(v.string()) },
+  handler: async (ctx, { id, as }) => {
+    const { user } = await requireActor(ctx, as);
     const task = await ctx.db.get(id);
     if (!task || task.posterId !== user._id) throw new Error("Task not found");
     if (task.funding.state !== "unfunded") throw new Error("This task is funded; refund it instead.");
