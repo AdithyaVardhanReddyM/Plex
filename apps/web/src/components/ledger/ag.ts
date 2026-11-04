@@ -117,7 +117,7 @@ export const plexGridTheme = themeQuartz.withPart(iconSetQuartzLight).withParams
 });
 
 /** The same grid, tighter: for small widgets inside cards. */
-export const plexGridThemeCompact = plexGridTheme.withParams({ rowHeight: 44, headerHeight: 36 });
+export const plexGridThemeCompact = plexGridTheme.withParams({ rowHeight: 50, headerHeight: 36 });
 
 // ── Charts ──────────────────────────────────────────────────────────────────
 

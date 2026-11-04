@@ -14,6 +14,7 @@ import { cn, formatCents, relativeTime } from "@/lib/utils";
 import { plexChartTheme, plexGridTheme, registerAg, stateColor } from "./ag";
 import { MiniChart } from "./mini-chart";
 import { useTokens } from "./widget";
+import { useWidth } from "./use-width";
 
 registerAg();
 
@@ -223,11 +224,14 @@ function RatingCell({ data }: WP) {
   );
 }
 
+/** Running total, so a few payouts read as a rising line rather than lone bars. */
+const cumulative = (xs: number[]) => xs.reduce<number[]>((acc, x) => [...acc, (acc[acc.length - 1] ?? 0) + x], []);
+
 function TrendCell({ data }: WP) {
   if (!data) return null;
   return (
     <div className="flex h-full items-center">
-      <MiniChart values={data.daily} height={28} width={110} />
+      <MiniChart values={cumulative(data.daily)} type="area" height={28} width={100} />
     </div>
   );
 }
@@ -243,21 +247,22 @@ function PaidCell({ data }: WP) {
 }
 
 export function TopWorkers({ workers }: { workers: Worker[] }) {
+  const [ref, width] = useWidth<HTMLDivElement>();
   const columnDefs = useMemo<ColDef<Worker>[]>(
     () => [
-      { colId: "worker", headerName: "Worker", field: "name", cellRenderer: WorkerCell, flex: 1.4, minWidth: 190 },
-      { colId: "rating", headerName: "Rating", field: "rating", cellRenderer: RatingCell, width: 92 },
-      { colId: "pass", headerName: "Proof pass rate", field: "passRate", cellRenderer: PassRateCell, width: 150, sort: undefined },
-      { colId: "tasks", headerName: "Tasks", field: "tasksForYou", width: 84, type: "rightAligned", cellClass: "tabular" },
-      { colId: "trend", headerName: "Paid, 21 days", cellRenderer: TrendCell, width: 140, sortable: false },
-      { colId: "paid", headerName: "Paid", field: "paidCents", cellRenderer: PaidCell, width: 112, type: "rightAligned", sort: "desc" },
+      { colId: "worker", headerName: "Worker", field: "name", cellRenderer: WorkerCell, flex: 1.4, minWidth: 180 },
+      { colId: "rating", headerName: "Rating", field: "rating", cellRenderer: RatingCell, width: 88, hide: width < 760 },
+      { colId: "pass", headerName: "Proof pass rate", field: "passRate", cellRenderer: PassRateCell, width: 140, hide: width < 440 },
+      { colId: "tasks", headerName: "Tasks", field: "tasksForYou", width: 76, type: "rightAligned", cellClass: "tabular", hide: width < 640 },
+      { colId: "trend", headerName: "Paid to date", cellRenderer: TrendCell, width: 124, sortable: false, hide: width < 560 },
+      { colId: "paid", headerName: "Paid", field: "paidCents", cellRenderer: PaidCell, width: 104, type: "rightAligned", sort: "desc" },
     ],
-    [],
+    [width],
   );
   return (
     <Card className="overflow-hidden">
       <CardHeader title="Top workers" description="Who you've paid, and how their proof holds up" />
-      <div className="mt-3 border-t border-line" style={{ height: 40 + Math.max(workers.length, 1) * 56 + 2 }}>
+      <div ref={ref} className="mt-3 border-t border-line" style={{ height: 40 + Math.max(workers.length, 1) * 56 + 2 }}>
         <AgGridReact<Worker>
           theme={plexGridTheme}
           rowData={workers}
@@ -301,7 +306,7 @@ export function ProofVerdicts({ counts, passRate }: { counts: Poster["proofCount
           ],
         },
       ],
-      legend: { position: "right" as const, item: { marker: { shape: "circle" as const, size: 8 } } },
+      legend: { position: "bottom" as const, item: { marker: { shape: "circle" as const, size: 8 } } },
     };
   }, [counts, passRate, t]);
   const total = counts.pass + counts.fail + counts.unsure;

@@ -250,6 +250,20 @@ const COLUMNS: Record<ColumnKey, ColDef<Row>> = {
   },
 };
 
+/** Columns go in this order when the card is too narrow for all of them; party and amount always stay. */
+const DROP_ORDER: ColumnKey[] = ["rule", "kind", "category", "agent", "when", "state", "why"];
+
+function fitColumns(keys: ColumnKey[], width: number): ColumnKey[] {
+  let shown = [...keys];
+  const colWidth = (c: ColDef<Row>) => (c.flex ? (c.minWidth ?? 160) : (c.width ?? c.minWidth ?? 120));
+  const need = (ks: ColumnKey[]) => ks.reduce((s, k) => s + colWidth(COLUMNS[k]), 0);
+  for (const k of DROP_ORDER) {
+    if (need(shown) <= width) break;
+    if (shown.length > 2) shown = shown.filter((x) => x !== k);
+  }
+  return shown;
+}
+
 export const DEFAULT_COLUMNS: ColumnKey[] = ["when", "party", "why", "rule", "agent", "state", "amount"];
 
 // ── Grid ─────────────────────────────────────────────────────────────────────
@@ -281,7 +295,8 @@ export const ReceiptsGrid = forwardRef<ReceiptsGridHandle, ReceiptsGridProps>(fu
 ) {
   const apiRef = useRef<GridApi<Row> | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const [narrow, setNarrow] = useState(false);
+  const [width, setWidth] = useState(1000);
+  const narrow = width < 560;
   const [total, setTotal] = useState<TotalRow | null>(null);
   const matchRef = useRef(match);
 
@@ -289,20 +304,20 @@ export const ReceiptsGrid = forwardRef<ReceiptsGridHandle, ReceiptsGridProps>(fu
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([e]) => setNarrow((e?.contentRect.width ?? 1000) < 620));
+    const ro = new ResizeObserver(([e]) => setWidth(Math.round(e?.contentRect.width ?? 1000)));
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
   const columnDefs = useMemo<ColDef<Row>[]>(() => {
-    const keys = narrow ? (["party", "amount"] as ColumnKey[]) : columns;
+    const keys = narrow ? (["party", "amount"] as ColumnKey[]) : fitColumns(columns, width);
     return keys.map((k) => {
       const def = { ...COLUMNS[k] };
       if (sort) def.sort = sort.column === k ? (sort.desc ? "desc" : "asc") : null;
       if (narrow && k === "party") def.minWidth = 160;
       return def;
     });
-  }, [columns, narrow, sort]);
+  }, [columns, narrow, width, sort]);
 
   const context = useMemo<GridContext>(() => ({ narrow, requested }), [narrow, requested]);
 

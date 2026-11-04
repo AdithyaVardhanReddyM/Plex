@@ -104,9 +104,9 @@ export function ReceiptPanel({
         title={confirm === "refund" ? `Refund ${amount}?` : `Release ${amount}?`}
         body={
           confirm === "refund" ? (
-            <>The hold goes back to you and the task closes. The worker isn&apos;t paid.</>
+            <>Tasks refunds the hold to you through PayPal and closes the task. The worker isn&apos;t paid.</>
           ) : (
-            <>The worker is paid {amount} through PayPal Payouts, and this receipt moves to Released.</>
+            <>Tasks pays the worker {amount} through PayPal Payouts. This receipt moves to Released when the payout lands.</>
           )
         }
         detail={

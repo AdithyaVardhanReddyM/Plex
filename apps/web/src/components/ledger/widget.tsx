@@ -104,7 +104,7 @@ function SpecChart({ spec, rows, now }: { spec: WidgetSpec; rows: Receipt[]; now
       const o: AgPolarChartOptions = {
         theme,
         data,
-        height: 240,
+        height: 220,
         series: [
           {
             type: "donut",
@@ -120,7 +120,7 @@ function SpecChart({ spec, rows, now }: { spec: WidgetSpec; rows: Receipt[]; now
             tooltip: { renderer: ({ datum }) => ({ heading: datum.label, data: [{ label: "Amount", value: fmt(datum.value) }] }) },
           },
         ],
-        legend: { position: "right", item: { marker: { shape: "circle", size: 8 }, label: { fontSize: 12.5 } } },
+        legend: { enabled: false },
       };
       return o;
     }
@@ -181,9 +181,37 @@ function SpecChart({ spec, rows, now }: { spec: WidgetSpec; rows: Receipt[]; now
   }, [rows, c, spec.filter.sinceDays, spec.title, now, t]);
 
   if (!rows.length) return <div className="px-5 py-10 text-center text-[13px] text-muted">Nothing to chart yet.</div>;
+  if (c.type === "donut") return <DonutWithBreakdown options={options} rows={rows} spec={spec} />;
   return (
     <div className={cn("px-3 pb-3")}>
       <AgCharts options={options} />
+    </div>
+  );
+}
+
+/** A donut beside its breakdown: each slice's label, amount and share, in the slice's color. */
+function DonutWithBreakdown({ options, rows, spec }: { options: AgChartOptions; rows: Receipt[]; spec: WidgetSpec }) {
+  const t = useTokens();
+  const c = spec.chart!;
+  const { buckets } = aggregate(rows, c.groupBy, c.measure);
+  const total = buckets.reduce((s, b) => s + b.value, 0) || 1;
+  const fills = c.groupBy === "state" ? buckets.map((b) => stateColor(t, b.label)) : categoryPalette(t);
+  return (
+    <div className="grid items-center gap-2 px-3 pb-4 sm:grid-cols-[minmax(0,240px)_minmax(0,1fr)] sm:pr-5">
+      <AgCharts options={options} />
+      <ul className="divide-y divide-line px-2 sm:px-0">
+        {buckets.slice(0, 6).map((b, i) => (
+          <li key={String(b.key)} className="grid grid-cols-[10px_minmax(0,1fr)_auto_44px] items-center gap-3 py-2.5">
+            <span className="size-2.5 rounded-full" style={{ background: fills[i % fills.length] }} />
+            <span className="truncate text-[13.5px] text-ink-2">
+              {b.label}
+              <span className="ml-1.5 text-[12px] text-faint">{b.count}</span>
+            </span>
+            {c.measure === "sum" ? <Amount cents={b.value} size="sm" /> : <span className="tabular text-[13px] font-semibold">{b.value}</span>}
+            <span className="tabular text-right text-[12.5px] text-muted">{Math.round((b.value / total) * 100)}%</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

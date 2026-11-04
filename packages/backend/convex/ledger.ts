@@ -105,7 +105,9 @@ export const personal = query({
       return d.getTime();
     };
     const today = dayStart(now);
-    const out = receipts.filter((r) => r.payeeId !== me && r.kind !== "refund" && r.kind !== "invoice");
+    // Money that left the viewer: not refunds or invoices coming in, and not
+    // payouts Plex made from a hold (counted when the task was funded).
+    const out = receipts.filter((r) => r.payeeId !== me && r.kind !== "refund" && r.kind !== "invoice" && !(r.kind === "payout" && r.payerId !== me));
 
     const potRows = pots.map((p) => {
       const daily = Array.from({ length: 14 }, (_, i) => ({ day: today - (13 - i) * DAY, cents: 0 }));
@@ -288,6 +290,11 @@ export const poster = query({
       flow.refunded += r.amountCents;
       flowCount.refunded += 1;
     }
+
+    // Funded is everything that entered the flow, so the stages add up to it
+    // (older payouts and refunds predate their funding receipts).
+    flow.funded = flow.held + flow.released + flow.refunded + flow.disputed;
+    flowCount.funded = flowCount.held + flowCount.released + flowCount.refunded + flowCount.disputed;
 
     const decided = proofs.filter((p) => p.status !== "pending" && p.status !== "checking");
     return {

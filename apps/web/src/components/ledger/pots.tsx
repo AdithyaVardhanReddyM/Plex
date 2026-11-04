@@ -66,7 +66,6 @@ function PotGauge({ pot }: { pot: Pot }) {
   const warn = month >= 0.8;
   const accent = warn ? t.refunded : pot.color === "blue" || pot.color === "steel" ? t.steel[500] : t.green[500];
   const today = pot.dailyLimitCents ? pot.spentTodayCents / pot.dailyLimitCents : null;
-  const fortnight = pot.daily.reduce((s, d) => s + d.cents, 0);
   return (
     <Card className="flex flex-col p-4">
       <div className="flex items-start justify-between gap-3">
@@ -92,10 +91,7 @@ function PotGauge({ pot }: { pot: Pot }) {
           color={pot.color === "blue" || pot.color === "steel" ? t.steel[300] : t.green[300]}
           height={34}
         />
-        <div className="mt-1.5 flex items-center justify-between text-[11.5px] text-faint">
-          <span>14 days</span>
-          <span className="tabular">{formatCents(fortnight)}</span>
-        </div>
+        <div className="mt-1.5 text-[11.5px] text-faint">Last 14 days</div>
       </div>
 
       <div className="mt-3 border-t border-line pt-3">

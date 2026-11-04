@@ -190,13 +190,13 @@ function PersonalDashboard({ host, onToast }: { host: WidgetHost; onToast: (m: s
         <Stat label="Spent this week" sub={`${delta >= 0 ? "+" : "−"}${formatCents(Math.abs(delta))} vs last week`}>
           <Amount cents={k.spentWeekCents} size="lg" />
         </Stat>
-        <Stat label="Held by Plex" tone="steel" sub={`${k.heldCount} receipt${k.heldCount === 1 ? "" : "s"}, until proof passes`}>
+        <Stat label="Held by Plex" tone="steel" sub={`${k.heldCount} receipt${k.heldCount === 1 ? "" : "s"}, on proof`}>
           <Amount cents={k.heldCents} size="lg" />
         </Stat>
-        <Stat label="Owed to you" sub="From splits, by PayPal invoice">
+        <Stat label="Owed to you" sub="From splits">
           <Amount cents={k.owedCents} size="lg" />
         </Stat>
-        <Stat label="Saved by agents" tone="green" sub="Negotiated off list prices">
+        <Stat label="Saved by agents" tone="green" sub="Off list prices">
           <Amount cents={k.savedCents} size="lg" className="text-green-700" />
         </Stat>
       </div>
@@ -227,7 +227,7 @@ function PosterDashboard() {
     <section aria-label="Task poster dashboard" className="space-y-3">
       <SectionTitle>Task poster</SectionTitle>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Held now" tone="steel" sub={`${p.flowCount.held} task${p.flowCount.held === 1 ? "" : "s"} waiting on proof`}>
+        <Stat label="Held now" tone="steel" sub={`${p.flowCount.held} task${p.flowCount.held === 1 ? "" : "s"}, on proof`}>
           <Amount cents={p.flow.held} size="lg" />
         </Stat>
         <Stat label="Paid to workers" tone="green" sub={`${p.flowCount.released} payouts, all on proof`}>
@@ -295,14 +295,14 @@ function CauseDashboard({ host }: { host: WidgetHost }) {
           </div>
         </div>
         <p className="border-t border-line px-5 py-3 text-[12.5px] text-muted">
-          The dashboard {c.org?.name ?? "the cause"} sees. In the demo you can open it as a donor would.
+          The view {c.org?.name ?? "the cause"} sees. Donors get the same receipts for the shifts they fund.
         </p>
       </Card>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Raised, 21 days" tone="green" sub={`${c.totals.gifts} gifts, ${c.totals.recurring} monthly`}>
           <Amount cents={c.totals.last21Cents} size="lg" />
         </Stat>
-        <Stat label="Paid to local workers" sub="Released on before-and-after proof">
+        <Stat label="Paid to local workers" sub="Released on proof">
           <Amount cents={c.totals.paidToWorkersCents} size="lg" />
         </Stat>
         <Stat label="Shifts done" sub={`${c.totals.shiftsOpen} open`}>
@@ -312,11 +312,11 @@ function CauseDashboard({ host }: { host: WidgetHost }) {
           <span className="tabular text-[22px] font-semibold tracking-[-0.02em] text-ink">{c.cause.donorsCount}</span>
         </Stat>
       </div>
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <WidgetCard spec={DONATIONS_BY_WEEK} host={host} />
         <DonorLeaderboard leaders={c.leaderboard} />
       </div>
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <DonationFeed feed={c.feed} />
         <CauseTasks tasks={c.tasks} />
       </div>

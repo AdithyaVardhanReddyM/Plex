@@ -317,37 +317,29 @@ export function Watchdog({ role, onShow }: { role: LedgerRole; onShow: (a: { tit
   return (
     <section aria-label="Watchdog" className="space-y-2">
       <SectionTitle icon={<Bell size={14} strokeWidth={1.9} />}>Watchdog</SectionTitle>
-      <div className={cn("grid gap-3", alerts.length > 1 && "md:grid-cols-2", alerts.length > 2 && "xl:grid-cols-3")}>
+      <Card className="divide-y divide-line">
         {alerts.map((a) => (
-          <div
-            key={a.id}
-            className={cn(
-              "flex flex-col rounded-lg border bg-surface p-4 shadow-card",
-              a.severity === "warning" ? "border-refunded/25" : "border-line",
-            )}
-          >
-            <div className="flex items-start gap-2.5">
-              <span
-                className={cn(
-                  "mt-px flex size-7 flex-none items-center justify-center rounded-full",
-                  a.severity === "warning" ? "bg-refunded-bg text-refunded" : "bg-steel-50 text-steel-600",
-                )}
-              >
-                {a.severity === "warning" ? <TriangleAlert size={14} strokeWidth={1.9} /> : <Eye size={14} strokeWidth={1.9} />}
-              </span>
-              <div className="min-w-0">
-                <div className="text-[14px] leading-snug font-semibold text-ink">{a.title}</div>
-                <p className="mt-1 text-[13px] leading-relaxed text-muted">{a.detail}</p>
-              </div>
+          <div key={a.id} className="grid grid-cols-[28px_minmax(0,1fr)] gap-x-3 gap-y-2 px-4 py-3.5 sm:grid-cols-[28px_minmax(0,1fr)_auto] sm:items-center">
+            <span
+              className={cn(
+                "flex size-7 items-center justify-center rounded-full sm:self-start",
+                a.severity === "warning" ? "bg-refunded-bg text-refunded" : "bg-steel-50 text-steel-600",
+              )}
+            >
+              {a.severity === "warning" ? <TriangleAlert size={14} strokeWidth={1.9} /> : <Eye size={14} strokeWidth={1.9} />}
+            </span>
+            <div className="min-w-0">
+              <div className="text-[14px] leading-snug font-semibold text-ink">{a.title}</div>
+              <p className="mt-0.5 text-[13px] leading-relaxed text-muted">{a.detail}</p>
             </div>
-            <div className="mt-3 flex justify-end">
-              <Button variant="ghost" size="sm" onClick={() => onShow({ title: a.title, spec: a.spec })}>
+            <div className="col-start-2 sm:col-start-3">
+              <Button variant="secondary" size="sm" onClick={() => onShow({ title: a.title, spec: a.spec })}>
                 Show me
               </Button>
             </div>
           </div>
         ))}
-      </div>
+      </Card>
     </section>
   );
 }

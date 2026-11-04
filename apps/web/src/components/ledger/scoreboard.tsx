@@ -6,7 +6,6 @@ import type { FunctionReturnType } from "convex/server";
 import { BellRing, Check, Send } from "lucide-react";
 import { api } from "@/lib/convex";
 import { Avatar, Card, CardHeader } from "@/components/ui/primitives";
-import { Button } from "@/components/ui/button";
 import { Amount } from "@/components/ui/money";
 import { cn, formatCents, relativeTime } from "@/lib/utils";
 import { ConfirmDialog } from "./confirm";
@@ -81,26 +80,32 @@ export function Scoreboard({ split, viewerName, viewerColor, canRemind, onDone }
               <Avatar name={p.name} color={p.color} size={32} />
               <div className="min-w-0 leading-[1.3]">
                 <div className="truncate text-[14px] font-medium text-ink">{p.name}</div>
-                <div className={cn("mt-0.5 flex items-center gap-1 text-[12.5px]", s.tone)}>
-                  {s.icon}
-                  {s.label}
+                <div className="mt-0.5 flex min-w-0 items-center gap-1 text-[12.5px] whitespace-nowrap">
+                  <span className={cn("flex items-center gap-1", s.tone)}>
+                    {s.icon}
+                    {s.label}
+                  </span>
+                  {p.status !== "paid" && canRemind ? (
+                    <>
+                      <span className="text-faint">·</span>
+                      <button
+                        type="button"
+                        onClick={() => setNudge(p)}
+                        className="rounded-xs font-medium text-green-700 hover:text-green-800 focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:outline-none"
+                      >
+                        Nudge
+                      </button>
+                    </>
+                  ) : null}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {p.status !== "paid" && canRemind ? (
-                  <Button variant="ghost" size="sm" onClick={() => setNudge(p)} aria-label={`Nudge ${p.name}`}>
-                    <BellRing />
-                    <span className="hidden sm:inline">Nudge</span>
-                  </Button>
-                ) : null}
-                <Amount cents={p.shareCents} size="md" className={p.status === "paid" ? "text-green-700" : undefined} />
-              </div>
+              <Amount cents={p.shareCents} size="md" className={p.status === "paid" ? "text-green-700" : undefined} />
             </li>
           );
         })}
       </ol>
 
-      <div className="mt-auto flex items-center justify-between gap-3 border-t border-line px-5 py-3 text-[12.5px]">
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-line px-5 py-3 text-[12.5px] whitespace-nowrap">
         <span className="flex items-center gap-2 text-muted">
           <Avatar name={viewerName} color={viewerColor} size={20} />
           You covered {formatCents(split.totalCents)}
