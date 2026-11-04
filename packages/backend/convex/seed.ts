@@ -50,7 +50,13 @@ export const run = internalMutation({
         kind: "person",
         avatarColor,
         isDemo: true,
-        paypalEmail: `${handle}.plex@personal.example.com`,
+        // Payouts to the demo workers land in one real sandbox personal account
+        // when PAYPAL_DEMO_PAYEE_EMAIL is set; otherwise PayPal holds them as
+        // unclaimed at a made-up address.
+        paypalEmail:
+          handle !== "adi" && process.env.PAYPAL_DEMO_PAYEE_EMAIL
+            ? process.env.PAYPAL_DEMO_PAYEE_EMAIL
+            : `${handle}.plex@personal.example.com`,
         ...extra,
       });
 
@@ -622,10 +628,10 @@ export const run = internalMutation({
     const pastTask = await impact({
       posterId: lakeside, causeId: cause, title: "Saturday shoreline cleanup, north shore",
       brief: "Lake shore cleanup, Saturday: 3 people × 3 hours, $15 an hour each.",
-      description: "Meet at the Pergola at 9am. Three hours clearing litter along the north shore to the boathouse. Before and after photo at the marked post, and the filled bags at the pickup point.",
+      description: "Meet at the Pergola at 9am. Three hours clearing litter along the north shore to the boathouse. A photo of the cleared shore from the marked post, and what you collected at the pickup point.",
       location: { label: "Lake Merritt Pergola, Oakland", lat: 37.8093, lng: -122.2498, radiusM: 300 },
       start: pastStart, hours: 3, cents: 4_500, spots: 3, code: "cobalt-19",
-      proof: [["Before", "The marked stretch before you start"], ["After", "The same spot, same angle, after the shift"], ["Bags", "The filled bags at the pickup point"]],
+      proof: [["After", "The cleared shore, from the marked post"], ["Bags", "What you collected, at the pickup point"]],
       tags: ["Impact", "Outdoors", "Saturday"], status: "paid", funded: "released", assigneeId: marisol,
     });
     for (const w of [marisol, rosa, luis]) {
@@ -637,20 +643,21 @@ export const run = internalMutation({
     const pastProof = await ctx.db.insert("proofs", {
       taskId: pastTask,
       workerId: marisol,
-      items: [0, 1, 2].map((i) => ({
-        specIndex: i, capturedAt: pastStart + (i === 0 ? 0 : 2 * HOUR + 50 * 60_000 + (i - 1) * 60_000), lat: 37.8093, lng: -122.2498,
+      // Openly licensed stand-in photos (credits in apps/web/public/demo/reel/CREDITS.md).
+      items: ["/demo/reel/lake-merritt-shore.jpg", "/demo/reel/collected-debris.jpg"].map((url, i) => ({
+        specIndex: i, url, capturedAt: pastStart + 2 * HOUR + 50 * 60_000 + i * 60_000, lat: 37.8093, lng: -122.2498,
       })),
       note: "Eleven bags from the Pergola to the boathouse. Most of it was takeout packaging by the benches.",
       status: "pass",
       verdict: {
         result: "pass",
         confidence: 0.94,
-        summary: "Before and after photos match the marked post, taken 2 h 50 min apart inside the window. Eleven filled bags at the pickup point. The challenge word is on paper in the after photo.",
+        summary: "The after photo is taken from the marked post inside the window, and the collected litter is at the pickup point. The worker confirmed the challenge word.",
         checks: [
-          { check: "Same spot, before and after", passed: true, detail: "Matching angle on the marked post" },
-          { check: "Taken in the window", passed: true, detail: "9:00am and 11:50am on Saturday" },
+          { check: "After, from the marked post", passed: true, detail: "Same view as the post's reference photo" },
+          { check: "Taken in the window", passed: true, detail: "11:50am and 11:51am on Saturday" },
           { check: "At the location", passed: true, detail: "Within 120 m of the Pergola" },
-          { check: "Challenge word", passed: true, detail: "“cobalt-19” on paper in the after photo" },
+          { check: "Challenge word", passed: true, detail: "Worker confirmed “cobalt-19” at the pickup point" },
           { check: "Original photos", passed: true, detail: "No match with earlier submissions" },
         ],
         model: "gemini-2.5-flash",

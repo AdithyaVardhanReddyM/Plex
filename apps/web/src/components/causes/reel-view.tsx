@@ -125,6 +125,12 @@ export function ReelView({ donationId }: { donationId: string }) {
                 </figure>
               ))}
             </div>
+            {reel.media.some((m) => m.url?.startsWith("/demo/")) ? (
+              <p className="mt-2 text-[11.5px] leading-snug text-faint">
+                Seeded demo: stand-in photos by Brad Greenlee (CC BY 2.0) and USFWS (public domain), via Wikimedia
+                Commons. Live shifts show the worker&apos;s own uploads.
+              </p>
+            ) : null}
           </div>
         ) : null}
 
