@@ -62,6 +62,7 @@ export function evaluate(rules: PolicyRule[], req: SpendRequest): PolicyDecision
   if (req.amountCents > req.balanceCents)
     return { outcome: "deny", ruleText: `Pot balance is ${formatCents(req.balanceCents)}` };
 
+  // 1. Hard denials, whatever order the rules were written in.
   for (const rule of rules) {
     if (rule.kind === "quiet_hours" && inQuietHours(req.hour, rule.startHour, rule.endHour))
       return { outcome: "deny", ruleText: describeRule(rule) };
@@ -71,6 +72,9 @@ export function evaluate(rules: PolicyRule[], req: SpendRequest): PolicyDecision
       !rule.merchants.some((m) => m.toLowerCase() === req.merchant!.toLowerCase())
     )
       return { outcome: "deny", ruleText: describeRule(rule) };
+  }
+  // 2. Limits: over one, a person decides.
+  for (const rule of rules) {
     if (rule.kind === "per_purchase_limit" && req.amountCents > rule.amountCents)
       return { outcome: "needs_approval", ruleText: describeRule(rule) };
     if (rule.kind === "daily_limit" && req.spentTodayCents + req.amountCents > rule.amountCents)
@@ -81,6 +85,7 @@ export function evaluate(rules: PolicyRule[], req: SpendRequest): PolicyDecision
     )
       return { outcome: "needs_approval", ruleText: describeRule(rule) };
   }
+  // 3. Ask-first rules.
   for (const rule of rules) {
     if (rule.kind === "approval_over" && req.amountCents > rule.amountCents)
       return { outcome: "needs_approval", ruleText: describeRule(rule) };

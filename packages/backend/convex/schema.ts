@@ -165,6 +165,7 @@ export default defineSchema({
     ruleText: v.string(), // the rule that asked for approval
     status: v.union(v.literal("pending"), v.literal("approved"), v.literal("declined")),
     receiptId: v.optional(v.id("receipts")),
+    decidedAt: v.optional(v.number()), // when the person approved or declined
   }).index("by_owner_status", ["ownerId", "status"]),
 
   // ── Receipts: the record attached to every payment ─────────────────────────

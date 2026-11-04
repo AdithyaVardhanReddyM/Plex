@@ -23,7 +23,7 @@ export const decideApproval = mutation({
     if (!pot) throw new Error("Pot not found");
 
     if (!approve) {
-      await ctx.db.patch(id, { status: "declined" });
+      await ctx.db.patch(id, { status: "declined", decidedAt: Date.now() });
       return null;
     }
     if (approval.amountCents > pot.balanceCents) throw new Error(`${pot.name} pot doesn't have enough left`);
@@ -48,7 +48,7 @@ export const decideApproval = mutation({
       spentTodayCents: pot.spentTodayCents + approval.amountCents,
       spentMonthCents: pot.spentMonthCents + approval.amountCents,
     });
-    await ctx.db.patch(id, { status: "approved", receiptId });
+    await ctx.db.patch(id, { status: "approved", receiptId, decidedAt: Date.now() });
     return receiptId;
   },
 });
@@ -149,7 +149,8 @@ export const approvalHistory = query({
           .take(limit ?? 20),
       ),
     );
-    const rows = [...approved!, ...declined!].sort((a, b) => b._creationTime - a._creationTime).slice(0, limit ?? 20);
+    const at = (a: { decidedAt?: number; _creationTime: number }) => a.decidedAt ?? a._creationTime;
+    const rows = [...approved!, ...declined!].sort((a, b) => at(b) - at(a)).slice(0, limit ?? 20);
     const pots = new Map((await ctx.db.query("pots").withIndex("by_owner", (q) => q.eq("ownerId", owner)).collect()).map((p) => [p._id, p.name]));
     return rows.map((r) => ({ ...r, potName: pots.get(r.potId) ?? "Pot" }));
   },
