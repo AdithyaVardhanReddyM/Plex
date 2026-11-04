@@ -316,9 +316,11 @@ export const beginRelease = internalMutation({
         why: t.brief || t.title,
         rule: { source: "proof", text: ruleText },
         evidence: { proofId: proof!._id, verdict: verdictLine, checks },
-        category: "Errands",
+        category: t.causeId ? "Giving" : "Errands",
         potId: t.potId,
         taskId,
+        // Impact tasks: the Proof Reel finds payouts by cause.
+        causeId: t.causeId,
         state: "pending",
         timelineLabel: "Approved; capturing the held funds",
       });
@@ -393,6 +395,16 @@ export const recordPayout = internalMutation({
     if (receipt && receipt.state !== "released")
       await advanceReceipt(ctx, receipt._id, "released", `Released to ${worker?.name ?? "the worker"}`);
     if (worker) await ctx.db.patch(worker._id, { tasksCompleted: (worker.tasksCompleted ?? 0) + 1 });
+    // Impact task: the donations that funded this shift are released on the
+    // same proof, so every donor's receipt shows the work was done.
+    if (task.causeId) {
+      const payout = await ctx.db.get(payoutReceiptId);
+      await ctx.scheduler.runAfter(0, internal.donations.releaseForTask, {
+        taskId,
+        proofId: payout?.evidence?.proofId,
+        verdict: payout?.evidence?.verdict,
+      });
+    }
   },
 });
 

@@ -185,7 +185,7 @@ export const run = internalMutation({
       spentMonthCents: 2_560,
       monthlyBudgetCents: 5_000,
       rulesText: "Send 10% of what my agent saves to Lakeside Commons. Up to $50 a month.",
-      rules: [{ kind: "daily_limit", amountCents: 5_000 }],
+      rules: [{ kind: "monthly_limit", amountCents: 5_000 }],
     });
 
     // ── Cause ───────────────────────────────────────────────────────────────
