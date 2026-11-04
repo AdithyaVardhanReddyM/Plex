@@ -10,6 +10,7 @@
 
 import type * as lib_money from "../lib/money.js";
 import type * as lib_policy from "../lib/policy.js";
+import type * as lib_policyAi from "../lib/policyAi.js";
 import type * as lib_receipts from "../lib/receipts.js";
 import type * as lib_viewer from "../lib/viewer.js";
 import type * as pots from "../pots.js";
@@ -26,6 +27,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   "lib/money": typeof lib_money;
   "lib/policy": typeof lib_policy;
+  "lib/policyAi": typeof lib_policyAi;
   "lib/receipts": typeof lib_receipts;
   "lib/viewer": typeof lib_viewer;
   pots: typeof pots;

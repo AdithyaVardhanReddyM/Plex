@@ -1,7 +1,9 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { action, mutation, query } from "./_generated/server";
+import { policyRule } from "./schema";
 import { getViewer, requireViewer } from "./lib/viewer";
-import { describeRule, evaluate } from "./lib/policy";
+import { decidingRuleIndex, describeRule, evaluate } from "./lib/policy";
+import { parsePolicy } from "./lib/policyAi";
 import { writeReceipt } from "./lib/receipts";
 
 /**
@@ -64,7 +66,12 @@ export const list = query({
   },
 });
 
-/** Dry-run the policy engine, e.g. to preview "would this need approval?" */
+/**
+ * Dry-run the policy engine, e.g. to preview "would this need approval?"
+ * Pass `rules` to try a draft before saving it; otherwise the pot's saved
+ * rules are used. `ruleIndex` points at the rule that decided (-1 when the
+ * pause switch or the pot balance decided).
+ */
 export const check = query({
   args: {
     potId: v.id("pots"),
@@ -72,20 +79,107 @@ export const check = query({
     category: v.optional(v.string()),
     merchant: v.optional(v.string()),
     hour: v.number(),
+    rules: v.optional(v.array(policyRule)),
   },
   handler: async (ctx, args) => {
     const viewer = await getViewer(ctx);
     const pot = await ctx.db.get(args.potId);
-    if (!viewer || !pot) return null;
-    return evaluate(pot.rules, {
+    if (!viewer || !pot || pot.ownerId !== viewer.user._id) return null;
+    const rules = args.rules ?? pot.rules;
+    const decision = evaluate(rules, {
       amountCents: args.amountCents,
       category: args.category,
       merchant: args.merchant,
       hour: args.hour,
       spentTodayCents: pot.spentTodayCents,
+      spentMonthCents: pot.spentMonthCents,
       balanceCents: pot.balanceCents,
       paused: Boolean(viewer.user.agentsPaused),
     });
+    return { ...decision, ruleIndex: decidingRuleIndex(rules, decision) };
+  },
+});
+
+/**
+ * Plain English in, proposed rules out. The model (or the deterministic
+ * fallback) only proposes: nothing is saved until the user confirms with
+ * `saveRules`, and `evaluate()` alone ever decides.
+ */
+export const proposeRules = action({
+  args: { text: v.string() },
+  handler: async (_ctx, { text }) => {
+    const trimmed = text.trim().slice(0, 1_000);
+    if (!trimmed) return { rules: [], lines: [], unparsed: [], source: "heuristic" as const };
+    const parsed = await parsePolicy(trimmed);
+    return { ...parsed, lines: parsed.rules.map(describeRule) };
+  },
+});
+
+/** Save the rules the user confirmed, with their own words beside them. */
+export const saveRules = mutation({
+  args: { potId: v.id("pots"), rulesText: v.string(), rules: v.array(policyRule) },
+  handler: async (ctx, { potId, rulesText, rules }) => {
+    const { user } = await requireViewer(ctx);
+    const pot = await ctx.db.get(potId);
+    if (!pot || pot.ownerId !== user._id) throw new Error("Pot not found");
+    for (const r of rules) {
+      if ("amountCents" in r && (!Number.isInteger(r.amountCents) || r.amountCents <= 0))
+        throw new Error("Amounts must be positive whole cents");
+      if (r.kind === "quiet_hours" && [r.startHour, r.endHour].some((h) => !Number.isInteger(h) || h < 0 || h > 23))
+        throw new Error("Hours must be 0 to 23");
+    }
+    await ctx.db.patch(potId, { rulesText: rulesText.trim().slice(0, 1_000), rules });
+    return null;
+  },
+});
+
+/** Decided approvals, newest first, with the pot each came from. */
+export const approvalHistory = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit }) => {
+    const viewer = await getViewer(ctx);
+    if (!viewer) return [];
+    const owner = viewer.user._id;
+    const [approved, declined] = await Promise.all(
+      (["approved", "declined"] as const).map((status) =>
+        ctx.db
+          .query("approvals")
+          .withIndex("by_owner_status", (q) => q.eq("ownerId", owner).eq("status", status))
+          .order("desc")
+          .take(limit ?? 20),
+      ),
+    );
+    const rows = [...approved!, ...declined!].sort((a, b) => b._creationTime - a._creationTime).slice(0, limit ?? 20);
+    const pots = new Map((await ctx.db.query("pots").withIndex("by_owner", (q) => q.eq("ownerId", owner)).collect()).map((p) => [p._id, p.name]));
+    return rows.map((r) => ({ ...r, potName: pots.get(r.potId) ?? "Pot" }));
+  },
+});
+
+/** Tasks the viewer posted that are still in flight, for Home. */
+export const myOpenTasks = query({
+  args: {},
+  handler: async (ctx) => {
+    const viewer = await getViewer(ctx);
+    if (!viewer) return [];
+    const tasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_poster", (q) => q.eq("posterId", viewer.user._id))
+      .collect();
+    const live = new Set(["open", "assigned", "submitted", "verifying", "approved"]);
+    return tasks
+      .filter((t) => live.has(t.status))
+      .sort((a, b) => a.windowEnd - b.windowEnd)
+      .map((t) => ({
+        _id: t._id,
+        title: t.title,
+        status: t.status,
+        payout: t.payout,
+        locationLabel: t.location?.label,
+        windowEnd: t.windowEnd,
+        postedVia: t.postedVia,
+        agentLabel: t.agentLabel,
+        fundingState: t.funding.state,
+      }));
   },
 });
 

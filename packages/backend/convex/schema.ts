@@ -32,6 +32,7 @@ export const policyRule = v.union(
     startHour: v.number(), // 0-23, local time
     endHour: v.number(),
   }),
+  v.object({ kind: v.literal("monthly_limit"), amountCents: v.number() }),
 );
 
 export const proofSpecItem = v.object({

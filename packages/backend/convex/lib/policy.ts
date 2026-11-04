@@ -11,6 +11,8 @@ export interface SpendRequest {
   /** Local hour 0-23 at the time of the request. */
   hour: number;
   spentTodayCents: number;
+  /** This month's spend from the pot. Only `monthly_limit` reads it. */
+  spentMonthCents?: number;
   balanceCents: number;
   paused: boolean;
 }
@@ -35,6 +37,8 @@ export function describeRule(rule: PolicyRule): string {
       return `Only from ${rule.merchants.join(", ")}`;
     case "quiet_hours":
       return `No spending between ${hourLabel(rule.startHour)} and ${hourLabel(rule.endHour)}`;
+    case "monthly_limit":
+      return `Up to ${formatCents(rule.amountCents)} a month`;
   }
 }
 
@@ -71,6 +75,11 @@ export function evaluate(rules: PolicyRule[], req: SpendRequest): PolicyDecision
       return { outcome: "needs_approval", ruleText: describeRule(rule) };
     if (rule.kind === "daily_limit" && req.spentTodayCents + req.amountCents > rule.amountCents)
       return { outcome: "needs_approval", ruleText: describeRule(rule) };
+    if (
+      rule.kind === "monthly_limit" &&
+      (req.spentMonthCents ?? 0) + req.amountCents > rule.amountCents
+    )
+      return { outcome: "needs_approval", ruleText: describeRule(rule) };
   }
   for (const rule of rules) {
     if (rule.kind === "approval_over" && req.amountCents > rule.amountCents)
@@ -82,6 +91,13 @@ export function evaluate(rules: PolicyRule[], req: SpendRequest): PolicyDecision
     )
       return { outcome: "needs_approval", ruleText: describeRule(rule) };
   }
-  const limit = rules.find((r) => r.kind === "daily_limit" || r.kind === "per_purchase_limit");
+  const limit = rules.find(
+    (r) => r.kind === "daily_limit" || r.kind === "per_purchase_limit" || r.kind === "monthly_limit",
+  );
   return { outcome: "allow", ruleText: limit ? describeRule(limit) : "Within pot balance" };
+}
+
+/** Where the decision came from: the index of the rule that decided, or -1 for pause/balance. */
+export function decidingRuleIndex(rules: PolicyRule[], decision: PolicyDecision): number {
+  return rules.findIndex((r) => describeRule(r) === decision.ruleText);
 }
