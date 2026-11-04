@@ -1,17 +1,12 @@
 import type { Metadata } from "next";
-import { LayoutDashboard } from "lucide-react";
-import { PageHeader, Card, EmptyState } from "@/components/ui/primitives";
+import { LedgerView } from "./ledger-view";
 
 export const metadata: Metadata = { title: "Ledger" };
 
-// Placeholder: this surface is being built in its own session.
+// Live Convex data and the ?view= role tab render in the browser only (see the
+// (app) layout), so instant-navigation validation doesn't apply here.
+export const instant = false;
+
 export default function Page() {
-  return (
-    <>
-      <PageHeader title="Ledger" description="Where your money went and what it did, built live by your agents." />
-      <Card>
-        <EmptyState icon={<LayoutDashboard />} title="Coming together" body="This surface is being built right now." />
-      </Card>
-    </>
-  );
+  return <LedgerView />;
 }

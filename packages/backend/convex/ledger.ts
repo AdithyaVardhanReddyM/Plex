@@ -141,7 +141,17 @@ export const personal = query({
 
     return {
       pots: potRows,
-      splits: splits.sort((a, b) => b.occurredAt - a.occurredAt),
+      splits: await Promise.all(
+        splits
+          .sort((a, b) => b.occurredAt - a.occurredAt)
+          .map(async (sp) => ({
+            ...sp,
+            participants: await Promise.all(
+              sp.participants.map(async (p) => ({ ...p, color: p.userId ? (await ctx.db.get(p.userId))?.avatarColor : undefined })),
+            ),
+          })),
+      ),
+      viewerColor: viewer.user.avatarColor,
       kpis: {
         spentWeekCents: weekOut.reduce((s, r) => s + r.amountCents, 0),
         spentPrevWeekCents: prevWeekOut.reduce((s, r) => s + r.amountCents, 0),
@@ -467,7 +477,7 @@ export const watchdog = query({
         id: "refund-spike",
         severity: "warning",
         title: `Refunds are up: ${thisWeek.length} this week`,
-        detail: `${formatCents(thisWeek.reduce((s, r) => s + r.amountCents, 0))} came back, against about ${weeklyBefore < 1 ? "one every few weeks" : `${weeklyBefore.toFixed(1)} a week`} before. Each refund names the proof check behind it.`,
+        detail: `${formatCents(thisWeek.reduce((s, r) => s + r.amountCents, 0))} came back this week. Before that it was ${weeklyBefore < 1 ? "about one every few weeks" : `about ${weeklyBefore.toFixed(1)} a week`}. Each refund names the check that failed.`,
         spec: {
           kind: "chart",
           title: "Refunds and disputes by week",
