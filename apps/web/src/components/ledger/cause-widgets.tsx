@@ -76,7 +76,7 @@ export function DonationFeed({ feed }: { feed: Gift[] }) {
   const columnDefs = useMemo<ColDef<Gift>[]>(
     () => [
       { colId: "donor", headerName: "Donor", field: "donor", cellRenderer: DonorCell, flex: 1.2, minWidth: 170 },
-      { colId: "source", headerName: "How", field: "source", cellRenderer: SourceCell, flex: 1.3, minWidth: 190, sortable: false, hide: width < 480 },
+      { colId: "source", headerName: "How", field: "source", cellRenderer: SourceCell, flex: 1.3, minWidth: 190, sortable: false, hide: (width ?? 0) < 480 },
       { colId: "amount", headerName: "Amount", field: "amountCents", cellRenderer: GiftAmountCell, width: 112, type: "rightAligned", enableCellChangeFlash: true },
     ],
     [width],
@@ -85,7 +85,7 @@ export function DonationFeed({ feed }: { feed: Gift[] }) {
     <Card className="flex flex-col overflow-hidden">
       <CardHeader title="Donation feed" description="Live from PayPal, newest first" />
       <div ref={ref} className="mt-3 border-t border-line" style={{ height: 40 + 7 * 56 }}>
-        <AgGridReact<Gift>
+        {width !== null ? <AgGridReact<Gift>
           theme={plexGridTheme}
           rowData={feed}
           columnDefs={columnDefs}
@@ -93,7 +93,7 @@ export function DonationFeed({ feed }: { feed: Gift[] }) {
           getRowId={(p) => p.data._id}
           suppressCellFocus
           animateRows
-        />
+        /> : null}
       </div>
     </Card>
   );
@@ -141,7 +141,7 @@ export function DonorLeaderboard({ leaders }: { leaders: Cause["leaderboard"] })
     () => [
       { colId: "rank", headerName: "#", field: "rank", cellRenderer: RankCell, width: 56, sortable: false },
       { colId: "donor", headerName: "Donor", cellRenderer: LeaderCell, flex: 1, minWidth: 140, sortable: false },
-      { colId: "gifts", headerName: "Gifts", field: "gifts", width: 70, type: "rightAligned", cellClass: "tabular", hide: width < 360 },
+      { colId: "gifts", headerName: "Gifts", field: "gifts", width: 70, type: "rightAligned", cellClass: "tabular", hide: (width ?? 0) < 360 },
       {
         colId: "cents",
         headerName: "Given",
@@ -157,7 +157,7 @@ export function DonorLeaderboard({ leaders }: { leaders: Cause["leaderboard"] })
     <Card className="flex flex-col overflow-hidden">
       <CardHeader title="Donor leaderboard" description="Named donors, by total given" />
       <div ref={ref} className="mt-3 border-t border-line" style={{ height: 36 + Math.min(rows.length, 7) * 50 + 2 }}>
-        <AgGridReact<Leader>
+        {width !== null ? <AgGridReact<Leader>
           theme={plexGridThemeCompact}
           rowData={rows}
           columnDefs={columnDefs}
@@ -165,7 +165,7 @@ export function DonorLeaderboard({ leaders }: { leaders: Cause["leaderboard"] })
           getRowId={(p) => p.data.donor}
           suppressCellFocus
           animateRows
-        />
+        /> : null}
       </div>
     </Card>
   );

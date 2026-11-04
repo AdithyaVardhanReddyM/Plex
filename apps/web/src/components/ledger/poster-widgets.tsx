@@ -251,10 +251,10 @@ export function TopWorkers({ workers }: { workers: Worker[] }) {
   const columnDefs = useMemo<ColDef<Worker>[]>(
     () => [
       { colId: "worker", headerName: "Worker", field: "name", cellRenderer: WorkerCell, flex: 1.4, minWidth: 180 },
-      { colId: "rating", headerName: "Rating", field: "rating", cellRenderer: RatingCell, width: 88, hide: width < 760 },
-      { colId: "pass", headerName: "Proof pass rate", field: "passRate", cellRenderer: PassRateCell, width: 140, hide: width < 440 },
-      { colId: "tasks", headerName: "Tasks", field: "tasksForYou", width: 76, type: "rightAligned", cellClass: "tabular", hide: width < 640 },
-      { colId: "trend", headerName: "Paid to date", cellRenderer: TrendCell, width: 124, sortable: false, hide: width < 560 },
+      { colId: "rating", headerName: "Rating", field: "rating", cellRenderer: RatingCell, width: 88, hide: (width ?? 0) < 760 },
+      { colId: "pass", headerName: "Proof pass rate", field: "passRate", cellRenderer: PassRateCell, width: 140, hide: (width ?? 0) < 440 },
+      { colId: "tasks", headerName: "Tasks", field: "tasksForYou", width: 76, type: "rightAligned", cellClass: "tabular", hide: (width ?? 0) < 640 },
+      { colId: "trend", headerName: "Paid to date", cellRenderer: TrendCell, width: 124, sortable: false, hide: (width ?? 0) < 560 },
       { colId: "paid", headerName: "Paid", field: "paidCents", cellRenderer: PaidCell, width: 104, type: "rightAligned", sort: "desc" },
     ],
     [width],
@@ -263,7 +263,7 @@ export function TopWorkers({ workers }: { workers: Worker[] }) {
     <Card className="overflow-hidden">
       <CardHeader title="Top workers" description="Who you've paid, and how their proof holds up" />
       <div ref={ref} className="mt-3 border-t border-line" style={{ height: 40 + Math.max(workers.length, 1) * 56 + 2 }}>
-        <AgGridReact<Worker>
+        {width !== null ? <AgGridReact<Worker>
           theme={plexGridTheme}
           rowData={workers}
           columnDefs={columnDefs}
@@ -271,7 +271,7 @@ export function TopWorkers({ workers }: { workers: Worker[] }) {
           getRowId={(p) => p.data._id}
           suppressCellFocus
           animateRows
-        />
+        /> : null}
       </div>
     </Card>
   );

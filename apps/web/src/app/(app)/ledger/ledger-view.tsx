@@ -201,7 +201,7 @@ function PersonalDashboard({ host, onToast }: { host: WidgetHost; onToast: (m: s
         </Stat>
       </div>
       <PotGauges pots={p.pots} />
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <WidgetCard spec={SPEND_BY_DAY} host={host} />
         {p.splits[0] ? (
           <Scoreboard
@@ -240,7 +240,7 @@ function PosterDashboard() {
           <span className="tabular text-[22px] font-semibold tracking-[-0.02em] text-ink">{p.openTasks}</span>
         </Stat>
       </div>
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <MoneyFlow flow={p.flow} count={p.flowCount} />
         <ProofVerdicts counts={p.proofCounts} passRate={p.passRate} />
       </div>
@@ -312,11 +312,11 @@ function CauseDashboard({ host }: { host: WidgetHost }) {
           <span className="tabular text-[22px] font-semibold tracking-[-0.02em] text-ink">{c.cause.donorsCount}</span>
         </Stat>
       </div>
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <WidgetCard spec={DONATIONS_BY_WEEK} host={host} />
         <DonorLeaderboard leaders={c.leaderboard} />
       </div>
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <DonationFeed feed={c.feed} />
         <CauseTasks tasks={c.tasks} />
       </div>

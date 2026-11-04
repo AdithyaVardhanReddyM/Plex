@@ -162,7 +162,11 @@ export function direction(r: LedgerReceipt): "in" | "out" | "via" {
 export function partyOf(r: LedgerReceipt): string {
   if (direction(r) === "in") return r.payerLabel;
   if (r.kind === "payout") return r.payeeLabel;
-  return r.payeeLabel === "Plex (held)" ? "Held by Plex" : r.payeeLabel;
+  if (r.payeeLabel !== "Plex (held)") return r.payeeLabel;
+  // Task money sits with Plex until proof; name where it ended up.
+  if (r.state === "released" || r.state === "paid") return "Paid out by Plex";
+  if (r.state === "refunded") return "Returned by Plex";
+  return "Held by Plex";
 }
 
 export function agentOf(r: LedgerReceipt): string {

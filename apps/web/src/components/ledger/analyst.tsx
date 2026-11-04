@@ -45,7 +45,7 @@ export function WidgetCard({
     <Card className={cn("flex min-w-0 flex-col overflow-hidden", className)}>
       <CardHeader
         title={spec.title}
-        description={spec.subtitle ?? (from ? `From “${from}”` : undefined)}
+        description={spec.subtitle ?? (from === "Watchdog" ? "Flagged by Watchdog" : from ? `From “${from}”` : undefined)}
         action={
           pinnedId ? (
             <Button variant="ghost" size="sm" onClick={() => unpin({ id: pinnedId })} aria-label="Unpin">
@@ -87,9 +87,9 @@ function Widgets({ specs, host, from, askId }: { specs: WidgetSpec[]; host: Widg
   const small = specs.filter((s) => s.kind !== "grid");
   const grids = specs.filter((s) => s.kind === "grid");
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-1 gap-3">
       {small.length ? (
-        <div className={cn("grid gap-3", small.length > 1 && "lg:grid-cols-2")}>
+        <div className={cn("grid grid-cols-1 gap-3", small.length > 1 && "lg:grid-cols-2")}>
           {small.map((s, i) => (
             <WidgetCard key={i} spec={s} host={host} from={from} askId={askId} />
           ))}
@@ -161,7 +161,7 @@ export function Analyst({ host, spotlight, onClearSpotlight }: {
             ref={inputRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Ask the Ledger: where did my money go this week?"
+            placeholder="Ask the Ledger about your money"
             className="h-10 min-w-0 flex-1 bg-transparent text-[14.5px] text-ink placeholder:text-faint focus:outline-none"
             autoComplete="off"
           />
@@ -202,7 +202,7 @@ export function Analyst({ host, spotlight, onClearSpotlight }: {
           {active.status === "done" && active.widgets ? (
             <Widgets specs={active.widgets} host={host} from={active.question} askId={active._id} />
           ) : active.status === "thinking" ? (
-            <div className="grid gap-3 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               <Skeleton className="h-64 w-full rounded-lg" />
               <Skeleton className="h-64 w-full rounded-lg" />
             </div>
@@ -224,14 +224,14 @@ export function Analyst({ host, spotlight, onClearSpotlight }: {
           ) : null}
         </div>
       ) : asks && asks.length ? (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 text-[12.5px] text-faint">Earlier</span>
-          {asks.slice(0, 4).map((a) => (
+        <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
+          <span className="mr-1 flex-none text-[12.5px] text-faint">Earlier</span>
+          {asks.filter((a, i) => asks.findIndex((b) => b.question === a.question) === i).slice(0, 4).map((a) => (
             <button
               key={a._id}
               type="button"
               onClick={() => setActiveId(a._id)}
-              className="h-7 max-w-[260px] truncate rounded-full bg-sunken px-3 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-line"
+              className="h-7 max-w-[260px] flex-none truncate rounded-full bg-sunken px-3 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-line"
             >
               {a.question}
             </button>
@@ -296,7 +296,7 @@ export function PinnedWidgets({ host }: { host: WidgetHost }) {
     <section aria-label="Pinned" className="space-y-3">
       <SectionTitle icon={<Pin size={14} strokeWidth={1.9} />}>Pinned by you</SectionTitle>
       {small.length ? (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {small.map((p) => (
             <WidgetCard key={p._id} spec={p.spec} host={host} from={p.question} pinnedId={p._id} />
           ))}

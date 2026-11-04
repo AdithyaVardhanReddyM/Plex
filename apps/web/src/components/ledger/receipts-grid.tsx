@@ -17,11 +17,12 @@ import {
   ShoppingBag,
   User,
 } from "lucide-react";
-import { direction, kindLabel, partyOf, type ColumnKey } from "@plex/backend/lib/ledgerSpec";
+import { direction, kindLabel, partyOf, stateLabel, type ColumnKey } from "@plex/backend/lib/ledgerSpec";
 import { StatePill, type Receipt } from "@/components/receipt/receipt";
 import { Amount } from "@/components/ui/money";
 import { cn, formatCents, relativeTime, shortDate } from "@/lib/utils";
 import { plexGridTheme, registerAg } from "./ag";
+import { useWidth } from "./use-width";
 
 registerAg();
 
@@ -84,8 +85,7 @@ function PartyCell({ data, context }: CellProps) {
       <div className="flex min-w-0 flex-col leading-[1.3]">
         <span className="truncate text-[13.5px] font-medium text-ink">{partyOf(data)}</span>
         <span className="truncate text-[12px] text-muted">
-          {context.narrow ? relativeTime(data.occurredAt) + " · " : ""}
-          {kindLabel(data.kind)}
+          {context.narrow ? `${relativeTime(data.occurredAt)} · ${stateLabel(data.state)}` : kindLabel(data.kind)}
           {data.category && !context.narrow ? ` · ${data.category}` : ""}
         </span>
       </div>
@@ -141,7 +141,7 @@ function StateCell({ data, context }: CellProps) {
   );
 }
 
-function AmountCell({ data, context }: CellProps) {
+function AmountCell({ data }: CellProps) {
   if (!data) return null;
   if (isTotal(data)) {
     const net = data.inCents - data.outCents;
@@ -154,7 +154,7 @@ function AmountCell({ data, context }: CellProps) {
   }
   const dir = direction(data);
   return (
-    <div className="flex h-full flex-col items-end justify-center gap-1">
+    <div className="flex h-full items-center justify-end">
       <Amount
         cents={data.amountCents}
         currency={data.currency}
@@ -162,7 +162,6 @@ function AmountCell({ data, context }: CellProps) {
         size="sm"
         className={dir === "via" ? "text-muted" : undefined}
       />
-      {context.narrow ? <StatePill state={data.state} /> : null}
     </div>
   );
 }
@@ -294,20 +293,13 @@ export const ReceiptsGrid = forwardRef<ReceiptsGridHandle, ReceiptsGridProps>(fu
   ref,
 ) {
   const apiRef = useRef<GridApi<Row> | null>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(1000);
+  // Columns are picked by the card's width (measured before first paint);
+  // narrow cards get a two-column layout instead of a sideways scroll.
+  const [wrapRef, measured] = useWidth<HTMLDivElement>();
+  const width = measured ?? 0;
   const narrow = width < 560;
   const [total, setTotal] = useState<TotalRow | null>(null);
   const matchRef = useRef(match);
-
-  // Narrow containers get a two-column layout instead of a sideways scroll.
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([e]) => setWidth(Math.round(e?.contentRect.width ?? 1000)));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   const columnDefs = useMemo<ColDef<Row>[]>(() => {
     const keys = narrow ? (["party", "amount"] as ColumnKey[]) : fitColumns(columns, width);
@@ -367,7 +359,7 @@ export const ReceiptsGrid = forwardRef<ReceiptsGridHandle, ReceiptsGridProps>(fu
 
   return (
     <div ref={wrapRef} className={cn("ledger-grid w-full", className)} style={{ height: height ?? autoHeight }}>
-      <AgGridReact<Row>
+      {measured === null ? null : <AgGridReact<Row>
         theme={plexGridTheme}
         rowData={rows}
         loading={rows === undefined}
@@ -393,7 +385,7 @@ export const ReceiptsGrid = forwardRef<ReceiptsGridHandle, ReceiptsGridProps>(fu
         suppressCellFocus={false}
         tooltipShowDelay={400}
         overlayNoRowsTemplate='<span class="text-[13px] text-muted">No receipts match.</span>'
-      />
+      />}
     </div>
   );
 });
