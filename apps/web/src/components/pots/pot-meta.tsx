@@ -1,4 +1,5 @@
 import {
+  BadgeCheck,
   Ban,
   CalendarClock,
   CalendarRange,
@@ -91,6 +92,7 @@ const RULE_ICON: Record<PolicyRule["kind"], React.ComponentType<React.SVGProps<S
   block_category: Ban,
   allow_merchants: Store,
   quiet_hours: MoonStar,
+  auto_approve: BadgeCheck,
 };
 
 const RULE_KIND: Record<PolicyRule["kind"], string> = {
@@ -101,6 +103,7 @@ const RULE_KIND: Record<PolicyRule["kind"], string> = {
   block_category: "Ask first",
   allow_merchants: "Merchants",
   quiet_hours: "Quiet hours",
+  auto_approve: "Always allowed",
 };
 
 /** One structured rule: kind, its plain sentence and the raw value the engine reads. */
@@ -152,5 +155,7 @@ export function ruleCode(rule: PolicyRule): string {
       return `${rule.kind}  [${rule.merchants.map((m) => `"${m}"`).join(", ")}]`;
     case "quiet_hours":
       return `${rule.kind}  ${String(rule.startHour).padStart(2, "0")}:00–${String(rule.endHour).padStart(2, "0")}:00`;
+    case "auto_approve":
+      return `${rule.kind}  "${rule.merchant}" ≤ ${rule.upToCents}¢`;
   }
 }

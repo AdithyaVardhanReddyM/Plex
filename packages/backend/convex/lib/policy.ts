@@ -39,6 +39,8 @@ export function describeRule(rule: PolicyRule): string {
       return `No spending between ${hourLabel(rule.startHour)} and ${hourLabel(rule.endHour)}`;
     case "monthly_limit":
       return `Up to ${formatCents(rule.amountCents)} a month`;
+    case "auto_approve":
+      return `Pay ${rule.merchant} up to ${formatCents(rule.upToCents)} without asking`;
   }
 }
 
@@ -55,7 +57,8 @@ function inQuietHours(hour: number, start: number, end: number) {
 /**
  * The policy engine. Deterministic: the model turns plain English into
  * `rules` once, and this code alone decides whether money may move.
- * Order matters: hard denials first, then approvals, then allow.
+ * Order matters: hard denials first, then standing approvals (`auto_approve`),
+ * then limits and ask-first rules, then allow.
  */
 export function evaluate(rules: PolicyRule[], req: SpendRequest): PolicyDecision {
   if (req.paused) return { outcome: "deny", ruleText: "All agent spending is paused" };
@@ -73,7 +76,15 @@ export function evaluate(rules: PolicyRule[], req: SpendRequest): PolicyDecision
     )
       return { outcome: "deny", ruleText: describeRule(rule) };
   }
-  // 2. Limits: over one, a person decides.
+  // 2. Standing approvals ("Always"): that merchant, at or under the amount.
+  if (req.merchant) {
+    const merchant = req.merchant.trim().toLowerCase();
+    const standing = rules.find(
+      (r) => r.kind === "auto_approve" && r.merchant.trim().toLowerCase() === merchant && req.amountCents <= r.upToCents,
+    );
+    if (standing) return { outcome: "allow", ruleText: describeRule(standing) };
+  }
+  // 3. Limits: over one, a person decides.
   for (const rule of rules) {
     if (rule.kind === "per_purchase_limit" && req.amountCents > rule.amountCents)
       return { outcome: "needs_approval", ruleText: describeRule(rule) };
@@ -85,7 +96,7 @@ export function evaluate(rules: PolicyRule[], req: SpendRequest): PolicyDecision
     )
       return { outcome: "needs_approval", ruleText: describeRule(rule) };
   }
-  // 3. Ask-first rules.
+  // 4. Ask-first rules.
   for (const rule of rules) {
     if (rule.kind === "approval_over" && req.amountCents > rule.amountCents)
       return { outcome: "needs_approval", ruleText: describeRule(rule) };

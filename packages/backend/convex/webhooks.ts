@@ -78,6 +78,14 @@ export const paypalWebhook = httpAction(async (ctx, req) => {
         itemId: resource.payout_item_id,
       });
   }
+  // Plex for Mac: routines with a PayPal trigger for this event get a queued run.
+  const invoice = resource.invoice as Record<string, any> | undefined;
+  const amount = invoice?.amount ?? resource.amount;
+  await ctx.runMutation(internal.routines.queueForPaypalEvent, {
+    eventType: type,
+    resourceId: typeof resource.id === "string" ? resource.id : typeof invoice?.id === "string" ? invoice.id : undefined,
+    summary: amount?.value ? `${amount.value} ${amount.currency_code ?? amount.currency ?? ""}`.trim() : undefined,
+  });
   await ctx.runMutation(internal.webhooks.markProcessed, { eventId: event.id });
   return new Response("OK", { status: 200 });
 });
