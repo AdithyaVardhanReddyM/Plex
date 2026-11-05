@@ -24,3 +24,7 @@ gold.png
 # OS / editors
 .DS_Store
 *.log
+
+# Service account keys (Vertex AI) and other credential files
+.secrets/
+*service-account*.json
