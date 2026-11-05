@@ -917,6 +917,20 @@ async function seedMacWorld(ctx: MutationCtx, { adi, now }: { adi: Id<"users">; 
     ],
   });
 
+  // ── Savings: where routines sweep what's left ─────────────────────────────
+  await ctx.db.insert("pots", {
+    ownerId: adi,
+    name: "Savings",
+    icon: "piggy-bank",
+    color: "green",
+    balanceCents: 412_000,
+    spentTodayCents: 0,
+    spentMonthCents: 0,
+    monthlyBudgetCents: 0,
+    rulesText: "Money I set aside. Plex can move money in, but never spends from here without asking.",
+    rules: [{ kind: "approval_over", amountCents: 0 }],
+  });
+
   // ── Receipts the routines left behind ─────────────────────────────────────
   const paid = async (x: {
     payee: string;

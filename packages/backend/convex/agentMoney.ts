@@ -12,6 +12,7 @@ import {
   internalAction,
   internalMutation,
   internalQuery,
+  mutation,
   query,
   type ActionCtx,
   type MutationCtx,
@@ -742,6 +743,45 @@ export const cancelSubscription = action({
       viaPaypal: real,
     });
     return { ok: true, receiptId };
+  },
+});
+
+// ── move ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Moves money between two of the user's own pots ("move half of what's left in
+ * Food to Savings"). Pots are envelopes inside the user's own PayPal balance, so
+ * nothing leaves it and PayPal isn't called: this is bookkeeping, logged in the
+ * activity feed, never a payment (payments go through `pay` and get a Receipt).
+ */
+export const move = mutation({
+  args: { secret: v.string(), fromPot: v.string(), toPot: v.string(), amountCents: v.number(), why: v.string() },
+  handler: async (ctx, { secret, fromPot, toPot, amountCents, why }) => {
+    const user = await agentUser(ctx, secret);
+    const amount = Math.round(amountCents);
+    if (!Number.isFinite(amount) || amount <= 0) return { ok: false as const, error: "The amount must be more than $0." };
+    const from = await potByName(ctx, user._id, fromPot);
+    const to = await potByName(ctx, user._id, toPot);
+    if (!from) return { ok: false as const, error: `No pot called “${fromPot}”.` };
+    if (!to) return { ok: false as const, error: `No pot called “${toPot}”.` };
+    if (from._id === to._id) return { ok: false as const, error: "That's the same pot." };
+    if (user.agentsPaused) return { ok: false as const, error: "Agent spending is paused." };
+    if (from.balanceCents < amount) {
+      return { ok: false as const, error: `${from.name} only has ${formatCents(from.balanceCents)}.` };
+    }
+    await ctx.db.patch(from._id, { balanceCents: from.balanceCents - amount });
+    await ctx.db.patch(to._id, { balanceCents: to.balanceCents + amount });
+    await logActivity(ctx, {
+      ownerId: user._id,
+      kind: "money",
+      title: `Moved ${formatCents(amount)} from ${from.name} to ${to.name}`,
+      detail: why,
+    });
+    return {
+      ok: true as const,
+      from: { name: from.name, balanceCents: from.balanceCents - amount },
+      to: { name: to.name, balanceCents: to.balanceCents + amount },
+    };
   },
 });
 
