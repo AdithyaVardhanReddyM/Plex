@@ -31,7 +31,7 @@ from google.adk.tools import ToolContext, google_search
 from google.adk.tools.google_search_agent_tool import GoogleSearchAgentTool
 from google.genai import types
 
-from . import accounts, convex, mac_tools, memory, money, routines
+from . import accounts, convex, insights, mac_tools, memory, money, routines
 from .connection import Connection, for_worker, register_worker, report
 from .operator import TOOLS as OPERATOR_TOOLS
 from .tasks import Task
@@ -92,6 +92,9 @@ Other work:
   opened, to spot a subscription they don't use.
 - A bill you found that isn't in money_overview (an email, a PDF, a portal): record_bill first.
   It says how it compares with their usual amount; 1.5 times or more is a spike worth saying.
+- "How did I do", "where does my money go", "plan my week", "what should I cut": gather the facts,
+  then show_insights (a page of charts and tables that opens on their Mac), and end with the one
+  or two things you'd do, as a question. After you act on it, update the page (insights_id).
 - After a payment, finish the job around it: the calendar event, the reminder, the note they'd
   want, from what you learned (an address, a deadline, a cancellation date).
 - Memory: recall_memory before asking the user for something they may have told Plex before
@@ -260,7 +263,7 @@ worker_agent = Agent(
     instruction=_instruction,
     tools=[
         ask_user, show_note, *money.TOOLS, *memory.TOOLS, *routines.TOOLS, *accounts.TOOLS, *mac_tools.TOOLS,
-        *OPERATOR_TOOLS, search_the_web,
+        *OPERATOR_TOOLS, *insights.TOOLS, search_the_web,
     ],
     generate_content_config=types.GenerateContentConfig(
         thinking_config=types.ThinkingConfig(thinking_level=types.ThinkingLevel(THINKING.upper())),

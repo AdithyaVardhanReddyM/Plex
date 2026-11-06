@@ -16,6 +16,7 @@ from google import genai
 from google.adk.tools import ToolContext
 from google.genai import types
 
+from . import convex
 from .connection import for_worker, report
 
 VISION_MODEL = "gemini-3.8-flash"
@@ -247,7 +248,16 @@ async def app_usage(apps: list[str], tool_context: ToolContext) -> dict[str, Any
     Args:
         apps: App names as in the Applications folder.
     """
-    return await _mac(tool_context, "app_usage", {"apps": apps[:20]}, label="Checked when you last used " + ", ".join(apps[:3]))
+    out = await _mac(tool_context, "app_usage", {"apps": apps[:20]}, label="Checked when you last used " + ", ".join(apps[:3]))
+    seen = [{"app": str(u.get("app")), "lastUsedAt": int(u["lastUsedAt"])}
+            for u in (out.get("usage") or []) if isinstance(u, dict) and u.get("lastUsedAt")]
+    if seen:
+        # The measured date goes onto the matching subscription, so Money and Insights show it too.
+        try:
+            await convex.mutation("subscriptions:noteUsage", usage=seen)
+        except convex.ConvexError as err:
+            print(f"plex: subscriptions:noteUsage failed: {err}", flush=True)
+    return out
 
 
 async def read_file(path: str, tool_context: ToolContext, question: str = "") -> dict[str, Any]:

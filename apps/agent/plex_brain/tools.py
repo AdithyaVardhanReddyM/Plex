@@ -78,7 +78,8 @@ async def answer_ask(ask_id: str, tool_context: ToolContext, approved: bool | No
 
 
 async def start_task(goal: str, title: str, tool_context: ToolContext) -> dict[str, Any]:
-    """Hand NEW work to a background task: paying a bill or a person, splitting a receipt,
+    """Hand NEW work to a background task: money reviews and plans ("how did I do this month",
+    "plan my week", which build an Insights page), paying a bill or a person, splitting a receipt,
     cancelling a subscription, requesting money, setting up a routine ("every Friday…",
     "whenever…"), anything with the user's accounts (Gmail, calendars, Sheets, Slack, Notion),
     anything on the screen or a website, anything with several steps. Before calling, say one

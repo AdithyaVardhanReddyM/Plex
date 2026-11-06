@@ -59,7 +59,10 @@ def run_cli(args: dict[str, Any]) -> dict[str, Any]:
     timeout = max(1.0, float(args.get("timeout_ms") or 20000) / 1000)
     started = time.monotonic()
     try:
-        proc = subprocess.run([path, *[str(a) for a in args.get("args") or []]], capture_output=True, text=True, timeout=timeout)
+        argv = [os.path.expanduser(str(a)) if str(a).startswith("~/") else str(a) for a in args.get("args") or []]
+        if binary == "agent-browser" and argv[:1] == ["pdf"] and len(argv) > 1:
+            os.makedirs(os.path.dirname(argv[1]), exist_ok=True)
+        proc = subprocess.run([path, *argv], capture_output=True, text=True, timeout=timeout)
         out = {"code": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr[-2000:]}
     except subprocess.TimeoutExpired:
         out = {"code": 124, "stdout": "", "stderr": f"timed out after {timeout:.0f}s"}
@@ -103,7 +106,8 @@ def stub(name: str, args: dict[str, Any]) -> dict[str, Any]:
     if name == "read_file":
         return read_file(str(args.get("path") or ""))
     if name == "app_usage":
-        return {"usage": [{"app": a, "lastUsedAt": int((time.time() - 74 * 86400) * 1000)} for a in args.get("apps") or []]}
+        # Unknown on this stand-in: a made-up date would be written onto the user's subscriptions.
+        return {"usage": [{"app": a, "running": False} for a in args.get("apps") or []]}
     if name in ("calendar_events", "reminders_list"):
         return {"events": [], "reminders": []}
     if name == "contacts_search":
