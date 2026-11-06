@@ -167,11 +167,22 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         model.go(section)
         let window = self.window ?? makeWindow(agent: agent)
         self.window = window
-        NSApp.setActivationPolicy(.regular)
         ConvexClient.shared.windowVisible = true
         ConvexClient.shared.poke()
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        if window.isVisible, NSApp.activationPolicy() == .regular {
+            NSApp.activate()
+            window.makeKeyAndOrderFront(nil)
+            return
+        }
+        // Plex runs as a menu bar (accessory) app, and macOS lets an accessory app's windows land
+        // on top of another app's full-screen Space. Become a regular app first, and only show the
+        // window once that has taken effect (the next turn of the run loop): then macOS treats it
+        // like any app window and opens it on a desktop, switching there from a full-screen app.
+        NSApp.setActivationPolicy(.regular)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            NSApp.activate()
+            window.makeKeyAndOrderFront(nil)
+        }
     }
 
     private func makeWindow(agent: AgentSession) -> NSWindow {
@@ -187,6 +198,9 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         window.appearance = NSAppearance(named: .aqua)
         window.minSize = NSSize(width: 900, height: 600)
         window.isReleasedWhenClosed = false
+        // A normal document-style window: it lives on one desktop, can go full screen itself, and
+        // never rides along onto other apps' full-screen Spaces (unlike the island and cursor panels).
+        window.collectionBehavior = [.managed, .participatesInCycle, .fullScreenPrimary]
         window.setFrameAutosaveName("PlexMainWindow")
         window.backgroundColor = NSColor(Plex.canvas)
         window.delegate = self
