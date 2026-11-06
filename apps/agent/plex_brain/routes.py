@@ -233,6 +233,7 @@ class LiveConversation:
         self.session = session
         self.queue: LiveRequestQueue | None = None
         self._heard = ""  # the user's words in this turn, from partial transcriptions
+        self._garbled = False  # this turn's agent transcript turned into markup
         self.task: asyncio.Task[None] | None = None
 
     def ensure(self) -> LiveRequestQueue:
@@ -269,6 +270,11 @@ class LiveConversation:
             if blob and blob.data and (blob.mime_type or "").startswith("audio/"):
                 await bridge.send_audio(blob.data)
         for role, tx in (("user", event.input_transcription), ("agent", event.output_transcription)):
+            if tx and tx.text and role == "agent" and (self._garbled or _looks_like_markup(tx.text)):
+                # The Live model now and then transcribes a burst of unrelated HTML; the notch never shows
+                # it, nor the rest of that turn.
+                self._garbled = True
+                continue
             if tx and tx.text:
                 await bridge.send_json({"type": "transcript", "role": role, "text": tx.text, "partial": bool(event.partial)})
                 if role == "user":
@@ -276,6 +282,8 @@ class LiveConversation:
                     if not event.partial or tx.finished:
                         self.conn.hear(tx.text if not event.partial else self._heard)
                         self._heard = ""
+        if event.interrupted or event.turn_complete:
+            self._garbled = False
         if event.interrupted:
             await bridge.send_json({"type": "interrupted"})
         if event.turn_complete:
@@ -287,6 +295,11 @@ class LiveConversation:
         if self.task and not self.task.done():
             self.task.cancel()
         self.queue = self.task = None
+
+
+def _looks_like_markup(text: str) -> bool:
+    t = text.strip()
+    return t.count("<") >= 2 and any(tag in t for tag in ("</", "<td", "<tr", "<div", "<li", "<p>", "<table", "<!--"))
 
 
 async def _refresh(conn: Connection) -> None:

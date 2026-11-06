@@ -399,6 +399,29 @@ async def cancel_subscription(merchant: str, why: str, tool_context: ToolContext
     return res
 
 
+async def update_subscription(merchant: str, why: str, tool_context: ToolContext, plan: str = "",
+                              amount_cents: int = -1, status: str = "") -> dict[str, Any]:
+    """Record a change you made to a subscription outside PayPal, after it's done (a plan you
+    switched on the merchant's site), so Money and Insights show the new price.
+
+    Args:
+        merchant: The subscription's merchant ("Cloudnest").
+        why: The user's words.
+        plan: The new plan's name ("50 GB"), if it changed.
+        amount_cents: The new price in integer cents, if it changed.
+        status: active, paused or cancelled, if that changed.
+    """
+    conn, task = for_worker(tool_context)
+    res = dict(await convex.mutation("subscriptions:recordChange", merchant=merchant, why=users_why(task, why),
+                                     plan=plan or None, amountCents=None if amount_cents < 0 else int(amount_cents),
+                                     status=status or None) or {})
+    if res.get("ok"):
+        saved = res.get("savedCents") or 0
+        await report(conn, task, "money", f"Updated {res.get('merchant')}", f"saves {usd(saved)} a month" if saved else plan or status,
+                     step_kind="money")
+    return res
+
+
 async def recent_money(tool_context: ToolContext, days: int = 30) -> dict[str, Any]:
     """Recent receipts and transactions (what was paid, to whom, from which pot, and why).
 
@@ -438,4 +461,4 @@ async def move_between_pots(from_pot: str, to_pot: str, amount_cents: int, why: 
 
 
 TOOLS = [money_overview, move_between_pots, check_spend, pay, pay_bill, record_bill, request_money, cancel_subscription,
-         recent_money, create_pot]
+         update_subscription, recent_money, create_pot]

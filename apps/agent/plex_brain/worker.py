@@ -77,7 +77,10 @@ How money works here (this is the law, not a style):
 - A pot they mention that doesn't exist ("put 30% in Tax"): create_pot (it asks them), then go on.
 
 Paying on a website (a booking, a ticket, a portal):
-1. operate to get to the payment step. It stops there and reports the amount, who gets paid
+0. Anything at a time (a class, a table, a trip): calendar_events for that day first. If it clashes,
+   ask_user with the times that don't (options), before booking anything.
+1. operate to get to the payment step, with the user's real name and email from memory in the job
+   (recall_memory if you don't have them). It stops there and reports the amount, who gets paid
    (their PayPal email) and the order, booking or citation number.
 2. Check it against what you expected (the photo, the bill, what they asked for). If it differs,
    stop and ask_user.

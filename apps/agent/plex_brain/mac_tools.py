@@ -37,9 +37,15 @@ async def _mac(tool_context: ToolContext, name: str, args: dict[str, Any] | None
     return result
 
 
-async def _confirm(tool_context: ToolContext, title: str, detail: str = "") -> bool:
+async def _confirm(tool_context: ToolContext, title: str, detail: str = "", *, asked_by: tuple[str, ...] = ()) -> bool:
+    """Ask before writing to the user's Mac, unless they asked for exactly this in their own words
+    ("…and put it in my calendar"): then the yes is already theirs, and asking again is noise."""
     conn, task = for_worker(tool_context)
     assert conn.tasks
+    said = " ".join(task.said).lower()
+    if asked_by and any(word in said for word in asked_by):
+        conn.tasks.step(task, "You asked for this", kind="info")
+        return True
     return await conn.tasks.confirm_action(task, title, detail)
 
 
@@ -92,7 +98,8 @@ async def add_calendar_event(title: str, start: str, end: str, tool_context: Too
         location: Optional place or address.
         notes: Optional notes.
     """
-    if not await _confirm(tool_context, f"Add “{title}” to your calendar?", f"{start} to {end} {location}".strip()):
+    if not await _confirm(tool_context, f"Add “{title}” to your calendar?", f"{start} to {end} {location}".strip(),
+                          asked_by=("calendar",)):
         return {"cancelled": True}
     return await _mac(tool_context, "calendar_add", {"title": title, "start": start, "end": end, "location": location, "notes": notes}, label=f"Added {title} to your calendar")
 
@@ -117,7 +124,7 @@ async def add_reminder(title: str, tool_context: ToolContext, due: str = "", not
         list_name: Optional list to put it on; the default list otherwise.
     """
     when = f"{due}" + (f", on {list_name}" if list_name else "")
-    if not await _confirm(tool_context, f"Add “{title}” to your reminders?", when.strip(", ")):
+    if not await _confirm(tool_context, f"Add “{title}” to your reminders?", when.strip(", "), asked_by=("remind",)):
         return {"cancelled": True}
     return await _mac(tool_context, "reminders_add", {"title": title, "due": due, "notes": notes, "list": list_name},
                       label=f"Added {title} to Reminders")
