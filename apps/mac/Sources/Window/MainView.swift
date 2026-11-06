@@ -63,10 +63,7 @@ struct MainSidebar: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Plex")
-                .font(.system(size: 20, weight: .bold))
-                .tracking(-0.5)
-                .foregroundStyle(Plex.ink)
+            PlexLogo(height: 24)
                 .padding(.horizontal, 22)
                 .padding(.top, 2)
                 .padding(.bottom, 14)
