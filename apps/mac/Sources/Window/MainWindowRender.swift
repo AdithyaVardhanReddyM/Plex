@@ -11,6 +11,8 @@ enum MainWindowRender {
         MWLook.still = true
         let controller = MainWindowController.shared
         controller.show(agent: agent, section: .today)
+        // show() creates the window a moment later, once Plex is a regular app.
+        for _ in 0..<40 where controller.window == nil { try? await Task.sleep(for: .milliseconds(50)) }
         guard let window = controller.window else { return }
         let frame = window.frameRect(forContentRect: NSRect(origin: .zero, size: MainWindowController.size))
         window.setFrame(NSRect(x: 80, y: 80, width: frame.width, height: frame.height), display: true)

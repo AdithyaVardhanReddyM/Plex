@@ -165,25 +165,35 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     func show(agent: AgentSession, section: MainSection = .today) {
         self.agent = agent
         model.go(section)
-        let window = self.window ?? makeWindow(agent: agent)
-        self.window = window
         ConvexClient.shared.windowVisible = true
         ConvexClient.shared.poke()
-        if window.isVisible, NSApp.activationPolicy() == .regular {
+        if let window, window.isVisible, NSApp.activationPolicy() == .regular {
             NSApp.activate()
             window.makeKeyAndOrderFront(nil)
             return
         }
-        // Plex runs as a menu bar (accessory) app, and macOS lets an accessory app's windows land
-        // on top of another app's full-screen Space. Become a regular app first, and only show the
-        // window once that has taken effect (the next turn of the run loop): then macOS treats it
-        // like any app window and opens it on a desktop, switching there from a full-screen app.
+        // Plex runs as a menu bar (accessory) app, and macOS lets an accessory app's windows sit on
+        // top of another app's full-screen Space. A window keeps how it behaves across Spaces from
+        // the moment it's created, so become a regular app first, wait for that to take effect,
+        // and only then create (or bring back) the window. macOS then treats it like any app window:
+        // it opens on a desktop, and from a full-screen app it slides over to that desktop.
+        guard !opening else { return }
+        opening = true
         NSApp.setActivationPolicy(.regular)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-            NSApp.activate()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
+            guard let self else { return }
+            self.opening = false
+            let window = self.window ?? self.makeWindow(agent: agent)
+            self.window = window
             window.makeKeyAndOrderFront(nil)
+            // Activating once the window exists makes macOS switch to its desktop (from a
+            // full-screen app the screen slides over), as it does for any app.
+            NSApp.activate()
         }
     }
+
+    /// Between becoming a regular app and showing the window.
+    private var opening = false
 
     private func makeWindow(agent: AgentSession) -> NSWindow {
         let window = NSWindow(
