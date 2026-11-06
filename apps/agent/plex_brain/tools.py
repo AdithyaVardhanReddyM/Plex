@@ -84,8 +84,9 @@ async def start_task(goal: str, title: str, tool_context: ToolContext) -> dict[s
     "whenever…"), anything with the user's accounts (Gmail, calendars, Sheets, Slack, Notion),
     anything on the screen or a website, anything with several steps. Before calling, say one
     short line ("On it"). The answer comes back later; until then, don't guess at the result.
-    Anything about a task that already ran ("pay it", "do it every month", "send it to Sam") is a
-    follow-up: continue_task with that task's id, never a new task.
+    Anything about a task that already ran ("pay it", "do it every month", "send it to Sam", "run
+    it now" after setting up a routine) is a follow-up: continue_task with that task's id, never a
+    new task.
 
     Args:
         goal: Everything the worker needs, in the user's words plus context from the conversation

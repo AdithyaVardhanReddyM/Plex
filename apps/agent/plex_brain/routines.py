@@ -40,7 +40,8 @@ COMPILE_MODEL = os.environ.get("PLEX_COMPILE_MODEL", "gemini-3.8-flash")
 COMPILE_FALLBACK = os.environ.get("PLEX_COMPILE_FALLBACK", "gemini-3.6-flash")
 TICK_S = 5.0  # the contract says 30 s; 5 s makes Run now from the window feel immediate (one cheap query)
 LATE_MS = 10 * 60 * 1000
-MAIL_EVERY_S = 300.0
+# Gmail is polled this often for email-triggered routines (PLEX_MAIL_POLL_S=30 for a filmed demo).
+MAIL_EVERY_S = float(os.environ.get("PLEX_MAIL_POLL_S", "300"))
 
 # --- the exact spec (contract §2), for validation -----------------------------------------------
 
@@ -195,7 +196,7 @@ Fill in:
 - trigger: when it runs.
   schedule: cadence hourly (everyHours), daily (time), weekly (days + time), monthly (dayOfMonth +
   time) or once (onceAt). "Every Friday at 6pm" is weekly, days [5], time "18:00". No time given:
-  pick a sensible one (09:00) and add a question.
+  use 09:00 and don't ask about it (the user can change it on the routine's page).
   email: a Gmail search (query) and a label, for "when an email from Comcast arrives".
   paypal: a PayPal webhook event (INVOICING.INVOICE.PAID, PAYMENT.CAPTURE.COMPLETED,
   BILLING.SUBSCRIPTION.ACTIVATED...) and a label, for "when an invoice is paid".
@@ -207,7 +208,9 @@ Fill in:
   tool for the step, one of {tools}. Money to people uses pay; bills use pay_bill; asking people to
   pay the user back uses request_money (that's an act step, it doesn't spend). Moving money between
   the user's own pots (Food to Savings) uses move_between_pots (a money step; no one is paid).
-  Amounts that depend on state ("half of what's left") stay as words in detail.
+  Amounts that depend on state ("half of what's left") stay as words in detail. Never write today's
+  amounts into a step or condition: "if it's the usual amount" stays as those words, since the
+  bill changes every month (the worker compares it with the usual in code at run time).
 - guardrails: potName (the pot money comes from, spelled as above), maxSpendCents only for a hard cap
   the user states ("never more than $200"); "ask me if it's over $150" is not a cap (put that
   threshold in a condition or an ask step, and leave maxSpendCents empty), approval: always (the user says ask me / confirm first), over_limit (the pot's rules decide;
@@ -218,8 +221,9 @@ Fill in:
   folder trigger; cloud if only money and connected-account APIs.
 - missed: run_on_wake for money moves, bills and check-ins; skip for things that only matter at that
   moment (a reminder at 9).
-- questions: at most 2 short questions about what's genuinely unclear and changes the routine (which
-  pot, which day); empty if it's clear. Still fill in your best guess.
+- questions: at most 2 short questions about what's genuinely unclear and changes what the routine
+  does (which pot when several fit, which people); never about the time of day; empty if it's clear.
+  Still fill in your best guess.
 
 The user said: "{prompt}"
 """
@@ -564,6 +568,9 @@ Recent runs:
 How to run it:
 - Check the conditions first with tools (money_overview for pots and bills). If one isn't met,
   stop there and say why in one sentence: that's a normal, successful run.
+- "The usual amount" means within 10% of the bill's usual (record_bill or money_overview give it;
+  record_bill's timesUsual up to 1.1), unless the user named their own margin. Cents of difference
+  are the usual.
 - Follow the steps in order with the tools they name. Work out amounts from live data (integer
   cents; "half of what's left" means half the pot's balance, rounded down to the cent).
 - Money goes through pay or pay_bill only: the pot's rules and the routine's guardrails decide,

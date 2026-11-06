@@ -147,7 +147,7 @@ function Ticket({ now }: { now: number }) {
             <div className="text-[11px] tracking-[0.2em] uppercase">City of Lakeport</div>
             <div className="text-[16px] font-bold">Notice of parking violation</div>
           </div>
-          <div className="text-right text-[11px]">CITATION NO.<div className="text-[15px] font-bold">LP-4417-2290</div></div>
+          <div className="flex-none text-right text-[11px]">CITATION NO.<div className="text-[15px] font-bold whitespace-nowrap">LP-4417-2290</div></div>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-y-1.5">
           <span>DATE</span><span>{shortDate(issued)}</span>

@@ -1237,7 +1237,7 @@ async function seedMacWorld(ctx: MutationCtx, { adi, now }: { adi: Id<"users">; 
   // 3. Utility bill guard (email)
   const utility = await routine({
     name: "Pay utility bills unless they spike",
-    prompt: "When a bill from Pacific Power or Northwave comes in, pay it from Bills two days before it's due. If it's more than 20% over the usual, ask me first.",
+    prompt: "When a bill from Pacific Power or Northwave comes in, pay it from Bills. If it's more than 20% over the usual, hold it and ask me first.",
     icon: "zap",
     trigger: {
       kind: "email",
@@ -1249,10 +1249,10 @@ async function seedMacWorld(ctx: MutationCtx, { adi, now }: { adi: Id<"users">; 
       { kind: "check", title: "Read the amount and due date from the email", tool: "gmail" },
       { kind: "check", title: "Compare it with the last three bills" },
       { kind: "ask", title: "Ask you first if it's more than 20% over the usual" },
-      { kind: "money", title: "Pay it from Bills two days before it's due", tool: "agentMoney.pay" },
+      { kind: "money", title: "Pay it from Bills", tool: "agentMoney.pay" },
     ],
     guardrails: { potName: "Bills", maxSpendCents: 30_000, approval: "over_limit" },
-    summary: "When a Pacific Power or Northwave bill arrives, pays it from Bills two days before it's due, and asks you first if it's more than 20% above the usual.",
+    summary: "When a Pacific Power or Northwave bill arrives, pays it from Bills, and holds it to ask you first if it's more than 20% above the usual.",
     runWhere: "cloud",
     missed: "run_on_wake",
     createdDaysAgo: 45,
@@ -1267,7 +1267,7 @@ async function seedMacWorld(ctx: MutationCtx, { adi, now }: { adi: Id<"users">; 
         ["money", "Paid Pacific Power $94.10", "Bills: Up to $3,000 a month"],
         ["done", "Done"],
       ],
-      summary: "Pacific Power sent $94.10, close to the usual $96. Paid it from Bills two days early.",
+      summary: "Pacific Power sent $94.10, close to the usual $96. Paid it from Bills.",
     },
     {
       at: ago(30, 6), status: "done", reason: "Email from Northwave Internet", receiptIds: [netOct],

@@ -19,6 +19,14 @@ export function useSiteState<T extends object>(site: string, initial: T): [T, (p
   const key = `plex-site:${site}`;
   const [state, setState] = useState<T>(() => {
     try {
+      // `?reset` starts the site over (a rehearsal), then drops itself from the address.
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("reset")) {
+        window.localStorage.removeItem(key);
+        url.searchParams.delete("reset");
+        window.history.replaceState(null, "", url);
+        return initial;
+      }
       const raw = window.localStorage.getItem(key);
       return raw ? { ...initial, ...(JSON.parse(raw) as Partial<T>) } : initial;
     } catch {

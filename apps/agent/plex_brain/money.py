@@ -223,7 +223,8 @@ def _bill_pot(pots: list[dict[str, Any]], bill: dict[str, Any]) -> str | None:
     return None
 
 
-async def pay_bill(payee: str, why: str, tool_context: ToolContext, pot_name: str = "") -> dict[str, Any]:
+async def pay_bill(payee: str, why: str, tool_context: ToolContext, pot_name: str = "", reference: str = "",
+                   payee_email: str = "") -> dict[str, Any]:
     """Pay one of the user's bills by its payee ("the Comcast bill", "rent"). Finds the bill in
     their list (amount, due date), then pays it like `pay` (rules, approval card, receipt).
 
@@ -231,6 +232,8 @@ async def pay_bill(payee: str, why: str, tool_context: ToolContext, pot_name: st
         payee: The biller or the kind of bill ("Comcast", "internet", "rent").
         why: The user's own words, quoted from the task as they said them, not your summary.
         pot_name: The pot to pay from; leave empty to use their bills pot, if they have one.
+        reference: When paying on the biller's site, the reference it shows ("BL-88213-NOV").
+        payee_email: The PayPal email the biller's site shows, if the bill doesn't have one.
     """
     conn, task = for_worker(tool_context)
     data = await snapshot()
@@ -260,7 +263,7 @@ async def pay_bill(payee: str, why: str, tool_context: ToolContext, pot_name: st
     await report(conn, task, "money", f"Found the {bill.get('payee')} bill", f"{usd(bill.get('amountCents'))}, due {bill.get('due')}")
     args = {"kind": "bill", "potName": pot, "amountCents": int(bill["amountCents"]), "payee": str(bill.get("payee")),
             "why": why, "category": bill.get("category") or None, "billId": bill.get("_id"),
-            "payeeEmail": bill.get("payeeEmail") or None}
+            "payeeEmail": payee_email.strip() or bill.get("payeeEmail") or None, "reference": reference.strip() or None}
     res = await pay_flow(conn, task, args)
     if note:
         res["spike"] = note

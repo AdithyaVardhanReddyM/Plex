@@ -8,8 +8,10 @@ receipt or bill) are Plex's additions (docs/plex-mac.md §4).
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
+import os
 from typing import Any
 
 from google import genai
@@ -19,7 +21,34 @@ from google.genai import types
 from . import convex
 from .connection import for_worker, report
 
-VISION_MODEL = "gemini-3.8-flash"
+VISION_MODEL = os.environ.get("PLEX_VISION_MODEL", "gemini-3.8-flash")
+VISION_FALLBACK = os.environ.get("PLEX_VISION_FALLBACK", "gemini-3.6-flash")
+VISION_HEDGE_S = 8.0
+
+
+async def _vision(contents: list[types.Content], config: types.GenerateContentConfig | None = None) -> Any:
+    """One vision call, hedged like the worker's steps: if the main model hasn't answered in a few
+    seconds (the shared quota), the fallback is asked too and the first answer wins."""
+    calls = [asyncio.create_task(_client().aio.models.generate_content(model=VISION_MODEL, contents=contents, config=config))]
+    try:
+        done, _ = await asyncio.wait(calls, timeout=VISION_HEDGE_S)
+        if not done:
+            calls.append(asyncio.create_task(
+                _client().aio.models.generate_content(model=VISION_FALLBACK, contents=contents, config=config)))
+        while calls:
+            done, _ = await asyncio.wait(calls, timeout=45, return_when=asyncio.FIRST_COMPLETED)
+            if not done:
+                raise TimeoutError("vision didn't answer")
+            for t in done:
+                calls.remove(t)
+                if t.exception() is None:
+                    return t.result()
+                if not calls:
+                    raise t.exception()  # type: ignore[misc]
+        raise TimeoutError("vision didn't answer")
+    finally:
+        for t in calls:
+            t.cancel()
 _genai: genai.Client | None = None
 
 
@@ -67,13 +96,10 @@ async def look_at_screen(question: str, tool_context: ToolContext) -> dict[str, 
         await report(conn, task, "mac", "Couldn't see the screen", shot["error"])
         return shot
     image = base64.b64decode(shot["image"])
-    res = await _client().aio.models.generate_content(
-        model=VISION_MODEL,
-        contents=[types.Content(role="user", parts=[
-            types.Part(text=f"This is the user's screen. {question} Answer briefly and concretely."),
-            types.Part.from_bytes(data=image, mime_type=shot.get("mime") or "image/jpeg"),
-        ])],
-    )
+    res = await _vision([types.Content(role="user", parts=[
+        types.Part(text=f"This is the user's screen. {question} Answer briefly and concretely."),
+        types.Part.from_bytes(data=image, mime_type=shot.get("mime") or "image/jpeg"),
+    ])])
     await report(conn, task, "mac", "Looked at your screen")
     return {"answer": (res.text or "").strip()}
 
@@ -287,13 +313,13 @@ async def read_file(path: str, tool_context: ToolContext, question: str = "") ->
         return {"error": f"{name} has no text or image Plex can read."}
     data = base64.b64decode(result["image"])
     ask = question or "List the merchant, the date, every line item with its price, tax, tip and the total."
-    res = await _client().aio.models.generate_content(
-        model=VISION_MODEL,
-        contents=[types.Content(role="user", parts=[
-            types.Part(text=f"This is a file the user gave you ({name}). {ask} Amounts exactly as printed. Answer as compact JSON."),
+    res = await _vision(
+        [types.Content(role="user", parts=[
+            types.Part(text=f"This is a file the user gave you ({name}). {ask} Amounts, numbers and dates exactly as printed. "
+                            "Answer as compact JSON."),
             types.Part.from_bytes(data=data, mime_type=result.get("mime") or "image/jpeg"),
         ])],
-        config=types.GenerateContentConfig(response_mime_type="application/json"),
+        types.GenerateContentConfig(response_mime_type="application/json"),
     )
     try:
         return {"read": json.loads(res.text or "{}"), "mime": result.get("mime")}

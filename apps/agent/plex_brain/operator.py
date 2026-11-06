@@ -697,7 +697,9 @@ async def operate_tool(job: str, tool_context: ToolContext, surface: str = "auto
 
     Args:
         job: One clear job with every detail ("In the Plex browser, open comcast.com, sign in if
-            needed, and read the amount and due date of the latest bill").
+            needed, and read the amount and due date of the latest bill"). The operator sees only
+            this text, not what you've read or remembered: put in every value the page will ask
+            for (citation and plate numbers, names, emails, dates, amounts) and the site's address.
         surface: auto, desktop (a native app) or browser (a website).
     """
     conn, task = for_worker(tool_context)

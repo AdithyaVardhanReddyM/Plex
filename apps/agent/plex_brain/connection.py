@@ -45,6 +45,9 @@ class Connection:
 
     def hear(self, text: str) -> None:
         text = " ".join(text.split())
+        # A dropped file arrives as "[Dropped file: /path] what they said"; keep what they said.
+        if text.startswith("[Dropped file:") and "]" in text:
+            text = text.split("]", 1)[1].strip()
         if text and not text.startswith("[") and (not self.heard or self.heard[-1][1] != text):
             self.heard = [*self.heard[-19:], (time.monotonic(), text)]
 
