@@ -12,6 +12,7 @@ docs/              Plan and runbooks
 ```
 
 - `pnpm dev` from the root starts Convex (a local anonymous deployment, no account needed) and Next on :3000.
+- `pnpm start` (`scripts/start.sh`) starts everything: Convex, the brain on :8790, Next on :3000, and builds and opens Plex for Mac; it seeds on the first run (`--no-web`, `--no-mac`). Not `pnpm up`: that's pnpm's alias for update.
 - `pnpm seed` creates the demo world. Rebuild it with `pnpm --filter @plex/backend exec convex run seed:run '{"reset":true}'`.
 - Checks: `pnpm typecheck` (all packages) and `pnpm --filter @plex/web lint`, then `pnpm --filter @plex/web build`. Run all of them before every commit.
 - Commit small and often, with Conventional Commits (`feat(tasks): …`, `fix(web): …`).

@@ -66,6 +66,16 @@ Optional settings, all set the same way with `npx convex env set`:
 | `PAYPAL_DEMO_PAYEE_EMAIL` | A sandbox personal account that receives the demo workers' payouts, so they complete instead of waiting unclaimed. Re-seed after setting it. |
 | `PAYPAL_WEBHOOK_ID` | Verifies PayPal webhook signatures. Webhooks need a public URL; see [docs/paypal-webhooks.md](docs/paypal-webhooks.md). |
 
+### Everything at once, with Plex for Mac
+
+On a Mac with Xcode, [uv](https://docs.astral.sh/uv/) and XcodeGen (`brew install uv xcodegen`), one command starts Convex, the Plex brain (Python, Gemini on Vertex AI), the web app and Plex for Mac. It seeds the demo world on the first run:
+
+```bash
+pnpm start            # add --no-web or --no-mac to skip a part
+```
+
+The brain needs `apps/agent/.env` (copy `apps/agent/.env.example`: a Vertex AI service account key, `CONVEX_URL`, and a `PLEX_AGENT_SECRET` that matches the one set in Convex). For computer use, install `npm i -g agent-desktop agent-browser`. Ctrl-C stops every part, including the Mac app.
+
 Checks: `pnpm typecheck`, `pnpm --filter @plex/web lint`, `pnpm --filter @plex/web build`.
 
 ## PayPal APIs used
