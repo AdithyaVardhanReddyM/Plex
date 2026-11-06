@@ -355,8 +355,8 @@ export const saveFromBrain = mutation({
 
 /** Queues a run for every enabled routine whose trigger is this PayPal event. */
 export const queueForPaypalEvent = internalMutation({
-  args: { eventType: v.string(), resourceId: v.optional(v.string()), summary: v.optional(v.string()) },
-  handler: async (ctx, { eventType, resourceId, summary }) => {
+  args: { eventType: v.string(), resourceId: v.optional(v.string()), summary: v.optional(v.string()), trigger: v.optional(v.any()) },
+  handler: async (ctx, { eventType, resourceId, summary, trigger }) => {
     const routines = await ctx.db.query("routines").collect();
     const matching = routines.filter(
       (r) => r.enabled && r.spec.trigger.kind === "paypal" && r.spec.trigger.event.toUpperCase() === eventType.toUpperCase(),
@@ -379,6 +379,7 @@ export const queueForPaypalEvent = internalMutation({
           },
         ],
         receiptIds: [],
+        trigger,
       });
     }
     return matching.length;

@@ -343,11 +343,15 @@ export default defineSchema({
     causeId: v.optional(v.id("causes")),
     campaignId: v.optional(v.id("campaigns")),
     category: v.optional(v.string()), // "Food", "Shopping", "Errands", "Giving"
+    // A merchant's order or booking number the payment settles ("CC-4821"): goes on the PayPal
+    // payout note, and lets the merchant's page see that Plex paid it (merchants.paymentFor).
+    reference: v.optional(v.string()),
   })
     .index("by_owner_time", ["ownerId", "occurredAt"])
     .index("by_task", ["taskId"])
     .index("by_cause", ["causeId"])
-    .index("by_state", ["state"]),
+    .index("by_state", ["state"])
+    .index("by_reference", ["reference"]),
 
   // ── Plex Tasks ─────────────────────────────────────────────────────────────
 
@@ -685,6 +689,8 @@ export default defineSchema({
     summary: v.optional(v.string()),
     receiptIds: v.array(v.id("receipts")),
     askId: v.optional(v.id("asks")),
+    // What set off an event-triggered run (a PayPal webhook's payer, amount, invoice), handed to the brain.
+    trigger: v.optional(v.any()),
   })
     .index("by_routine", ["routineId", "startedAt"])
     .index("by_owner", ["ownerId", "startedAt"])

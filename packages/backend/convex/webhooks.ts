@@ -78,13 +78,33 @@ export const paypalWebhook = httpAction(async (ctx, req) => {
         itemId: resource.payout_item_id,
       });
   }
-  // Plex for Mac: routines with a PayPal trigger for this event get a queued run.
-  const invoice = resource.invoice as Record<string, any> | undefined;
-  const amount = invoice?.amount ?? resource.amount;
+  // Plex for Mac: routines with a PayPal trigger for this event get a queued run, with what
+  // happened (who paid, how much) so the run can act on it.
+  const invoice = (resource.invoice as Record<string, any> | undefined) ?? (type.startsWith("INVOICING.") ? resource : undefined);
+  const amount = invoice?.payments?.paid_amount ?? invoice?.amount ?? resource.amount;
+  const invoiceId = typeof invoice?.id === "string" ? invoice.id : undefined;
+  let trigger: Record<string, unknown> = {
+    event: type,
+    amount: amount?.value ? `${amount.value} ${amount.currency_code ?? amount.currency ?? ""}`.trim() : undefined,
+    payerEmail: invoice?.primary_recipients?.[0]?.billing_info?.email_address,
+    payerName: invoice?.primary_recipients?.[0]?.billing_info?.name?.full_name
+      ?? [invoice?.primary_recipients?.[0]?.billing_info?.name?.given_name, invoice?.primary_recipients?.[0]?.billing_info?.name?.surname].filter(Boolean).join(" "),
+    invoiceNumber: invoice?.detail?.invoice_number,
+    note: invoice?.detail?.note,
+  };
+  if (type === "INVOICING.INVOICE.PAID" && invoiceId) {
+    const paid = await ctx.runMutation(internal.agentMoney.invoicePaid, {
+      invoiceId,
+      reference: invoice?.detail?.reference,
+      paidCents: amount?.value ? Math.round(Number(amount.value) * 100) : undefined,
+    });
+    if (paid) trigger = { ...trigger, plex: paid };
+  }
   await ctx.runMutation(internal.routines.queueForPaypalEvent, {
     eventType: type,
-    resourceId: typeof resource.id === "string" ? resource.id : typeof invoice?.id === "string" ? invoice.id : undefined,
-    summary: amount?.value ? `${amount.value} ${amount.currency_code ?? amount.currency ?? ""}`.trim() : undefined,
+    resourceId: typeof resource.id === "string" ? resource.id : invoiceId,
+    summary: typeof trigger.amount === "string" ? trigger.amount : undefined,
+    trigger,
   });
   await ctx.runMutation(internal.webhooks.markProcessed, { eventId: event.id });
   return new Response("OK", { status: 200 });

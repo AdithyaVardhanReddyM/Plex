@@ -34,6 +34,7 @@ import type * as lib_schedule from "../lib/schedule.js";
 import type * as lib_taskRules from "../lib/taskRules.js";
 import type * as lib_viewer from "../lib/viewer.js";
 import type * as memory from "../memory.js";
+import type * as merchants from "../merchants.js";
 import type * as pots from "../pots.js";
 import type * as proofs from "../proofs.js";
 import type * as receipts from "../receipts.js";
@@ -78,6 +79,7 @@ declare const fullApi: ApiFromModules<{
   "lib/taskRules": typeof lib_taskRules;
   "lib/viewer": typeof lib_viewer;
   memory: typeof memory;
+  merchants: typeof merchants;
   pots: typeof pots;
   proofs: typeof proofs;
   receipts: typeof receipts;

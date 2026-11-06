@@ -23,6 +23,10 @@ export async function logActivity(ctx: MutationCtx, input: ActivityInput) {
 
 const isOpenBill = (b: Doc<"bills">) => b.status !== "paid";
 
+/** Pots that belong to the web's Tasks and Causes; Plex for Mac doesn't show or spend from them. */
+const WEB_ONLY_POTS = new Set(["errands", "giving"]);
+export const isMacPot = (p: Doc<"pots">) => !WEB_ONLY_POTS.has(p.name.toLowerCase());
+
 /** A stored "upcoming" bill whose date passed reads as overdue. */
 export function withBillStatus(b: Doc<"bills">, now: number): Doc<"bills"> {
   return b.status === "upcoming" && b.dueAt < now ? { ...b, status: "overdue" } : b;
@@ -86,7 +90,7 @@ export const today = query({
       needsYou,
       upcoming: { bills, routines: nextRoutines },
       recent,
-      pots: pots.map((p) => ({
+      pots: pots.filter(isMacPot).map((p) => ({
         _id: p._id,
         name: p.name,
         icon: p.icon,
@@ -98,7 +102,7 @@ export const today = query({
         ruleLines: p.rules.map(describeRule),
       })),
       totals: {
-        spentMonthCents: pots.reduce((s, p) => s + p.spentMonthCents, 0),
+        spentMonthCents: pots.filter(isMacPot).reduce((s, p) => s + p.spentMonthCents, 0),
         savedMonthCents: monthReceipts.reduce((s, r) => s + (r.evidence?.savedCents ?? 0), 0),
         billsDueCents: bills.reduce((s, b) => s + b.amountCents, 0),
       },
@@ -158,7 +162,7 @@ export const snapshot = query({
       paused: Boolean(user.agentsPaused),
       now,
       today: isoDay(now),
-      pots: pots.map((p) => ({
+      pots: pots.filter(isMacPot).map((p) => ({
         name: p.name,
         balanceCents: p.balanceCents,
         spentTodayCents: p.spentTodayCents,
@@ -177,6 +181,7 @@ export const snapshot = query({
         due: isoDay(b.dueAt),
         status: b.status,
         autopay: b.autopay,
+        payeeEmail: b.payeeEmail,
       })),
       subscriptions: subs
         .filter((s) => s.status !== "cancelled")

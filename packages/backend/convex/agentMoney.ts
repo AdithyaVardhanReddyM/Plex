@@ -23,7 +23,8 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { askSource } from "./schema";
 import { MAC_AGENT_LABEL, agentUser, requireAgent } from "./lib/agentAuth";
 import { formatCents } from "./lib/money";
-import { evaluate } from "./lib/policy";
+import { describeRule, evaluate } from "./lib/policy";
+import { parsePolicy } from "./lib/policyAi";
 import { advanceReceipt, writeReceipt } from "./lib/receipts";
 import { localHour } from "./lib/schedule";
 import { requireViewer } from "./lib/viewer";
@@ -145,6 +146,8 @@ const payArgs = {
   approvalAskId: v.optional(v.id("asks")),
   /** Who is asking, for the approval card ("Weekly money check-in", "Voice"). Defaults to a task. */
   source: v.optional(askSource),
+  /** The merchant's order, booking or citation number this pays ("CC-4821"). */
+  reference: v.optional(v.string()),
 };
 
 type PayPlan =
@@ -157,6 +160,7 @@ type PayPlan =
       payee: string;
       why: string;
       ruleText: string;
+      reference?: string;
       billId?: Id<"bills">;
       runId?: Id<"routineRuns">;
     };
@@ -267,6 +271,7 @@ export const beginPay = internalMutation({
       state: "pending",
       potId: pot._id,
       category: pot.name,
+      reference: args.reference?.trim() || undefined,
       timelineLabel:
         rule.source === "approval" ? "You approved it, Plex is paying" : `Allowed by the ${pot.name} pot: ${ruleText}`,
     });
@@ -279,7 +284,10 @@ export const beginPay = internalMutation({
       args.payeeEmail?.trim() ||
       process.env.PAYPAL_DEMO_PAYEE_EMAIL ||
       `${payee.toLowerCase().replace(/[^a-z0-9]+/g, ".").replace(/^\.|\.$/g, "")}.plex@personal.example.com`;
-    return { stage: "send", receiptId, receiver, amountCents, payee: payee.trim(), why, ruleText, billId: bill?._id, runId };
+    return {
+      stage: "send", receiptId, receiver, amountCents, payee: payee.trim(), why, ruleText,
+      reference: args.reference?.trim() || undefined, billId: bill?._id, runId,
+    };
   },
 });
 
@@ -305,7 +313,7 @@ async function executePlan(ctx: ActionCtx, plan: SendPlan): Promise<PayResult> {
         {
           receiver: plan.receiver,
           amountCents: plan.amountCents,
-          note: `${plan.payee}: ${plan.why}`,
+          note: plan.reference ? `Ref ${plan.reference} · ${plan.why}` : `${plan.payee}: ${plan.why}`,
           senderItemId: plan.receiptId,
         },
       ],
@@ -509,9 +517,12 @@ type RequestPlan = {
 };
 
 export const beginRequest = internalMutation({
-  args: { from: v.array(person), items: v.array(lineItem), why: v.string() },
-  handler: async (ctx, { from, items, why }): Promise<RequestPlan> => {
+  args: { from: v.array(person), items: v.array(lineItem), why: v.string(), potName: v.optional(v.string()) },
+  handler: async (ctx, { from, items, why, potName }): Promise<RequestPlan> => {
     const { user } = await requireViewer(ctx);
+    // Where the money lands when they pay (a split of a bill goes back to Bills, a client's invoice to Work).
+    const pot = potName ? await potByName(ctx, user._id, potName) : null;
+    if (potName && !pot) throw new ConvexError(`No pot called “${potName}”`);
     if (from.length === 0) throw new ConvexError("Who should pay?");
     if (items.length !== from.length && items.length !== 1)
       throw new ConvexError("Give one item per person (or one item everyone owes)");
@@ -535,6 +546,8 @@ export const beginRequest = internalMutation({
         rule: { source: "system", text: "You asked Plex to request it; nothing leaves your account" },
         state: "pending",
         occurredAt: now,
+        potId: pot?._id,
+        category: pot?.name,
         timelineLabel: `Invoice drafted for ${from[i]!.name}`,
       });
       people.push({ index: i, name: from[i]!.name, email: from[i]!.email, item: lines[i]!, receiptId });
@@ -604,13 +617,14 @@ export const request = action({
     items: v.array(lineItem),
     why: v.string(),
     note: v.optional(v.string()),
+    potName: v.optional(v.string()),
   },
   handler: async (
     ctx,
-    { secret, from, items, why, note },
+    { secret, from, items, why, note, potName },
   ): Promise<{ ok: boolean; splitId?: Id<"splits">; invoiceIds: string[]; receiptIds: Id<"receipts">[]; errors?: string[] }> => {
     requireAgent(secret);
-    const plan: RequestPlan = await ctx.runMutation(internal.agentMoney.beginRequest, { from, items, why });
+    const plan: RequestPlan = await ctx.runMutation(internal.agentMoney.beginRequest, { from, items, why, potName });
     const configured = PayPalClient.isConfigured();
     const pp = configured ? PayPalClient.fromEnv() : null;
     const invoiceIds: string[] = [];
@@ -665,6 +679,116 @@ export const request = action({
       receiptIds: plan.people.map((p) => p.receiptId),
       ...(errors.length ? { errors } : {}),
     };
+  },
+});
+
+/**
+ * INVOICING.INVOICE.PAID for an invoice Plex sent (its reference is `plex-<receiptId>`): the
+ * receipt becomes paid, the money lands in the pot the request named, the split marks that
+ * person as paid, and the Today feed says so. Returns what a routine triggered by this event
+ * needs to know (who paid, how much, into which pot), or null for an invoice Plex didn't send.
+ */
+export const invoicePaid = internalMutation({
+  args: { invoiceId: v.string(), reference: v.optional(v.string()), paidCents: v.optional(v.number()) },
+  handler: async (ctx, { invoiceId, reference, paidCents }) => {
+    const fromRef = reference?.startsWith("plex-") ? ctx.db.normalizeId("receipts", reference.slice(5)) : null;
+    let r = fromRef ? await ctx.db.get(fromRef) : null;
+    if (!r || r.kind !== "invoice") {
+      const pending = await ctx.db.query("receipts").withIndex("by_state", (q) => q.eq("state", "pending")).collect();
+      r = pending.find((x) => x.kind === "invoice" && x.paypal?.invoiceId === invoiceId) ?? null;
+    }
+    if (!r || r.kind !== "invoice") return null;
+    const amountCents = paidCents ?? r.amountCents;
+    const pot = r.potId ? await ctx.db.get(r.potId) : null;
+    const first = r.state !== "paid";
+    if (first) {
+      await advanceReceipt(ctx, r._id, "paid", `${r.payerLabel} paid the PayPal invoice`);
+      if (pot) await ctx.db.patch(pot._id, { balanceCents: pot.balanceCents + amountCents });
+      const splits = await ctx.db.query("splits").withIndex("by_owner", (q) => q.eq("ownerId", r!.ownerId)).collect();
+      for (const sp of splits)
+        if (sp.participants.some((p) => p.invoiceId === invoiceId))
+          await ctx.db.patch(sp._id, {
+            participants: sp.participants.map((p) => (p.invoiceId === invoiceId ? { ...p, status: "paid" as const } : p)),
+          });
+      await logActivity(ctx, {
+        ownerId: r.ownerId,
+        kind: "money",
+        title: `${r.payerLabel} paid ${formatCents(amountCents)}`,
+        detail: pot ? `Into ${pot.name} · ${r.why}` : r.why,
+        receiptId: r._id,
+      });
+    }
+    return {
+      first,
+      payer: r.payerLabel,
+      amountCents,
+      amount: formatCents(amountCents),
+      potName: pot?.name ?? null,
+      why: r.why,
+      receiptId: r._id,
+      invoiceId,
+    };
+  },
+});
+
+// ── pots ─────────────────────────────────────────────────────────────────────
+
+export const insertPot = internalMutation({
+  args: { name: v.string(), icon: v.string(), color: v.string(), monthlyBudgetCents: v.number(), rulesText: v.string(), rules: v.array(v.any()) },
+  handler: async (ctx, args) => {
+    const { user } = await requireViewer(ctx);
+    const existing = await potByName(ctx, user._id, args.name);
+    if (existing) return { ok: false as const, error: `There's already a ${existing.name} pot.`, potId: existing._id };
+    const potId = await ctx.db.insert("pots", {
+      ownerId: user._id,
+      name: args.name,
+      icon: args.icon,
+      color: args.color,
+      balanceCents: 0,
+      spentTodayCents: 0,
+      spentMonthCents: 0,
+      monthlyBudgetCents: args.monthlyBudgetCents,
+      rulesText: args.rulesText,
+      rules: args.rules as Doc<"pots">["rules"],
+    });
+    await logActivity(ctx, {
+      ownerId: user._id,
+      kind: "money",
+      title: `New pot: ${args.name}`,
+      detail: args.rulesText || undefined,
+    });
+    return { ok: true as const, potId };
+  },
+});
+
+/**
+ * A new pot the user asked for ("put 30% in a Tax pot"). Its rules are the user's words, parsed
+ * once (the model or the heuristic) and then enforced by evaluate() like every other pot's.
+ * It starts empty; money gets in by moving it from another pot or by an invoice paid into it.
+ */
+export const createPot = action({
+  args: {
+    secret: v.string(),
+    name: v.string(),
+    rulesText: v.optional(v.string()),
+    monthlyBudgetCents: v.optional(v.number()),
+    icon: v.optional(v.string()),
+  },
+  handler: async (ctx, { secret, name, rulesText, monthlyBudgetCents, icon }): Promise<{ ok: boolean; error?: string; potId?: Id<"pots">; rules?: string[] }> => {
+    requireAgent(secret);
+    const clean = name.trim().replace(/\s+pot$/i, "").slice(0, 40);
+    if (!clean) return { ok: false, error: "What should the pot be called?" };
+    const text = (rulesText ?? "").trim().slice(0, 1_000);
+    const parsed = text ? await parsePolicy(text) : { rules: [] };
+    const res = await ctx.runMutation(internal.agentMoney.insertPot, {
+      name: clean[0]!.toUpperCase() + clean.slice(1),
+      icon: icon?.trim() || "piggy-bank",
+      color: "steel",
+      monthlyBudgetCents: Math.max(0, Math.round(monthlyBudgetCents ?? 0)),
+      rulesText: text,
+      rules: parsed.rules,
+    });
+    return { ...res, rules: parsed.rules.map(describeRule) };
   },
 });
 
