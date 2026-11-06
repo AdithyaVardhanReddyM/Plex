@@ -90,7 +90,7 @@ final class AgentSession {
     private var receiptTimer: Task<Void, Never>?
     private var pillTimer: Task<Void, Never>?
     private var presentTimer: Task<Void, Never>?
-    private var folderWatcher: FolderWatcher?
+    private var folderWatcher: FolderWatchers?
     private var asksLoop: Task<Void, Never>?
     private var lastWake = Date.distantPast
     /// Receipts already shown, so a task frame repeating its receipt doesn't show it again.
@@ -159,7 +159,7 @@ final class AgentSession {
             connection = .online
             // After setup, so the Downloads prompt doesn't land in the middle of onboarding.
             if folderWatcher == nil, OnboardingWindow.isDone {
-                folderWatcher = FolderWatcher { [weak self] url in self?.folderEvent(url) }
+                folderWatcher = FolderWatchers { [weak self] url in self?.folderEvent(url) }
                 folderWatcher?.start()
             }
         }
