@@ -15,7 +15,7 @@ const TABLES: TableNames[] = [
   "users", "agents", "pots", "approvals", "receipts", "tasks", "applications",
   "proofs", "causes", "donations", "campaigns", "campaignEntries", "splits", "webhookEvents",
   "ledgerAsks", "ledgerWidgets", "ledgerActions",
-  "routines", "routineRuns", "asks", "memories", "bills", "subscriptions", "agentActivity",
+  "routines", "routineRuns", "asks", "memories", "bills", "subscriptions", "agentActivity", "insights",
 ];
 
 const HOUR = 3_600_000;
@@ -931,6 +931,20 @@ async function seedMacWorld(ctx: MutationCtx, { adi, now }: { adi: Id<"users">; 
     rules: [{ kind: "approval_over", amountCents: 0 }],
   });
 
+  // ── Tax: what the freelance work sets aside for quarterly estimated tax ────
+  await ctx.db.insert("pots", {
+    ownerId: adi,
+    name: "Tax",
+    icon: "landmark",
+    color: "steel",
+    balanceCents: 234_000,
+    spentTodayCents: 0,
+    spentMonthCents: 0,
+    monthlyBudgetCents: 0,
+    rulesText: "Set aside for quarterly estimated tax. Plex can move money in, never spends from here without asking.",
+    rules: [{ kind: "approval_over", amountCents: 0 }],
+  });
+
   // ── Receipts the routines left behind ─────────────────────────────────────
   const paid = async (x: {
     payee: string;
@@ -1015,9 +1029,9 @@ async function seedMacWorld(ctx: MutationCtx, { adi, now }: { adi: Id<"users">; 
     note: "More than double the usual: heating since the cold snap",
   });
   await ctx.db.insert("bills", {
-    ownerId: adi, payee: "Brightline Mobile", category: "Phone",
-    amountCents: 6_500, usualCents: 6_500, dueAt: inDays(9), status: "scheduled", autopay: true, source: "invoice",
-    note: "On autopay with your card",
+    ownerId: adi, payee: "Brightline Mobile", payeeEmail: "billing@brightline.example.com", category: "Phone",
+    amountCents: 6_214, usualCents: 6_200, dueAt: inDays(9), status: "upcoming", autopay: false, source: "manual",
+    note: "No emailed bill: the balance is on Brightline's account page",
   });
   await ctx.db.insert("bills", {
     ownerId: adi, payee: "Harbor Mutual", category: "Renter's insurance",
@@ -1448,6 +1462,13 @@ async function seedMacWorld(ctx: MutationCtx, { adi, now }: { adi: Id<"users">; 
   await mem("habit", "Orders lunch from Juniper Noodle Bar most weekdays, usually about $14.", { about: "Juniper Noodle Bar", source: "learned", uses: 6, daysAgo: 12, confidence: 0.8 });
   await mem("habit", "Sends 10% of what Plex saves to Lakeside Commons.", { about: "Lakeside Commons", source: "settings", uses: 2, daysAgo: 40 });
   await mem("note", "Frame Studio was for a one-off poster project in August.", { about: "Frame Studio", source: "learned", uses: 1, daysAgo: 74, confidence: 0.7 });
+  // Where the demo world's businesses live online (apps/web /sites/*, served on their own *.localhost hosts).
+  await mem("merchant", "Clay Commons is the pottery studio Adi wants to try; it books classes at http://claycommons.localhost:3000.", { about: "Clay Commons", source: "said", uses: 1, daysAgo: 9 });
+  await mem("merchant", "Brightline Mobile never emails a bill; the balance is on the account page at http://brightline.localhost:3000.", { about: "Brightline Mobile", source: "learned", uses: 2, daysAgo: 35, confidence: 0.9 });
+  await mem("merchant", "Cloudnest's plans are changed on its site, http://cloudnest.localhost:3000, not through PayPal.", { about: "Cloudnest", source: "learned", uses: 1, daysAgo: 20, confidence: 0.85 });
+  await mem("merchant", "City of Lakeport parking citations are paid at http://lakeport.localhost:3000.", { about: "City of Lakeport", source: "learned", uses: 1, daysAgo: 120, confidence: 0.8 });
+  await mem("person", "Adi's full name is Adi Reddy; email for bookings and receipts: adi.reddy@plexmail.example.com.", { about: "Adi", source: "settings", pinned: true, uses: 4, daysAgo: 60 });
+  await mem("fact", "Adi's car is a Honda Civic, plate 8KDN042 (California).", { about: "car", source: "said", uses: 1, daysAgo: 60 });
 
   // ── The rest of the week on Today ─────────────────────────────────────────
   const feed: Array<Omit<Parameters<typeof activity>[0], "at"> & { at: number }> = [
@@ -1464,7 +1485,7 @@ async function seedMacWorld(ctx: MutationCtx, { adi, now }: { adi: Id<"users">; 
     { at: ago(3, 2), kind: "handoff", title: "You did it: Sign in to Northwave in the Plex browser", detail: "Plex keeps the session in its own browser profile" },
     { at: ago(3, 8), kind: "system", title: "Plex for Mac connected", detail: "Accessibility and Calendar access granted" },
     { at: ago(4, 2), kind: "memory", title: "Remembered", detail: "Lena Varga gets 30% of every client invoice she worked on." },
-    { at: ago(5, 6), kind: "task", title: "Found the Brightline Mobile bill in Gmail", detail: "$65.00, on autopay. Added it to Bills." },
+    { at: ago(5, 6), kind: "task", title: "Added the Brightline Mobile bill", detail: "$62.14, read off Brightline's account page" },
     { at: ago(6, 4), kind: "task", title: "Saved your Pacific Power statements", detail: "12 PDFs in Documents/Bills" },
   ];
   for (const f of feed) await activity(f);
