@@ -3,7 +3,7 @@ import Observation
 import SwiftUI
 
 enum MainSection: String, CaseIterable, Identifiable {
-    case today, needsYou, routines, activity, money, memory, connections, settings
+    case today, needsYou, routines, activity, money, insights, memory, connections, settings
 
     var id: String { rawValue }
 
@@ -14,6 +14,7 @@ enum MainSection: String, CaseIterable, Identifiable {
         case .routines: "Routines"
         case .activity: "Activity"
         case .money: "Money"
+        case .insights: "Insights"
         case .memory: "Memory"
         case .connections: "Connections"
         case .settings: "Settings"
@@ -28,6 +29,7 @@ enum MainSection: String, CaseIterable, Identifiable {
         case .routines: "plex-money-loop"
         case .activity: "plex-mint-chat"
         case .money: "plex-money-card"
+        case .insights: "plex-mint-screen"
         case .memory: "plex-money-brain"
         case .connections: "plex-money-link"
         case .settings: "plex-mint-gear"
@@ -41,6 +43,7 @@ enum MainSection: String, CaseIterable, Identifiable {
         case .routines: "arrow.triangle.2.circlepath"
         case .activity: "list.bullet"
         case .money: "dollarsign.circle"
+        case .insights: "chart.bar.xaxis"
         case .memory: "text.book.closed"
         case .connections: "link"
         case .settings: "gearshape"

@@ -4,7 +4,7 @@ import Foundation
 /// The protocol is docs/plex-mac.md section 4.
 struct BrainEvent: Decodable, Sendable {
     enum Kind: String, Decodable, Sendable {
-        case ready, transcript, activity, interrupted, error, task, receipt
+        case ready, transcript, activity, interrupted, error, task, receipt, insights
         case toolCall = "tool_call"
         case turnComplete = "turn_complete"
         case operatorStatus = "operator"

@@ -9,15 +9,13 @@ struct MoneyPage: View {
     @State private var subscriptions = LiveQuery<[SubscriptionDoc]>("subscriptions:list")
     @State private var receipts = LiveQuery<[ReceiptDoc]>("receipts:list")
 
-    static let ledgerURL = URL(string: "http://localhost:3000/ledger")!
-
     var body: some View {
         MWPage(maxWidth: 1000) {
             MWPageHeader(title: "Money",
                          glossy: "plex-money-card",
                          subtitle: "What agents may spend, what's due, and a receipt for every dollar that moved.") {
-                Button { NSWorkspace.shared.open(Self.ledgerURL) } label: {
-                    Label("Open the Ledger", systemImage: "arrow.up.right")
+                Button { model.go(.insights) } label: {
+                    Label("Insights", systemImage: "chart.bar.xaxis")
                 }
                 .mwButton(.secondary)
             }
@@ -38,11 +36,16 @@ struct MoneyPage: View {
 
     // MARK: Pots
 
+    /// Errands and Giving belong to Plex on the web (tasks and causes); the Mac doesn't spend from them.
+    private var macPots: [PotDoc]? {
+        pots.value?.filter { !["errands", "giving"].contains($0.name.lowercased()) }
+    }
+
     private var potsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MWSectionTitle("Pots", count: pots.value?.count, glossy: "plex-mint-shield")
+            MWSectionTitle("Pots", count: macPots?.count, glossy: "plex-mint-shield")
             MWQueryBanner(query: pots)
-            if let list = pots.value {
+            if let list = macPots {
                 if list.isEmpty {
                     MWEmptyState(symbol: "circle.grid.2x2", title: "No pots yet", message: "Pots hold what agents may spend, with limits in your own words. Create them in Plex on the web.", compact: true)
                 } else {
@@ -140,7 +143,7 @@ struct MoneyPage: View {
     private var receiptsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             MWSectionTitle(title: "Recent receipts", glossy: "plex-money-receipt") {
-                Button("See all in the Ledger") { NSWorkspace.shared.open(Self.ledgerURL) }
+                Button("See all in Activity") { model.go(.activity) }
                     .buttonStyle(.plain)
                     .font(.system(size: 12.5, weight: .medium))
                     .foregroundStyle(Plex.muted)

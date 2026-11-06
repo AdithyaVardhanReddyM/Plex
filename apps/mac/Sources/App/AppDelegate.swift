@@ -115,6 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         switch place {
         case .today: .today
         case .needsYou: .needsYou
+        case .insights: .insights
         case .connections: .connections
         case .settings: .settings
         }

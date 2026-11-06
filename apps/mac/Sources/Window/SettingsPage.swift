@@ -64,8 +64,7 @@ struct SettingsPage: View {
 
             group("About") {
                 row(symbol: "info.circle", title: "Plex for Mac", note: "Version \(version). Money moves through the PayPal sandbox, and every payment has a receipt.") {
-                    Button { NSWorkspace.shared.open(MoneyPage.ledgerURL) } label: { Label("Ledger", systemImage: "arrow.up.right") }
-                        .mwButton(.ghost, size: .small)
+                    EmptyView()
                 }
             }
         }

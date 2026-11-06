@@ -14,6 +14,7 @@ struct TaskViewCard: View {
         case "timeline": TimelineCard(view: view, showTitle: view.title != taskTitle)
         case "note": NoteCard(view: view)
         case "file": FileCard(view: view)
+        case "insights": InsightsCard(view: view)
         case "cards", "gifts", "options":
             VStack(alignment: .leading, spacing: 8) {
                 if let title = view.title, title != taskTitle { CardHeading(symbol: "square.grid.2x2", text: title) }
@@ -214,12 +215,37 @@ private struct FileCard: View {
                 }
             }
             Spacer()
-            if let path = view.path {
+            if let raw = view.path {
+                let path = (raw as NSString).expandingTildeInPath
                 Button("Show") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) }
                     .buttonStyle(IslandButtonStyle(.secondary))
                 Button("Open") { NSWorkspace.shared.open(URL(fileURLWithPath: path)) }
                     .buttonStyle(IslandButtonStyle(.primary))
             }
+        }
+    }
+}
+
+/// Plex built a page of charts (show_insights): open it in the main window's Insights.
+private struct InsightsCard: View {
+    let view: TaskView
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "chart.bar.xaxis")
+                .font(.system(size: 20))
+                .foregroundStyle(IslandStyle.accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(view.title ?? "Insights")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text("In Insights")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.white.opacity(0.55))
+            }
+            Spacer()
+            Button("Open") { IslandActions.openMainWindow(.insights) }
+                .buttonStyle(IslandButtonStyle(.primary))
         }
     }
 }

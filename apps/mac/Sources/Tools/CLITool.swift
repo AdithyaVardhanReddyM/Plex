@@ -55,12 +55,19 @@ enum CLITool {
         guard let path = path(bin) else {
             return .failure(.init(message: "\(bin) isn't installed on this Mac (npm i -g \(bin))."))
         }
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
         let argv: [String] = args?["args"]?.array.compactMap { value in
-            if let s = value.string { return s }
+            // The brain doesn't know this Mac's home folder: "~/Documents/Plex/x.pdf" means it.
+            if let s = value.string { return s.hasPrefix("~/") ? home + s.dropFirst() : s }
             if let d = value.double { return d == d.rounded() ? String(Int(d)) : String(d) }
             if let b = value.bool { return b ? "true" : "false" }
             return nil
         } ?? []
+        if bin == "agent-browser", argv.first == "pdf", argv.count > 1 {
+            // Saving a page as a PDF into a folder that may not exist yet (~/Documents/Plex).
+            let folder = (argv[1] as NSString).deletingLastPathComponent
+            try? FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
+        }
         let timeout = min(maxTimeout, (args?["timeout_ms"]?.double).map { $0 / 1000 } ?? defaultTimeout)
         var environment = ProcessInfo.processInfo.environment
         let dir = (path as NSString).deletingLastPathComponent

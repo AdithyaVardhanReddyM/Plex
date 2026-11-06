@@ -41,6 +41,7 @@ struct MainView: View {
             }
         case .activity: ActivityPage()
         case .money: MoneyPage(model: model)
+        case .insights: InsightsPage()
         case .memory: MemoryPage()
         case .connections: ConnectionsPage()
         case .settings: SettingsPage(model: model, agent: agent)
@@ -56,7 +57,7 @@ struct MainSidebar: View {
 
     private let groups: [[MainSection]] = [
         [.today, .needsYou],
-        [.routines, .activity, .money, .memory],
+        [.routines, .activity, .money, .insights, .memory],
         [.connections, .settings],
     ]
 

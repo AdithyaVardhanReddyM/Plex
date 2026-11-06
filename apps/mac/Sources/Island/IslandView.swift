@@ -6,7 +6,7 @@ extension EnvironmentValues {
 }
 
 /// Where the main window can open (AppDelegate maps these onto the window's sections).
-enum WindowPlace { case today, needsYou, connections, settings }
+enum WindowPlace { case today, needsYou, insights, connections, settings }
 
 /// What the island's buttons do outside the island (set by AppDelegate, which owns the main window).
 @MainActor

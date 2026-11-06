@@ -521,6 +521,9 @@ final class AgentSession {
         case .error:
             lastError = event.message
             if phase == .thinking { phase = .idle }
+        case .insights:
+            // Plex built a page of charts for a question you asked: show it.
+            IslandActions.openMainWindow(.insights)
         case .ready, .unknown:
             break
         }

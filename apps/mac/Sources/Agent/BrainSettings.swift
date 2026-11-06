@@ -39,6 +39,19 @@ enum BrainSettings {
         URL(string: convexURLString) ?? URL(string: localConvexURL)!
     }
 
+    /// Plex on the web (`pnpm dev` serves it on :3000): the Mac's Insights page shows its /insights.
+    static let localWebURL = "http://localhost:3000"
+    static let webURLKey = "webURL"
+
+    static var webURLString: String {
+        get { UserDefaults.standard.string(forKey: webURLKey).flatMap { $0.isEmpty ? nil : $0 } ?? bundled("PlexWebURL") ?? localWebURL }
+        set { UserDefaults.standard.set(newValue, forKey: webURLKey) }
+    }
+
+    static var webURL: URL {
+        URL(string: webURLString) ?? URL(string: localWebURL)!
+    }
+
     // MARK: Who this Mac is
 
     /// A stable id for this Mac's user: the `hello` user_id, and the id the brain keys Composio
