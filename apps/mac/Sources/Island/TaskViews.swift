@@ -394,17 +394,19 @@ struct ReceiptCard: View {
                         .foregroundStyle(IslandStyle.text)
                         .lineLimit(1)
                     Spacer(minLength: 8)
-                    if let state = receipt.state, !state.isEmpty {
-                        Text(state.capitalized)
+                    if let label = receipt.stateLabel {
+                        let steel = receipt.isRefund || receipt.isRecordOnly
+                        Text(label)
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(receipt.isRefund ? IslandStyle.accent : IslandStyle.money)
+                            .foregroundStyle(steel ? IslandStyle.accent : IslandStyle.money)
                             .padding(.horizontal, 8)
                             .frame(height: 20)
-                            .background(Capsule().fill((receipt.isRefund ? IslandStyle.accent : IslandStyle.money).opacity(0.14)))
+                            .background(Capsule().fill((steel ? IslandStyle.accent : IslandStyle.money).opacity(0.14)))
                     }
                 }
+                // Money that moved glows green; a cancellation or an invoice is steel (nothing left the pots).
                 AmountText(cents: receipt.amountCents, size: 26,
-                           style: AnyShapeStyle(receipt.isRefund ? AnyShapeStyle(IslandGlow.held) : AnyShapeStyle(IslandGlow.money)))
+                           style: AnyShapeStyle(receipt.isRefund || receipt.isRecordOnly ? AnyShapeStyle(IslandGlow.held) : AnyShapeStyle(IslandGlow.money)))
                 if let why = receipt.why, !why.isEmpty {
                     Text("\u{201C}\(why)\u{201D}")
                         .font(.system(size: 12.5))

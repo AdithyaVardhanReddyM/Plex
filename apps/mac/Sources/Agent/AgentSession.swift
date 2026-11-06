@@ -437,10 +437,11 @@ final class AgentSession {
     }
 
     static func verb(_ receipt: ReceiptItem) -> String {
+        // The brain sends the receipt's kind: subscription is a cancellation, invoice a request.
         switch receipt.kind ?? "" {
-        case "request": "requested"
+        case "request", "invoice": "invoiced"
         case "refund": "refunded"
-        case "cancel": "cancelled"
+        case "cancel", "subscription": "cancelled"
         default: receipt.isRefund ? "refunded" : "paid"
         }
     }

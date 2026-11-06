@@ -93,6 +93,20 @@ struct ReceiptItem: Decodable, Sendable, Equatable, Identifiable {
 
     /// Money coming back to the user rather than going out.
     var isRefund: Bool { state == "refunded" || kind == "refund" }
+    /// A cancellation or an invoice sent: a receipt, but no money left the user's pots.
+    var isRecordOnly: Bool { kind == "subscription" || kind == "cancel" || kind == "invoice" || kind == "request" }
+
+    /// The pill on the receipt card.
+    var stateLabel: String? {
+        switch (kind ?? "", state ?? "") {
+        case ("subscription", _), ("cancel", _): "Cancelled"
+        case ("invoice", "paid"), ("request", "paid"): "Paid you"
+        case ("invoice", _), ("request", _): "Sent"
+        case (_, "released"): "Sent"
+        case (_, ""): nil
+        case (_, let s): s.capitalized
+        }
+    }
 }
 
 /// A background task, as the brain reports it (plex_brain/tasks.py `Task.snapshot`).
