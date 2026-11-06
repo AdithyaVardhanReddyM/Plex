@@ -106,6 +106,53 @@ export const verdictCheck = v.object({
 
 // ── Plex for Mac value shapes ────────────────────────────────────────────────
 
+/**
+ * One widget on Plex for Mac's Insights page. The worker picks them; the web's /insights
+ * route draws them. Receipts, pots, bills and subscriptions are bound to live data (the
+ * worker only chooses the view); a timeline and a figure carry what the worker worked out
+ * from other sources (the Mac's calendar, a sum it computed), so it states them.
+ */
+export const insightTone = v.union(v.literal("good"), v.literal("warn"), v.literal("neutral"));
+export const insightWidget = v.union(
+  v.object({ kind: v.literal("receipts"), spec: vWidgetSpec, note: v.optional(v.string()) }),
+  v.object({
+    kind: v.literal("pots"),
+    title: v.string(),
+    note: v.optional(v.string()),
+    pots: v.optional(v.array(v.string())), // only these, by name
+  }),
+  v.object({ kind: v.literal("bills"), title: v.string(), note: v.optional(v.string()), days: v.optional(v.number()) }),
+  v.object({
+    kind: v.literal("subscriptions"),
+    title: v.string(),
+    note: v.optional(v.string()),
+    flag: v.optional(v.array(v.string())), // merchants to point at
+  }),
+  v.object({
+    kind: v.literal("timeline"),
+    title: v.string(),
+    note: v.optional(v.string()),
+    items: v.array(
+      v.object({
+        at: v.number(), // ms
+        label: v.string(),
+        detail: v.optional(v.string()),
+        amountCents: v.optional(v.number()),
+        kind: v.union(v.literal("bill"), v.literal("event"), v.literal("payment"), v.literal("plan")),
+        tone: v.optional(insightTone),
+      }),
+    ),
+  }),
+  v.object({
+    kind: v.literal("figure"),
+    title: v.string(),
+    valueCents: v.optional(v.number()),
+    value: v.optional(v.string()),
+    caption: v.optional(v.string()),
+    tone: v.optional(insightTone),
+  }),
+);
+
 export const routineTrigger = v.union(
   v.object({
     kind: v.literal("schedule"),
@@ -782,4 +829,15 @@ export default defineSchema({
     runId: v.optional(v.id("routineRuns")),
     routineId: v.optional(v.id("routines")),
   }).index("by_owner_time", ["ownerId", "at"]),
+
+  /** A page of widgets the worker built to answer a question ("How did I do this month?"). */
+  insights: defineTable({
+    ownerId: v.id("users"),
+    title: v.string(),
+    question: v.optional(v.string()), // the user's words
+    summary: v.optional(v.string()), // what Plex said about it
+    widgets: v.array(insightWidget),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_owner", ["ownerId", "updatedAt"]),
 });

@@ -26,6 +26,8 @@ const isOpenBill = (b: Doc<"bills">) => b.status !== "paid";
 /** Pots that belong to the web's Tasks and Causes; Plex for Mac doesn't show or spend from them. */
 const WEB_ONLY_POTS = new Set(["errands", "giving"]);
 export const isMacPot = (p: Doc<"pots">) => !WEB_ONLY_POTS.has(p.name.toLowerCase());
+export const isMacReceipt = (r: Doc<"receipts">) =>
+  r.kind !== "task_funding" && r.kind !== "donation" && !WEB_ONLY_POTS.has((r.category ?? "").toLowerCase());
 
 /** A stored "upcoming" bill whose date passed reads as overdue. */
 export function withBillStatus(b: Doc<"bills">, now: number): Doc<"bills"> {

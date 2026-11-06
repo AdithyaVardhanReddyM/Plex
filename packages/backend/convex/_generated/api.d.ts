@@ -18,6 +18,7 @@ import type * as causeBuilder from "../causeBuilder.js";
 import type * as causes from "../causes.js";
 import type * as donations from "../donations.js";
 import type * as http from "../http.js";
+import type * as insights from "../insights.js";
 import type * as ledger from "../ledger.js";
 import type * as lib_actor from "../lib/actor.js";
 import type * as lib_agentAuth from "../lib/agentAuth.js";
@@ -63,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   causes: typeof causes;
   donations: typeof donations;
   http: typeof http;
+  insights: typeof insights;
   ledger: typeof ledger;
   "lib/actor": typeof lib_actor;
   "lib/agentAuth": typeof lib_agentAuth;

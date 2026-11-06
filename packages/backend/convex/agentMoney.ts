@@ -28,7 +28,7 @@ import { parsePolicy } from "./lib/policyAi";
 import { advanceReceipt, writeReceipt } from "./lib/receipts";
 import { localHour } from "./lib/schedule";
 import { requireViewer } from "./lib/viewer";
-import { logActivity } from "./agent";
+import { isMacReceipt, logActivity } from "./agent";
 import { createAsk } from "./asks";
 
 /**
@@ -921,7 +921,9 @@ export const recent = query({
       .query("receipts")
       .withIndex("by_owner_time", (q) => q.eq("ownerId", user._id).gte("occurredAt", since))
       .order("desc")
-      .take(200);
+      .take(300)
+      // The web's task and cause money stays on the web (as on the Mac's Insights page).
+      .then((all) => all.filter(isMacReceipt).slice(0, 200));
     const incoming = (r: Doc<"receipts">) => r.payeeId === user._id && r.payerId !== user._id;
     const moved = (r: Doc<"receipts">) => r.state !== "declined" && r.state !== "pending";
     return {
