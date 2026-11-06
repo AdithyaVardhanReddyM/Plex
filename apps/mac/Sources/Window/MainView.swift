@@ -69,7 +69,7 @@ struct MainSidebar: View {
                 .padding(.bottom, 14)
 
             UserCard(model: model, agent: agent)
-                .padding(.horizontal, 14)
+                .padding(.horizontal, 12)
                 .padding(.bottom, 16)
 
             VStack(alignment: .leading, spacing: 12) {
@@ -93,85 +93,77 @@ struct MainSidebar: View {
                 .padding(.bottom, 14)
         }
         .frame(maxHeight: .infinity, alignment: .top)
-        .background(alignment: .top) {
-            MWAurora(base: Color(hex: 0xF2F6F4))
-                .frame(height: 340)
-                .ignoresSafeArea()
-        }
-        .background(Color(hex: 0xF2F6F4).ignoresSafeArea())
+        // A flat, quiet column: the colour lives in the pages, not the navigation.
+        .background(MWLook.sidebar.ignoresSafeArea())
     }
 }
 
-/// Who Plex works for, and whether it's ready: an avatar, a greeting, the brain's status.
+/// Who Plex works for: their avatar, name and PayPal email. Opens Settings. The brain's status shows
+/// here only when something is wrong.
 private struct UserCard: View {
     let model: MainWindowModel
     let agent: AgentSession
+    @State private var hovering = false
 
     private var name: String {
         let full = model.viewer.value?.name ?? ""
         return full.isEmpty ? BrainSettings.userName : full
     }
 
-    private var initials: String {
-        let parts = name.split(separator: " ").prefix(2)
-        let letters = parts.compactMap(\.first).map(String.init).joined()
-        return letters.isEmpty ? "P" : letters.uppercased()
-    }
-
     var body: some View {
-        HStack(spacing: 11) {
-            Circle()
-                .fill(MWLook.mintSteel)
-                .overlay(
-                    Text(initials)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white)
-                        .shadow(color: Plex.steel700.opacity(0.35), radius: 2, y: 1)
-                )
-                .overlay(Circle().strokeBorder(.white, lineWidth: 2))
-                .frame(width: 40, height: 40)
-                .shadow(color: MWLook.shadow, radius: 4, y: 2)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("\(WindowFormat.greeting()),")
-                    .font(.system(size: 11.5))
-                    .foregroundStyle(Plex.muted)
-                Text(name.split(separator: " ").first.map(String.init) ?? name)
-                    .font(.system(size: 15, weight: .bold))
-                    .tracking(-0.2)
-                    .foregroundStyle(Plex.ink)
-                    .lineLimit(1)
-                HStack(spacing: 5) {
-                    MWDot(color: brainColor, size: 6)
-                    Text(brainText)
-                        .font(.system(size: 11.5))
-                        .foregroundStyle(Plex.muted)
+        Button { model.go(.settings) } label: {
+            HStack(spacing: 10) {
+                Image("avatar-user")
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 34, height: 34)
+                    .clipShape(Circle())
+                    .overlay(Circle().strokeBorder(Plex.ink.opacity(0.08)))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(name)
+                        .font(.system(size: 13.5, weight: .semibold))
+                        .tracking(-0.1)
+                        .foregroundStyle(Plex.ink)
                         .lineLimit(1)
+                    if let problem {
+                        HStack(spacing: 5) {
+                            MWDot(color: problem.color, size: 6)
+                            Text(problem.text)
+                                .font(.system(size: 11.5))
+                                .foregroundStyle(Plex.muted)
+                                .lineLimit(1)
+                        }
+                    } else if let email = model.viewer.value?.email, !email.isEmpty {
+                        Text(email)
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(Plex.muted)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
                 }
-                .padding(.top, 1)
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 9)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Plex.surface.opacity(hovering ? 1 : 0.7))
+            )
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Plex.ink.opacity(0.06)))
+            .contentShape(Rectangle())
         }
-        .padding(12)
-        .background(Plex.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Plex.ink.opacity(0.05)))
-        .shadow(color: MWLook.shadow, radius: 12, y: 4)
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help("Settings")
     }
 
-    private var brainColor: Color {
-        if ConvexClient.shared.reachable == false { return Plex.disputed }
+    /// Nothing when Plex is fine; a line when Convex or the brain can't be reached.
+    private var problem: (text: String, color: Color)? {
+        if ConvexClient.shared.reachable == false { return ("Can't reach Convex", Plex.disputed) }
         return switch agent.connection {
-        case .online: Plex.green400
-        case .connecting: Plex.steel400
-        case .offline: Plex.faint
-        }
-    }
-
-    private var brainText: String {
-        if ConvexClient.shared.reachable == false { return "Can't reach Convex" }
-        return switch agent.connection {
-        case .online: "Plex is ready"
-        case .connecting: "Connecting\u{2026}"
-        case .offline: "Brain offline"
+        case .online: nil
+        case .connecting: ("Connecting\u{2026}", Plex.steel400)
+        case .offline: ("Brain offline", Plex.faint)
         }
     }
 }
@@ -206,11 +198,12 @@ private struct SidebarRow: View {
             .frame(height: 36)
             .background(
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(selected ? Color(hex: 0xD9F5E8) : (hovering ? Plex.ink.opacity(0.04) : .clear))
+                    .fill(selected ? Plex.surface : (hovering ? Plex.ink.opacity(0.04) : .clear))
+                    .shadow(color: selected ? MWLook.shadow : .clear, radius: 3, y: 1)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .strokeBorder(selected ? Plex.green300.opacity(0.45) : .clear)
+                    .strokeBorder(selected ? Plex.ink.opacity(0.06) : .clear)
             )
             .contentShape(Rectangle())
         }

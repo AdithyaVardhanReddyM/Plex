@@ -11,6 +11,8 @@ enum MWLook {
     /// Slice's card shadow: soft and low.
     static let shadow = Color(hex: 0x0C2426, opacity: 0.07)
     static let aqua = Color(hex: 0x7FE6EA)
+    /// The sidebar's flat ground, a step below the canvas.
+    static let sidebar = Color(hex: 0xF1F4F3)
     /// Freezes the aurora's drift (renders).
     nonisolated(unsafe) static var still = false
 
@@ -22,7 +24,8 @@ enum MWLook {
                                           startPoint: .topLeading, endPoint: .bottomTrailing)
 }
 
-/// A soft mint → aqua → steel wash that melts into the canvas, drifting slowly (Slice's sky, in Plex colours).
+/// A faint mint → aqua → steel wash that melts into the canvas, drifting slowly (Slice's sky, in Plex
+/// colours). Kept pale on purpose: it tints the top of a page, it never competes with the content.
 struct MWAurora: View {
     var base: Color = Plex.canvas
     var strength: Double = 1
@@ -39,8 +42,8 @@ struct MWAurora: View {
 
     private func mesh(at t: Double) -> some View {
         func wobble(_ phase: Double, _ amount: Float = 0.06) -> Float { Float(sin(t * 0.3 + phase)) * amount }
-        let top: [UInt32] = [0x9AF8DE, 0x8FEDEB, 0xC4D3E6]
-        let mid: [UInt32] = [0xD5FBEE, 0xDDF3F2, 0xE2EAF4]
+        let top: [UInt32] = [0xD9FAEF, 0xD6F4F4, 0xE4EBF4]
+        let mid: [UInt32] = [0xEEFBF6, 0xEEF7F7, 0xF0F3F7]
         let colors = (top + mid).map { Color(hex: $0) } + [base, base, base]
         return MeshGradient(width: 3, height: 3, points: [
             [0, 0], [0.5 + wobble(0.3), 0], [1, 0],
@@ -70,7 +73,7 @@ struct MWPage<Content: View>: View {
         .scrollIndicators(.automatic)
         .background(alignment: .top) {
             MWAurora()
-                .frame(height: 300)
+                .frame(height: 260)
                 .ignoresSafeArea()
         }
         .background(Plex.canvas)
