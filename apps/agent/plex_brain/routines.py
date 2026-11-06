@@ -189,6 +189,7 @@ on their Mac. Plex runs the routine on its trigger; a worker follows the steps w
 money step still goes through the user's pot rules in code.
 
 Now: {now} ({tz}). The user's pots: {pots}.
+What Plex already knows about them (people's emails, shares, where things are): {known}
 
 Fill in:
 - name: 3 to 6 words, plain ("Friday Food sweep", "Pay rent when everyone's in").
@@ -222,7 +223,8 @@ Fill in:
 - missed: run_on_wake for money moves, bills and check-ins; skip for things that only matter at that
   moment (a reminder at 9).
 - questions: at most 2 short questions about what's genuinely unclear and changes what the routine
-  does (which pot when several fit, which people); never about the time of day; empty if it's clear.
+  does (which pot when several fit, which people); never about the time of day, and never about
+  anything in what Plex already knows (the worker looks it up when it runs); empty if it's clear.
   Still fill in your best guess.
 
 The user said: "{prompt}"
@@ -308,7 +310,14 @@ async def compile(prompt: str, timezone: str | None = None) -> dict[str, Any]:
     except convex.ConvexError:
         pots = "unknown"
     now = dt.datetime.now(_tz(tz)).strftime("%A %d %B %Y, %H:%M")
-    text = _COMPILE.format(now=now, tz=tz, pots=pots, icons=", ".join(ICONS), tools=", ".join(STEP_TOOLS), prompt=prompt.strip())
+    try:
+        from . import memory
+
+        known = memory.core_lines(await memory.core()) or "nothing yet"
+    except Exception:
+        known = "unknown"
+    text = _COMPILE.format(now=now, tz=tz, pots=pots, icons=", ".join(ICONS), tools=", ".join(STEP_TOOLS), prompt=prompt.strip(),
+                           known=known)
     out = await _generate(text)
     try:
         spec = _to_spec(out, tz)
@@ -606,13 +615,43 @@ async def create_routine(description: str, tool_context: ToolContext) -> dict[st
         description = f"{description}\n(Asked: {draft['questions'][0]} They said: {answer})"
         draft = await compile(description, tz)
     card = describe(draft["spec"])
+    # A routine on the same event as one they already have would do the same work twice (pay Lena
+    # twice for one invoice): ask whether this one replaces it.
+    replaces: list[dict[str, Any]] = []
+    for other in await _same_trigger(draft["spec"]["trigger"]):
+        choice = await conn.tasks.ask(
+            task, f"You already have “{other['name']}” on the same trigger: {other.get('summary') or ''} Should the new one replace it?",
+            ["Replace it", "Keep both"])
+        if choice.strip().lower().startswith("replace"):
+            replaces.append(other)
     if not await conn.tasks.confirm_action(task, f"Save the routine “{draft['name']}”?", f"{draft['spec']['summary']}\n\n{card}"):
         return {"saved": False, "note": "The user didn't want it saved. Ask what to change."}
     routine_id = await convex.mutation("routines:saveFromBrain", name=draft["name"], prompt=description, icon=draft["icon"],
                                        spec=draft["spec"], runWhere=draft["runWhere"], missed=draft["missed"], timezone=tz)
+    for other in replaces:
+        await convex.public_mutation("routines:setEnabled", routineId=other["_id"], enabled=False)
+        await report(conn, task, "routine", f"Turned off “{other['name']}”", "The new routine replaces it")
     await report(conn, task, "routine", f"Saved the routine “{draft['name']}”", draft["spec"]["summary"])
     return {"saved": True, "routineId": routine_id, "name": draft["name"], "summary": draft["spec"]["summary"],
             "runWhere": draft["runWhere"]}
+
+
+async def _same_trigger(trigger: dict[str, Any]) -> list[dict[str, Any]]:
+    """Enabled routines set off by the same event: the same PayPal event or the same folder. (Two
+    schedules or two email searches can coexist; they rarely mean the same thing.)"""
+    kind = trigger.get("kind")
+    if kind not in ("paypal", "folder"):
+        return []
+    out = []
+    for r in await convex.public_query("routines:list") or []:
+        t = (r.get("spec") or {}).get("trigger") or {}
+        if not r.get("enabled") or t.get("kind") != kind:
+            continue
+        same = (str(t.get("event") or "").upper() == str(trigger.get("event") or "").upper() if kind == "paypal" else
+                os.path.expanduser(str(t.get("path") or "")).rstrip("/") == os.path.expanduser(str(trigger.get("path") or "")).rstrip("/"))
+        if same:
+            out.append({"_id": r["_id"], "name": r.get("name"), "summary": (r.get("spec") or {}).get("summary")})
+    return out
 
 
 async def list_routines(tool_context: ToolContext) -> dict[str, Any]:
