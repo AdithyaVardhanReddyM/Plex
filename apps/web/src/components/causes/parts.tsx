@@ -41,7 +41,7 @@ export function PlaceChip({ label, className }: { label: string; className?: str
         className,
       )}
     >
-      <MapPin className="size-3.5 text-green-600" strokeWidth={1.9} />
+      <MapPin className="size-3.5 text-green-700" strokeWidth={1.9} />
       {label}
     </span>
   );
@@ -179,7 +179,7 @@ export function LocationMap({
       {hasPoint ? (
         <div className="relative h-48 overflow-hidden bg-sunken">
           <TileMap lat={lat!} lng={lng!} />
-          <span className="absolute top-1/2 left-1/2 flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-green-600 text-white shadow-float ring-4 ring-surface/80">
+          <span className="absolute top-1/2 left-1/2 flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-green-400 text-ink shadow-float ring-4 ring-surface/80">
             <MapPin className="size-4" strokeWidth={1.9} />
           </span>
           <span className="absolute right-1.5 bottom-1 rounded-sm bg-surface/80 px-1.5 text-[10.5px] text-muted">
@@ -189,7 +189,7 @@ export function LocationMap({
       ) : null}
       <div className="flex items-center justify-between gap-3 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <MapPin className="size-4 flex-none text-green-600" strokeWidth={1.9} />
+          <MapPin className="size-4 flex-none text-green-700" strokeWidth={1.9} />
           <div className="min-w-0">
             <div className="truncate text-[14px] font-medium text-ink">{label}</div>
             {hasPoint ? (

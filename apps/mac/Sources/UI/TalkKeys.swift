@@ -105,8 +105,8 @@ private enum KeyLook {
     static let face = Color(hex: 0xF5F7F6)
     static let ink = Color(hex: 0x4A5552)
     static let highlight = Color.white
-    static let accent = Color(hex: 0x12975F)
-    static let accentFill = Color(hex: 0x3ECF8E)
+    static let accent = Color(hex: 0x0D8086)
+    static let accentFill = Color(hex: 0x3EE0D8)
 }
 
 /// One key. A lit key carries the accent; a held one sinks (no glow).

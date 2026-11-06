@@ -136,7 +136,7 @@ function RoleTabs({ role, onChange }: { role: LedgerRole; onChange: (r: LedgerRo
             role === r.key ? "bg-surface text-ink shadow-card" : "text-muted hover:text-ink",
           )}
         >
-          <span className={role === r.key ? "text-green-600" : "text-faint"}>{r.icon}</span>
+          <span className={role === r.key ? "text-green-700" : "text-faint"}>{r.icon}</span>
           {ROLE_LABEL[r.key]}
         </button>
       ))}

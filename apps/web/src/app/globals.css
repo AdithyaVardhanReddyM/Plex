@@ -2,8 +2,7 @@
 
 /*
  * Plex design tokens. Light only.
- * Ground: cool off-white. Ink: green-black. Brand: database green (Supabase /
- * Neon family) for money that moved, metallic steel blue for money that's held
+ * Ground: cool off-white. Ink: green-black. Brand: mint to aqua for money that moved, metallic steel blue for money that's held
  * and for the receipt's foil edge. Use the tokens, never raw hex, in components.
  */
 
@@ -24,17 +23,18 @@
   --color-muted: #5f6b67;
   --color-faint: #8d9893;
 
-  /* Brand green: 500 is the signal, 600/700 carry text on white */
-  --color-green-50: #ecfbf3;
-  --color-green-100: #d2f6e3;
-  --color-green-200: #a5ecc8;
-  --color-green-300: #6edcaa;
-  --color-green-400: #3ecf8e;
-  --color-green-500: #1fb978;
-  --color-green-600: #12975f;
-  --color-green-700: #0f774c;
-  --color-green-800: #0d5a3b;
-  --color-green-900: #0a3f2a;
+  /* Brand mint→aqua (palette #EBFFFA #C6FCE5 #6EF3D6 #0DCEDA). Token names stay green-*.
+     300-500 are fills (ink text on them, never white); 700/800 carry text on white */
+  --color-green-50: #ebfffa;
+  --color-green-100: #c6fce5;
+  --color-green-200: #9af8de;
+  --color-green-300: #6ef3d6;
+  --color-green-400: #3ee0d8;
+  --color-green-500: #0dceda;
+  --color-green-600: #0d969e;
+  --color-green-700: #0d8086;
+  --color-green-800: #0c5f62;
+  --color-green-900: #0c4344;
 
   /* Metallic steel blue */
   --color-steel-50: #f1f5fa;
@@ -50,7 +50,7 @@
 
   /* Money states */
   --color-held: var(--color-steel-600);
-  --color-released: var(--color-green-600);
+  --color-released: var(--color-green-700);
   --color-refunded: #b26b12;
   --color-refunded-bg: #fdf3e2;
   --color-disputed: #c2412d;
@@ -85,7 +85,7 @@
   /* Brushed-metal gradient for the receipt's edge and the logo */
   --metal: linear-gradient(135deg, #eef3f9 0%, #b8c8dc 28%, #6f8db3 52%, #c9d7e8 74%, #f3f6fa 100%);
   --metal-soft: linear-gradient(135deg, #f6f9fc 0%, #dbe5f0 45%, #c1d0e2 60%, #eef3f8 100%);
-  --brand: linear-gradient(135deg, #3ecf8e 0%, #1fb978 45%, #3f5f8c 100%);
+  --brand: linear-gradient(135deg, #6ef3d6 0%, #0dceda 50%, #3f5f8c 100%);
 }
 
 html {

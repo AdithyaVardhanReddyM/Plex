@@ -9,13 +9,13 @@ import SwiftUI
 /// The window's soft extras on top of the Plex tokens: the aurora wash, the card shadow.
 enum MWLook {
     /// Slice's card shadow: soft and low.
-    static let shadow = Color(hex: 0x10241C, opacity: 0.07)
-    static let aqua = Color(hex: 0x9FE6E4)
+    static let shadow = Color(hex: 0x0C2426, opacity: 0.07)
+    static let aqua = Color(hex: 0x7FE6EA)
     /// Freezes the aurora's drift (renders).
     nonisolated(unsafe) static var still = false
 
     /// The progress gradient for pots: mint into the signal green.
-    static let barGradient = LinearGradient(colors: [Color(hex: 0x8EE8C0), Plex.green400, Plex.green500],
+    static let barGradient = LinearGradient(colors: [Color(hex: 0x9AF8DE), Plex.green400, Plex.green500],
                                             startPoint: .leading, endPoint: .trailing)
     /// Mint → steel, for avatars and the flow's line.
     static let mintSteel = LinearGradient(colors: [Plex.green300, MWLook.aqua, Plex.steel300],
@@ -39,8 +39,8 @@ struct MWAurora: View {
 
     private func mesh(at t: Double) -> some View {
         func wobble(_ phase: Double, _ amount: Float = 0.06) -> Float { Float(sin(t * 0.3 + phase)) * amount }
-        let top: [UInt32] = [0xA5ECC8, 0xA9E7E6, 0xC4D3E6]
-        let mid: [UInt32] = [0xD6F5E6, 0xDDF3F2, 0xE2EAF4]
+        let top: [UInt32] = [0x9AF8DE, 0x8FEDEB, 0xC4D3E6]
+        let mid: [UInt32] = [0xD5FBEE, 0xDDF3F2, 0xE2EAF4]
         let colors = (top + mid).map { Color(hex: $0) } + [base, base, base]
         return MeshGradient(width: 3, height: 3, points: [
             [0, 0], [0.5 + wobble(0.3), 0], [1, 0],
@@ -300,7 +300,7 @@ struct MWButtonStyle: ButtonStyle {
             if arrow {
                 Image(systemName: "arrow.right")
                     .font(.system(size: size == .large ? 11 : 10, weight: .bold))
-                    .foregroundStyle(kind == .brand ? Plex.green600 : Plex.ink)
+                    .foregroundStyle(kind == .brand ? Plex.green700 : Plex.ink)
                     .frame(width: badge, height: badge)
                     .background(Circle().fill(.white))
             }
@@ -343,7 +343,8 @@ struct MWButtonStyle: ButtonStyle {
 
     private var foreground: Color {
         switch kind {
-        case .primary, .brand: .white
+        case .primary: .white
+        case .brand: Plex.ink
         case .secondary: Plex.ink
         case .ghost: hovering ? Plex.ink : Plex.ink2
         case .danger: Plex.disputed
@@ -353,7 +354,7 @@ struct MWButtonStyle: ButtonStyle {
     private func background(pressed: Bool) -> AnyShapeStyle {
         switch kind {
         case .primary: AnyShapeStyle(hovering ? Plex.ink2 : Plex.ink)
-        case .brand: AnyShapeStyle(LinearGradient(colors: [hovering ? Plex.green500 : Color(hex: 0x2CC283), hovering ? Plex.green600 : Plex.green500],
+        case .brand: AnyShapeStyle(LinearGradient(colors: [hovering ? Plex.green300 : Plex.green300, hovering ? Plex.green400 : Plex.green500],
                                                   startPoint: .top, endPoint: .bottom))
         case .secondary: AnyShapeStyle(hovering ? Plex.canvas : Plex.surface)
         case .ghost: AnyShapeStyle(hovering || pressed ? Plex.ink.opacity(0.05) : Color.clear)

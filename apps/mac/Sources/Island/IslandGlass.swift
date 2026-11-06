@@ -24,14 +24,14 @@ enum IslandStyle {
     static let good = Plex.OnDark.green
     static let bad = Color(hex: 0xF08A7E)
     /// Ink for text on the green button.
-    static let onMoney = Color(hex: 0x05261A)
+    static let onMoney = Color(hex: 0x04282A)
 
     /// The receipt's foil edge, tuned for black: mint into steel, catching white light in the middle.
     static let foil = LinearGradient(
         stops: [
-            .init(color: Color(hex: 0x3ECF8E), location: 0),
-            .init(color: Color(hex: 0xA5ECC8), location: 0.28),
-            .init(color: Color(hex: 0xF4FBF8), location: 0.48),
+            .init(color: Color(hex: 0x3EE0D8), location: 0),
+            .init(color: Color(hex: 0x9AF8DE), location: 0.28),
+            .init(color: Color(hex: 0xF2FEFB), location: 0.48),
             .init(color: Color(hex: 0xC4D3E6), location: 0.66),
             .init(color: Color(hex: 0x7393BD), location: 1),
         ],

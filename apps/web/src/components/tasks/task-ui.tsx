@@ -220,7 +220,7 @@ function CheckMark({ status }: { status: CheckRow["status"] }) {
     );
   if (status === "pass")
     return (
-      <span className={cn(base, "bg-green-50 text-green-600 ring-1 ring-green-200 ring-inset")}>
+      <span className={cn(base, "bg-green-50 text-green-700 ring-1 ring-green-200 ring-inset")}>
         <Check strokeWidth={2.4} />
       </span>
     );

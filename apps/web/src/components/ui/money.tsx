@@ -28,7 +28,7 @@ export function Amount({
   };
   return (
     <span className={cn("tabular inline-flex items-baseline font-semibold text-ink", sizes[size], className)}>
-      {sign ? <span className={cn("mr-0.5", sign === "in" ? "text-green-600" : "text-ink-2")}>{sign === "in" ? "+" : "−"}</span> : null}
+      {sign ? <span className={cn("mr-0.5", sign === "in" ? "text-green-700" : "text-ink-2")}>{sign === "in" ? "+" : "−"}</span> : null}
       <span className={cn("mr-[0.06em]", size === "xl" ? "text-[0.55em] font-medium text-muted" : "")}>{symbol}</span>
       {digits}
     </span>

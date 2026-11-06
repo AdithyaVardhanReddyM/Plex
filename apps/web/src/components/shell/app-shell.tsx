@@ -58,7 +58,7 @@ function NavList({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
               active ? "bg-surface text-ink shadow-card ring-1 ring-line" : "text-muted hover:bg-sunken hover:text-ink",
             )}
           >
-            <Icon className={cn("size-4", active ? "text-green-600" : "text-faint")} strokeWidth={1.9} />
+            <Icon className={cn("size-4", active ? "text-green-700" : "text-faint")} strokeWidth={1.9} />
             {label}
           </Link>
         );

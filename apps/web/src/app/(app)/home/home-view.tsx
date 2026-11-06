@@ -183,7 +183,7 @@ function ApprovalsCard({
           </div>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center rounded-md border border-dashed border-line px-4 py-8 text-center">
-            <ShieldCheck className="size-5 text-green-600" strokeWidth={1.9} />
+            <ShieldCheck className="size-5 text-green-700" strokeWidth={1.9} />
             <div className="mt-2 text-[14px] font-medium text-ink">Nothing waiting</div>
             <div className="mt-0.5 text-[13px] text-muted">Your agents are inside every limit.</div>
           </div>

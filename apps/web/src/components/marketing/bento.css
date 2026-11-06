@@ -2,11 +2,11 @@
 .pb-tasks,
 .pb-ledger {
   & .ss-stage {
-    --pb-green-50: var(--color-green-50, #ecfbf3);
-    --pb-green-200: var(--color-green-200, #a5ecc8);
-    --pb-green-400: var(--color-green-400, #3ecf8e);
-    --pb-green-500: var(--color-green-500, #1fb978);
-    --pb-green-700: var(--color-green-700, #0f774c);
+    --pb-green-50: var(--color-green-50, #ebfffa);
+    --pb-green-200: var(--color-green-200, #9af8de);
+    --pb-green-400: var(--color-green-400, #3ee0d8);
+    --pb-green-500: var(--color-green-500, #0dceda);
+    --pb-green-700: var(--color-green-700, #0d8086);
     --pb-steel-400: var(--color-steel-400, #7393bd);
     --pb-ink: var(--color-ink, #0c1512);
     --pb-ink-2: var(--color-ink-2, #34403c);

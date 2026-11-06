@@ -11,10 +11,10 @@ extension EnvironmentValues {
 }
 
 enum Aurora {
-    static let mint = Color(hex: 0x3ECF8E)
-    static let mintSoft = Color(hex: 0xA5ECC8)
-    static let aqua = Color(hex: 0x8FE3DA)
-    static let aquaSoft = Color(hex: 0xC9F1EC)
+    static let mint = Color(hex: 0x3EE0D8)
+    static let mintSoft = Color(hex: 0x9AF8DE)
+    static let aqua = Color(hex: 0x6FE3E6)
+    static let aquaSoft = Color(hex: 0xC6F5F2)
     static let steel = Color(hex: 0x9CB4D2)
     static let steelSoft = Color(hex: 0xC4D3E6)
 
@@ -47,7 +47,7 @@ struct AuroraWash: View {
             [0, 1], [0.5, 1], [1, 1],
         ], colors: [
             Aurora.mintSoft, Aurora.aqua.opacity(0.85), Aurora.steelSoft,
-            Color(hex: 0xDDF7EA), Color(hex: 0xDDF4F2), Color(hex: 0xE3EAF4),
+            Color(hex: 0xE0FCF1), Color(hex: 0xDAF8F7), Color(hex: 0xE3EAF4),
             base, base, base,
         ])
     }
@@ -186,14 +186,14 @@ struct CircleCloseButton: View {
 enum IslandGlow {
     /// Round the island's edge while Plex listens or thinks.
     static let ring = AngularGradient(colors: [
-        Color(hex: 0x3ECF8E), Color(hex: 0x8FE3DA), Color(hex: 0x9CB4D2), Color(hex: 0x6EDCAA), Color(hex: 0x3ECF8E),
+        Color(hex: 0x3EE0D8), Color(hex: 0x6FE3E6), Color(hex: 0x9CB4D2), Color(hex: 0x6EF3D6), Color(hex: 0x3EE0D8),
     ], center: .center)
 
     /// Money that moved, as text: green-200 into the signal mint.
     static let money = LinearGradient(stops: [
-        .init(color: Color(hex: 0xF0FDF6), location: 0.05),
-        .init(color: Color(hex: 0xA5ECC8), location: 0.45),
-        .init(color: Color(hex: 0x3ECF8E), location: 0.95),
+        .init(color: Color(hex: 0xEBFFFA), location: 0.05),
+        .init(color: Color(hex: 0x9AF8DE), location: 0.45),
+        .init(color: Color(hex: 0x3EE0D8), location: 0.95),
     ], startPoint: .top, endPoint: .bottom)
 
     /// Money that's held: steel catching light.

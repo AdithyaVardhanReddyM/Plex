@@ -17,7 +17,7 @@ export const buttonVariants = cva(
         primary: "bg-ink text-white shadow-card hover:bg-ink-2",
         /** Money moves: fund, approve, release, donate. */
         brand:
-          "bg-green-500 text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_1px_2px_rgb(15_119_76/0.3)] hover:bg-green-600",
+          "bg-green-400 text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_1px_2px_rgb(13_128_134/0.3)] hover:bg-green-300",
         secondary: "border border-line bg-surface text-ink shadow-card hover:border-line-strong hover:bg-canvas",
         ghost: "text-ink-2 hover:bg-sunken hover:text-ink",
         danger: "border border-line bg-surface text-disputed hover:border-disputed/40 hover:bg-disputed-bg",

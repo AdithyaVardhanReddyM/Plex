@@ -20,16 +20,17 @@ enum Plex {
     static let muted = Color(hex: 0x5F6B67)
     static let faint = Color(hex: 0x8D9893)
 
-    // Database green: money that moved
-    static let green50 = Color(hex: 0xECFBF3)
-    static let green100 = Color(hex: 0xD2F6E3)
-    static let green200 = Color(hex: 0xA5ECC8)
-    static let green300 = Color(hex: 0x6EDCAA)
-    static let green400 = Color(hex: 0x3ECF8E) // the signal
-    static let green500 = Color(hex: 0x1FB978)
-    static let green600 = Color(hex: 0x12975F)
-    static let green700 = Color(hex: 0x0F774C)
-    static let green800 = Color(hex: 0x0D5A3B)
+    // Brand mint to aqua (#EBFFFA #C6FCE5 #6EF3D6 #0DCEDA): money that moved. Names stay green*.
+    // 300-500 are fills: ink text on them, never white. 700/800 carry text on white.
+    static let green50 = Color(hex: 0xEBFFFA)
+    static let green100 = Color(hex: 0xC6FCE5)
+    static let green200 = Color(hex: 0x9AF8DE)
+    static let green300 = Color(hex: 0x6EF3D6)
+    static let green400 = Color(hex: 0x3EE0D8) // the signal
+    static let green500 = Color(hex: 0x0DCEDA)
+    static let green600 = Color(hex: 0x0D969E)
+    static let green700 = Color(hex: 0x0D8086)
+    static let green800 = Color(hex: 0x0C5F62)
 
     // Steel: money that's held, waiting, or needs you
     static let steel50 = Color(hex: 0xF1F5FA)
@@ -79,7 +80,7 @@ enum Plex {
         static let hairline = Color.white.opacity(0.1)
         static let fill = Color.white.opacity(0.07)
         static let fillStrong = Color.white.opacity(0.12)
-        static let green = Color(hex: 0x3ECF8E)
+        static let green = Color(hex: 0x6EF3D6)
         static let steel = Color(hex: 0x9CB4D2)
         static let warn = Color(hex: 0xF0B35A)
     }

@@ -19,7 +19,7 @@ export default function PublicCauseLayout({ children }: { children: React.ReactN
             <span className="text-[14px] font-medium text-muted">Causes</span>
           </Link>
           <span className="inline-flex items-center gap-1.5 text-[12.5px] text-muted">
-            <ShieldCheck className="size-4 text-green-600" strokeWidth={1.9} />
+            <ShieldCheck className="size-4 text-green-700" strokeWidth={1.9} />
             <span className="hidden sm:inline">Every donation gets a receipt ·</span> PayPal sandbox
           </span>
         </div>

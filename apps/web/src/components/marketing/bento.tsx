@@ -100,7 +100,7 @@ function MacPicture() {
 function CausesPicture() {
   return (
     <div className="flex flex-1 flex-col justify-end px-6 pb-6">
-      <HeartHandshake className="size-5 text-green-600" strokeWidth={1.9} aria-hidden />
+      <HeartHandshake className="size-5 text-green-700" strokeWidth={1.9} aria-hidden />
       <div className="mt-4 text-[14px] text-muted">One cleanup shift at Lake Merritt</div>
       <div className="tabular mt-1 whitespace-nowrap text-[64px] font-semibold leading-none tracking-[-0.04em] text-ink">
         $45

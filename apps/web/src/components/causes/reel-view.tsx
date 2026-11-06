@@ -145,7 +145,7 @@ export function ReelView({ donationId }: { donationId: string }) {
             <ul className="mt-2.5 space-y-1.5">
               {reel.proof.verdict.checks.map((c) => (
                 <li key={c.check} className="flex items-start gap-2 text-[13px] leading-snug">
-                  <span className={cn("mt-0.5", c.passed ? "text-green-600" : "text-disputed")}>
+                  <span className={cn("mt-0.5", c.passed ? "text-green-700" : "text-disputed")}>
                     {c.passed ? <Check className="size-3.5" strokeWidth={2.4} /> : <TriangleAlert className="size-3.5" strokeWidth={1.9} />}
                   </span>
                   <span>

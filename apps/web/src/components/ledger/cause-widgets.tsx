@@ -107,7 +107,7 @@ function RankCell({ data }: CustomCellRendererProps<Leader>) {
     <span
       className={cn(
         "tabular inline-flex size-6 items-center justify-center rounded-full text-[12px] font-semibold",
-        data.rank === 1 ? "bg-green-500 text-white" : data.rank <= 3 ? "bg-green-50 text-green-700" : "text-faint",
+        data.rank === 1 ? "bg-green-400 text-ink" : data.rank <= 3 ? "bg-green-50 text-green-700" : "text-faint",
       )}
     >
       {data.rank}

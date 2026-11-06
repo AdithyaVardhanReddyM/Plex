@@ -204,7 +204,7 @@ final class AgentCursor {
 /// the dim seam between two edges. All Core Animation: nothing runs on the main thread while it
 /// glows, however long the task.
 final class EdgeGlowView: NSView {
-    private static let palette: [NSColor] = [0x5376A5, 0x9CB4D2, 0x6EDCAA, 0xC4D3E6, 0x5376A5].map { NSColor(hex: $0) }
+    private static let palette: [NSColor] = [0x5376A5, 0x9CB4D2, 0x6EF3D6, 0xC4D3E6, 0x5376A5].map { NSColor(hex: $0) }
     /// Seconds for the colours to go once round the screen.
     private static let turn: CFTimeInterval = 9
 

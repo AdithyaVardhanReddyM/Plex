@@ -149,7 +149,7 @@ export function PersonaSwitch({ className }: { className?: string }) {
                         : `Worker · ${p.area ?? "Plex"}`}
                   </span>
                 </span>
-                {active ? <Check className="size-4 text-green-600" strokeWidth={1.9} /> : <span />}
+                {active ? <Check className="size-4 text-green-700" strokeWidth={1.9} /> : <span />}
               </button>
             );
           })}

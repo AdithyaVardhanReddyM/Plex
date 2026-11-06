@@ -106,7 +106,7 @@ function RuleCell({ data }: CellProps) {
   if (!data || isTotal(data)) return null;
   return (
     <div className="flex h-full min-w-0 items-center gap-2 text-muted">
-      <ShieldCheck size={14} strokeWidth={1.9} className="flex-none text-green-600" />
+      <ShieldCheck size={14} strokeWidth={1.9} className="flex-none text-green-700" />
       <span className="truncate text-[12.5px]">{data.rule.text}</span>
     </div>
   );

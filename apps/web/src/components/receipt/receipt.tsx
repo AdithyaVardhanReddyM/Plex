@@ -179,7 +179,7 @@ export function ReceiptCard({ receipt, className }: { receipt: Receipt; classNam
               <ul className="mt-1.5 space-y-1">
                 {receipt.evidence.checks.map((c) => (
                   <li key={c.check} className="flex items-start gap-2 text-[13px]">
-                    <span className={cn("mt-0.5 [&_svg]:size-3.5", c.passed ? "text-green-600" : "text-disputed")}>
+                    <span className={cn("mt-0.5 [&_svg]:size-3.5", c.passed ? "text-green-700" : "text-disputed")}>
                       {c.passed ? <Check /> : <TriangleAlert />}
                     </span>
                     <span>

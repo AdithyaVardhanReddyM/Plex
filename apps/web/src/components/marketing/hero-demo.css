@@ -3,12 +3,12 @@
    the same in the Stageshow playground and in the app. */
 .ph {
   & .ss-stage {
-    --ph-green-50: var(--color-green-50, #ecfbf3);
-    --ph-green-200: var(--color-green-200, #a5ecc8);
-    --ph-green-400: var(--color-green-400, #3ecf8e);
-    --ph-green-500: var(--color-green-500, #1fb978);
-    --ph-green-600: var(--color-green-600, #12975f);
-    --ph-green-700: var(--color-green-700, #0f774c);
+    --ph-green-50: var(--color-green-50, #ebfffa);
+    --ph-green-200: var(--color-green-200, #9af8de);
+    --ph-green-400: var(--color-green-400, #3ee0d8);
+    --ph-green-500: var(--color-green-500, #0dceda);
+    --ph-green-600: var(--color-green-600, #0d969e);
+    --ph-green-700: var(--color-green-700, #0d8086);
     --ph-steel-50: var(--color-steel-50, #f1f5fa);
     --ph-steel-100: var(--color-steel-100, #e1e9f3);
     --ph-steel-600: var(--color-steel-600, #3f5f8c);
@@ -47,7 +47,7 @@
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(60% 70% at 0% 0%, rgb(62 207 142 / 0.13), transparent 70%),
+      radial-gradient(60% 70% at 0% 0%, rgb(62 224 216 / 0.14), transparent 70%),
       radial-gradient(55% 65% at 100% 100%, rgb(83 118 165 / 0.14), transparent 70%);
   }
 

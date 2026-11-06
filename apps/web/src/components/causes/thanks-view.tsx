@@ -101,7 +101,7 @@ export function ThanksView({ slug, checkoutId, token }: { slug: string; checkout
 
   return (
     <div className="mx-auto max-w-xl animate-rise">
-      <div className="flex size-11 items-center justify-center rounded-full bg-green-500 text-white shadow-[0_6px_16px_-6px_rgb(31_185_120/0.6)]">
+      <div className="flex size-11 items-center justify-center rounded-full bg-green-400 text-ink shadow-[0_6px_16px_-6px_rgb(13_206_218/0.6)]">
         <Check className="size-5" strokeWidth={2.4} />
       </div>
       <h1 className="mt-5 text-[28px] font-semibold leading-tight tracking-[-0.03em] text-ink">

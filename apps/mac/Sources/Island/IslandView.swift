@@ -232,7 +232,7 @@ struct Bars: View {
     /// Loudness 0…1 at a time, before each bar's own offset.
     let level: (Double) -> Double
     var spread: Double = 0.7
-    var style: AnyShapeStyle = AnyShapeStyle(LinearGradient(colors: [Color(hex: 0xA5ECC8), Color(hex: 0x8FE3DA), Color(hex: 0x9CB4D2)],
+    var style: AnyShapeStyle = AnyShapeStyle(LinearGradient(colors: [Color(hex: 0x9AF8DE), Color(hex: 0x6FE3E6), Color(hex: 0x9CB4D2)],
                                                             startPoint: .top, endPoint: .bottom))
 
     var body: some View {
@@ -544,7 +544,7 @@ private struct GlowRing: View {
 
     private func ring(_ t: Double) -> some View {
         let gradient = AngularGradient(colors: [
-            Color(hex: 0x3ECF8E), Color(hex: 0x8FE3DA), Color(hex: 0xC4D3E6), Color(hex: 0x7393BD), Color(hex: 0x6EDCAA), Color(hex: 0x3ECF8E),
+            Color(hex: 0x3EE0D8), Color(hex: 0x6FE3E6), Color(hex: 0xC4D3E6), Color(hex: 0x7393BD), Color(hex: 0x6EF3D6), Color(hex: 0x3EE0D8),
         ], center: .center, angle: .degrees(t * (listening ? 90 : 50)))
         return GeometryReader { geo in
             let h = max(geo.size.height, 1)
@@ -573,10 +573,10 @@ struct GlowDot: View {
     var steel = false
 
     var body: some View {
-        let colors = steel ? [Color(hex: 0xE1E9F3), Color(hex: 0x9CB4D2)] : [Color(hex: 0xC9F6DF), Color(hex: 0x3ECF8E)]
+        let colors = steel ? [Color(hex: 0xE1E9F3), Color(hex: 0x9CB4D2)] : [Color(hex: 0xC6FCE5), Color(hex: 0x3EE0D8)]
         Circle()
             .fill(RadialGradient(colors: colors, center: UnitPoint(x: 0.35, y: 0.3), startRadius: 0, endRadius: size))
             .frame(width: size, height: size)
-            .shadow(color: (steel ? Color(hex: 0x9CB4D2) : Color(hex: 0x3ECF8E)).opacity(0.9), radius: size * 0.6)
+            .shadow(color: (steel ? Color(hex: 0x9CB4D2) : Color(hex: 0x3EE0D8)).opacity(0.9), radius: size * 0.6)
     }
 }

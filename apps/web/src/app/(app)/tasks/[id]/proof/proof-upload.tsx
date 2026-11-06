@@ -202,7 +202,7 @@ export function ProofUpload({ id }: { id: string }) {
             </span>
           </span>
           {geo.state === "ok" ? (
-            <Check className="size-4 flex-none text-green-600" strokeWidth={2.2} />
+            <Check className="size-4 flex-none text-green-700" strokeWidth={2.2} />
           ) : (
             <Button variant="secondary" size="sm" onClick={shareLocation} disabled={geo.state === "asking"}>
               {geo.state === "asking" ? <Loader2 className="animate-spin" /> : <Crosshair />} Share
