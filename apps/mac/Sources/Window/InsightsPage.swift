@@ -29,7 +29,7 @@ struct InsightsPage: View {
                          icon: MainSection.insights.icon,
                          subtitle: "Charts and tables Plex builds when you ask about your money. Ask “How did I do this month?” or “Plan my week”.") {
                 Button { NSWorkspace.shared.open(BrainSettings.webURL.appending(path: "insights")) } label: {
-                    MWLabel("Open in browser", icon: "arrow-up-right")
+                    PlexLabel("Open in browser", icon: "arrow-up-right")
                 }
                 .mwButton(.secondary)
             }

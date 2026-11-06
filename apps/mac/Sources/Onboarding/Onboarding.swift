@@ -115,7 +115,7 @@ struct OnboardingView: View {
             HStack {
                 if step > 0 {
                     Button("Back") { step -= 1 }
-                        .buttonStyle(CapsuleSecondaryButton(symbol: "arrow.left"))
+                        .buttonStyle(CapsuleSecondaryButton(symbol: "arrow-left"))
                 }
                 Spacer()
                 Button(step < 2 ? "Continue" : "Start using Plex") {
@@ -155,7 +155,7 @@ private struct FinePrint: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 7) {
-            Image(systemName: "lock.fill")
+            PlexIcon(symbol: "lock", size: 12, color: nil)
             Text(text).fixedSize(horizontal: false, vertical: true)
         }
         .font(.system(size: 12))
@@ -205,11 +205,11 @@ private struct WelcomeStep: View {
                 .frame(width: 280)
                 .lifted()
                 VStack(alignment: .leading, spacing: 16) {
-                    Point(icon: "plex-money-receipt", title: "Nothing moves without a receipt",
+                    Point(icon: "receipt", title: "Nothing moves without a receipt",
                           text: "Every payment keeps your words and the rule that allowed it.")
-                    Point(icon: "plex-mint-shield", title: "Your limits, enforced",
+                    Point(icon: "shield-check", title: "Your limits, enforced",
                           text: "Over a limit, Plex asks first. Allow, deny, or always.")
-                    Point(icon: "plex-mint-cursor", title: "It hands you the wheel",
+                    Point(icon: "mouse-pointer-2", title: "It hands you the wheel",
                           text: "Signing in is yours. Plex never types your passwords.")
                 }
                 .padding(.top, 4)
@@ -217,18 +217,15 @@ private struct WelcomeStep: View {
         }
     }
 
-    /// Three glossy icons floating over the aurora.
+    /// Three icon tiles floating over the aurora.
     private var hero: some View {
         ZStack {
-            GlossyIcon("plex-money-card", floating: true, phase: 1.4)
-                .frame(width: 70)
+            FloatingIconTile(symbol: "wallet", size: 58, floating: true, phase: 1.4)
                 .rotationEffect(.degrees(-12))
                 .offset(x: -64, y: 34)
-            GlossyIcon("plex-mint-orb", floating: true, phase: 2.6)
-                .frame(width: 44)
+            FloatingIconTile(symbol: "shield-check", size: 40, tint: .steel, floating: true, phase: 2.6)
                 .offset(x: 70, y: -30)
-            GlossyIcon("plex-money-receipt", floating: true)
-                .frame(width: 104)
+            FloatingIconTile(symbol: "receipt", size: 84, floating: true)
                 .shadow(color: Plex.green700.opacity(0.18), radius: 16, y: 10)
         }
         .frame(width: 200, height: 140)
@@ -241,7 +238,7 @@ private struct WelcomeStep: View {
 
         var body: some View {
             HStack(alignment: .center, spacing: 14) {
-                GlossyTile(image: icon, size: 46)
+                PlexIconTile(symbol: icon, size: 46)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title).font(.system(size: 14, weight: .semibold)).foregroundStyle(Plex.ink)
                     Text(text).font(.system(size: 12.5)).foregroundStyle(Plex.muted)
@@ -258,7 +255,7 @@ private struct AccessStep: View {
     @State private var statuses: [Permissions.Kind: Permissions.Status] = [:]
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     private let kinds: [(Permissions.Kind, String)] = [
-        (.microphone, "plex-mint-mic"), (.accessibility, "plex-mint-cursor"), (.screenRecording, "plex-mint-screen"),
+        (.microphone, "mic"), (.accessibility, "mouse-pointer-2"), (.screenRecording, "monitor"),
     ]
 
     var body: some View {
@@ -269,12 +266,10 @@ private struct AccessStep: View {
                     .frame(maxWidth: 440, alignment: .leading)
                 Spacer(minLength: 0)
                 ZStack {
-                    GlossyIcon("plex-mint-mic", floating: true, phase: 1.1)
-                        .frame(width: 54)
+                    FloatingIconTile(symbol: "mic", size: 48, floating: true, phase: 1.1)
                         .rotationEffect(.degrees(-10))
                         .offset(x: -62, y: 26)
-                    GlossyIcon("plex-mint-shield", floating: true)
-                        .frame(width: 100)
+                    FloatingIconTile(symbol: "shield-check", size: 80, floating: true)
                         .shadow(color: Plex.green700.opacity(0.18), radius: 16, y: 10)
                 }
                 .frame(width: 190, height: 130)
@@ -308,7 +303,7 @@ private struct PermissionCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
-                GlossyTile(image: icon, size: 52)
+                PlexIconTile(symbol: icon, size: 52)
                 Spacer(minLength: 6)
                 action
             }
@@ -327,7 +322,7 @@ private struct PermissionCard: View {
     private var action: some View {
         switch status {
         case .granted:
-            Label("On", systemImage: "checkmark")
+            PlexLabel("On", icon: "check")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Plex.green700)
                 .padding(.horizontal, 10)
@@ -374,7 +369,7 @@ private struct ConnectStep: View {
                     .frame(maxWidth: 520, alignment: .leading)
                 Spacer(minLength: 0)
                 if !connected.isEmpty {
-                    Label("\(connected.count) connected", systemImage: "checkmark")
+                    PlexLabel("\(connected.count) connected", icon: "check")
                         .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(Plex.green700)
                         .padding(.horizontal, 12)
@@ -388,7 +383,7 @@ private struct ConnectStep: View {
             }
             Spacer(minLength: 0)
             if let problem {
-                Label(problem, systemImage: "exclamationmark.triangle.fill")
+                PlexLabel(problem, icon: "triangle-alert")
                     .font(.system(size: 12))
                     .foregroundStyle(Plex.disputed)
                     .lineLimit(2)
@@ -410,11 +405,10 @@ private struct ConnectStep: View {
         let on = connected.contains(app.slug)
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
-                GlossyTile(image: "logo-\(app.slug)", size: 46, logo: true)
+                LogoTile(image: "logo-\(app.slug)", size: 46)
                 Spacer(minLength: 6)
                 if on {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .bold))
+                    PlexIcon(symbol: "check", size: 12, color: nil)
                         .foregroundStyle(Plex.green600)
                         .frame(width: 28, height: 28)
                         .background(Circle().fill(Plex.green50))

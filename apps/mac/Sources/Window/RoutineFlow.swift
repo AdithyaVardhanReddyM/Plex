@@ -32,7 +32,7 @@ struct RoutineFlow: View {
                         ForEach(spec.conditions.indices, id: \.self) { i in
                             block {
                                 HStack(spacing: 10) {
-                                    MWIcon(symbol: "circle-check", size: 13, color: Plex.ink2)
+                                    PlexIcon(symbol: "circle-check", size: 13, color: Plex.ink2)
                                         .frame(width: 18)
                                     Text(spec.conditions[i].text)
                                         .font(.system(size: 13))
@@ -73,7 +73,7 @@ struct RoutineFlow: View {
     private func stage<Content: View>(_ label: String, icon: String, last: Bool, @ViewBuilder content: () -> Content) -> some View {
         HStack(alignment: .top, spacing: 14) {
             VStack(spacing: 3) {
-                MWIconTile(symbol: icon, size: compact ? 34 : 38)
+                PlexIconTile(symbol: icon, size: compact ? 34 : 38)
                 Text(label)
                     .font(.system(size: 10.5, weight: .bold))
                     .tracking(0.4)
@@ -127,7 +127,7 @@ struct StepBlock: View {
                     .background(money ? Plex.steel100 : Plex.sunken, in: Circle())
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
-                        MWIcon(symbol: WindowFormat.stepSymbol(step.kind), size: 11.5, color: money ? Plex.steel600 : Plex.muted)
+                        PlexIcon(symbol: WindowFormat.stepSymbol(step.kind), size: 11.5, color: money ? Plex.steel600 : Plex.muted)
                         Text(step.title)
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(Plex.ink)
@@ -145,7 +145,7 @@ struct StepBlock: View {
             }
             if let guardrails, let text = Self.guardrailText(guardrails) {
                 HStack(spacing: 6) {
-                    MWIcon(symbol: "shield-check", size: 11, color: Plex.steel600)
+                    PlexIcon(symbol: "shield-check", size: 11, color: Plex.steel600)
                     Text(text)
                         .font(.system(size: 12))
                         .foregroundStyle(Plex.steel700)

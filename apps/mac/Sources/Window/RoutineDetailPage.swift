@@ -21,7 +21,7 @@ struct RoutineDetailPage: View {
     var body: some View {
         MWPage(maxWidth: 1000) {
             Button { model.openRoutineID = nil } label: {
-                MWLabel("Routines", icon: "chevron-left")
+                PlexLabel("Routines", icon: "chevron-left")
             }
             .mwButton(.ghost, size: .small)
             .padding(.leading, -8)
@@ -69,7 +69,7 @@ struct RoutineDetailPage: View {
 
     private func header(_ routine: RoutineDoc) -> some View {
         HStack(alignment: .top, spacing: 16) {
-            MWIconTile(symbol: WindowFormat.routineIcon(routine.icon, trigger: routine.spec.trigger, money: routine.spec.movesMoney), size: 52)
+            PlexIconTile(symbol: WindowFormat.routineIcon(routine.icon, trigger: routine.spec.trigger, money: routine.spec.movesMoney), size: 52)
             VStack(alignment: .leading, spacing: 8) {
                 Text(routine.name)
                     .font(.system(size: 30, weight: .bold))
@@ -101,19 +101,19 @@ struct RoutineDetailPage: View {
                     if busy == "run" {
                         HStack(spacing: 6) { ProgressView().controlSize(.mini).tint(.white); Text("Run now") }
                     } else {
-                        MWLabel("Run now", icon: "play")
+                        PlexLabel("Run now", icon: "play")
                     }
                 }
                 .mwButton(.primary)
                 Button { model.newRoutine(prompt: routine.prompt, draft: RoutineDraft(routine: routine), editing: routine.id) } label: {
-                    MWLabel("Edit", icon: "pencil")
+                    PlexLabel("Edit", icon: "pencil")
                 }
                 .mwButton(.secondary)
                 Button { setEnabled(routine, !routine.enabled) } label: {
-                    MWLabel(routine.enabled ? "Pause" : "Resume", icon: routine.enabled ? "pause" : "play")
+                    PlexLabel(routine.enabled ? "Pause" : "Resume", icon: routine.enabled ? "pause" : "play")
                 }
                 .mwButton(.secondary)
-                Button { confirmingDelete = true } label: { MWIcon(symbol: "trash-2", size: 13, color: nil) }
+                Button { confirmingDelete = true } label: { PlexIcon(symbol: "trash-2", size: 13, color: nil) }
                     .mwButton(.danger)
                     .help("Delete this routine")
             }
@@ -123,7 +123,7 @@ struct RoutineDetailPage: View {
 
     private func words(_ prompt: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            MWIcon(symbol: "quote", size: 12, color: Plex.faint)
+            PlexIcon(symbol: "quote", size: 12, color: Plex.faint)
                 .padding(.top, 3)
             VStack(alignment: .leading, spacing: 4) {
                 Text("In your words")
@@ -158,7 +158,7 @@ struct RoutineDetailPage: View {
 
     private func fact(_ label: String, _ value: String, symbol: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            MWIcon(symbol: symbol, size: 12.5, color: Plex.faint).frame(width: 16).padding(.top, 1)
+            PlexIcon(symbol: symbol, size: 12.5, color: Plex.faint).frame(width: 16).padding(.top, 1)
             Text(label)
                 .font(.system(size: 12.5, weight: .medium))
                 .foregroundStyle(Plex.muted)
@@ -273,7 +273,7 @@ struct RunRow: View {
                                 .padding(.top, 2)
                         }
                     }
-                    MWIcon(symbol: "chevron-right", size: 9.5, color: Plex.faint)
+                    PlexIcon(symbol: "chevron-right", size: 9.5, color: Plex.faint)
                         .rotationEffect(.degrees(expanded ? 90 : 0))
                         .padding(.top, 4)
                 }
@@ -293,7 +293,7 @@ struct RunRow: View {
                                 .foregroundStyle(Plex.faint)
                                 .frame(width: 52, alignment: .leading)
                                 .padding(.top, 1)
-                            MWIcon(symbol: WindowFormat.runStepSymbol(step.kind), size: step.kind == "info" ? 4 : 10.5,
+                            PlexIcon(symbol: WindowFormat.runStepSymbol(step.kind), size: step.kind == "info" ? 4 : 10.5,
                                    color: step.kind == "error" ? Plex.disputed : (step.kind == "money" ? Plex.green600 : Plex.muted))
                                 .frame(width: 14, height: 14)
                             VStack(alignment: .leading, spacing: 1) {

@@ -112,12 +112,11 @@ struct PillLine: View {
 
     var body: some View {
         HStack(spacing: 9) {
-            if pill.symbol.hasPrefix("checkmark") {
+            if pill.symbol.hasPrefix("check") {
                 GlowDot(size: 8, steel: !pill.moved)
                     .frame(width: 14)
             } else {
-                Image(systemName: pill.symbol)
-                    .font(.system(size: 13, weight: .medium))
+                PlexIcon(symbol: pill.symbol, size: 13, color: nil)
                     .foregroundStyle(IslandStyle.accent)
             }
             Text(pill.text)
@@ -137,8 +136,7 @@ struct PillLine: View {
 private struct DropHint: View {
     var body: some View {
         HStack(spacing: 12) {
-            GlossyIcon("plex-mint-folder")
-                .frame(width: 34, height: 34)
+            PlexIconTile(symbol: "folder", tint: .glass, size: 34)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Drop to hand it to Plex")
                     .font(.system(size: 13, weight: .semibold))
@@ -294,8 +292,8 @@ private struct OpenIsland: View {
             Spacer(minLength: model.notch.width + 16)
             StatusGlyph(agent: model.agent)
                 .frame(width: 26)
-            IconButton(symbol: "square.and.pencil", help: "New conversation") { model.agent.reset() }
-            IconButton(symbol: "macwindow", help: "Open Plex") {
+            IconButton(symbol: "square-pen", help: "New conversation") { model.agent.reset() }
+            IconButton(symbol: "app-window", help: "Open Plex") {
                 IslandActions.openMainWindow(model.agent.asksCount > 0 ? .needsYou : .today)
             }
         }
@@ -358,8 +356,7 @@ private struct FileChip: View {
 
     var body: some View {
         HStack(spacing: 7) {
-            Image(systemName: isImage ? "photo" : "doc.text")
-                .font(.system(size: 13, weight: .medium))
+            PlexIcon(symbol: isImage ? "image" : "file-text", size: 13, color: nil)
                 .foregroundStyle(IslandStyle.accent)
             Text(url.lastPathComponent)
                 .font(.system(size: 12, weight: .medium))
@@ -367,8 +364,7 @@ private struct FileChip: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
             Button(action: remove) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
+                PlexIcon(symbol: "x", size: 9, color: nil)
                     .foregroundStyle(IslandStyle.text3)
                     .frame(width: 16, height: 16)
                     .contentShape(Rectangle())
@@ -466,8 +462,7 @@ private struct IslandActivityRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: symbol)
-                .font(.system(size: 11, weight: .medium))
+            PlexIcon(symbol: symbol, size: 11, color: nil)
                 .foregroundStyle(IslandStyle.text3)
                 .frame(width: 16)
             Text(activity.label)
@@ -483,12 +478,12 @@ private struct IslandActivityRow: View {
 
     private var symbol: String {
         switch activity.kind {
-        case "money": "creditcard"
-        case "mail": "envelope"
+        case "money": "credit-card"
+        case "mail": "mail"
         case "memory": "brain"
-        case "mac": "macwindow"
+        case "mac": "app-window"
         case "browser": "globe"
-        default: "wrench.and.screwdriver"
+        default: "wrench"
         }
     }
 }
@@ -500,8 +495,7 @@ struct IconButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 13, weight: .medium))
+            PlexIcon(symbol: symbol, size: 13, color: nil)
                 .foregroundStyle(IslandStyle.text2)
                 .frame(width: 24, height: 24)
                 .contentShape(Rectangle())

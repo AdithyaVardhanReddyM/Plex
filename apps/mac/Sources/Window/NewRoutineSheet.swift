@@ -136,7 +136,7 @@ struct NewRoutineSheet: View {
                         .font(.system(size: 12.5, weight: .medium))
                         .foregroundStyle(Plex.faint)
                     HStack(spacing: 12) {
-                        MWIconTile(symbol: WindowFormat.routineIcon(draft.icon, trigger: draft.spec.trigger, money: draft.spec.movesMoney), size: 46)
+                        PlexIconTile(symbol: WindowFormat.routineIcon(draft.icon, trigger: draft.spec.trigger, money: draft.spec.movesMoney), size: 46)
                         if renaming {
                             TextField("Name", text: Binding(get: { self.draft?.name ?? "" }, set: { self.draft?.name = $0 }))
                                 .textFieldStyle(.plain)
@@ -207,7 +207,7 @@ struct NewRoutineSheet: View {
 
     private func option<Control: View>(_ title: String, symbol: String, note: String, @ViewBuilder control: () -> Control) -> some View {
         HStack(spacing: 12) {
-            MWIcon(symbol: symbol, size: 13, color: Plex.muted).frame(width: 18)
+            PlexIcon(symbol: symbol, size: 13, color: Plex.muted).frame(width: 18)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(Plex.ink)
                 Text(note).font(.system(size: 12)).foregroundStyle(Plex.muted).lineLimit(1)
@@ -225,7 +225,7 @@ struct NewRoutineSheet: View {
     private func questions(_ items: [String]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 7) {
-                MWIcon(symbol: "message-circle-question-mark", size: 12.5, color: Plex.steel600)
+                PlexIcon(symbol: "message-circle-question-mark", size: 12.5, color: Plex.steel600)
                 Text(items.count == 1 ? "One thing to check" : "Two things to check")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Plex.steel900)
@@ -240,7 +240,7 @@ struct NewRoutineSheet: View {
                         MWTextField(placeholder: "Your answer", text: Binding(get: { answers[q] ?? "" }, set: { answers[q] = $0 })) {
                             compile(refining: true)
                         }
-                        Button { compile(refining: true) } label: { MWLabel("Update", icon: "rotate-cw") }
+                        Button { compile(refining: true) } label: { PlexLabel("Update", icon: "rotate-cw") }
                             .mwButton(.secondary)
                             .disabled((answers[q] ?? "").trimmingCharacters(in: .whitespaces).isEmpty)
                     }
@@ -257,7 +257,7 @@ struct NewRoutineSheet: View {
     private var footer: some View {
         HStack(spacing: 10) {
             if phase == .review {
-                MWIcon(symbol: "shield-check", size: 12, color: Plex.faint)
+                PlexIcon(symbol: "shield-check", size: 12, color: Plex.faint)
                 Text("Money steps are checked against your pots every time it runs.")
                     .font(.system(size: 12))
                     .foregroundStyle(Plex.muted)
@@ -277,7 +277,7 @@ struct NewRoutineSheet: View {
                     if saving {
                         HStack(spacing: 6) { ProgressView().controlSize(.mini).tint(.white); Text("Saving") }
                     } else {
-                        MWLabel(editingID == nil ? "Save routine" : "Save changes", icon: "check")
+                        PlexLabel(editingID == nil ? "Save routine" : "Save changes", icon: "check")
                     }
                 }
                 .mwButton(.primary)
@@ -367,7 +367,7 @@ private struct ExampleChip: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                MWIcon(symbol: "corner-down-right", size: 10, color: hovering ? Plex.ink2 : Plex.faint)
+                PlexIcon(symbol: "corner-down-right", size: 10, color: hovering ? Plex.ink2 : Plex.faint)
                 Text(text)
                     .font(.system(size: 12.5))
                     .foregroundStyle(hovering ? Plex.ink : Plex.ink2)

@@ -84,14 +84,14 @@ struct MWPageHeader<Actions: View>: View {
     let title: String
     var icon: String?
     var subtitle: String?
-    var tint: MWIconTile.Tint = .green
+    var tint: PlexIconTile.Tint = .green
     @ViewBuilder var actions: Actions
 
     var body: some View {
         HStack(alignment: .top, spacing: 20) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 14) {
-                    if let icon { MWIconTile(symbol: icon, tint: tint, size: 38) }
+                    if let icon { PlexIconTile(symbol: icon, tint: tint, size: 38) }
                     Text(title)
                         .font(.system(size: 32, weight: .bold))
                         .tracking(-1)
@@ -114,7 +114,7 @@ struct MWPageHeader<Actions: View>: View {
 }
 
 extension MWPageHeader where Actions == EmptyView {
-    init(title: String, icon: String? = nil, subtitle: String? = nil, tint: MWIconTile.Tint = .green) {
+    init(title: String, icon: String? = nil, subtitle: String? = nil, tint: PlexIconTile.Tint = .green) {
         self.init(title: title, icon: icon, subtitle: subtitle, tint: tint) { EmptyView() }
     }
 }
@@ -124,12 +124,12 @@ struct MWSectionTitle<Trailing: View>: View {
     let title: String
     var count: Int?
     var icon: String?
-    var tint: MWIconTile.Tint = .green
+    var tint: PlexIconTile.Tint = .green
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
-            if let icon { MWIcon(symbol: icon, size: 15, color: MWIconTile.foreground(tint)) }
+            if let icon { PlexIcon(symbol: icon, size: 15, color: PlexIconTile.foreground(tint)) }
             Text(title)
                 .font(.system(size: 17, weight: .bold))
                 .tracking(-0.35)
@@ -147,7 +147,7 @@ struct MWSectionTitle<Trailing: View>: View {
 }
 
 extension MWSectionTitle where Trailing == EmptyView {
-    init(_ title: String, count: Int? = nil, icon: String? = nil, tint: MWIconTile.Tint = .green) {
+    init(_ title: String, count: Int? = nil, icon: String? = nil, tint: PlexIconTile.Tint = .green) {
         self.init(title: title, count: count, icon: icon, tint: tint) { EmptyView() }
     }
 }
@@ -183,119 +183,6 @@ struct MWDivider: View {
     }
 }
 
-// MARK: Icons
-
-// The window has one icon set: Lucide, the web app's set, drawn from the vector assets in
-// Assets > Lucide (`lucide-<name>`, made by scripts/lucide-icons.mjs). Two ways to show one:
-//  - MWIcon: the bare line glyph, beside text (the sidebar, section titles, badges, buttons).
-//  - MWIconTile: the glyph on a soft tile, where an icon stands for a thing (a page, a routine, a pot).
-// Mint is the default; steel is for what's held, waiting or needs you.
-
-/// A Lucide glyph. `size` matches a font size: the glyph's ink is about that tall.
-struct MWIcon: View {
-    let symbol: String
-    var size: CGFloat = 13
-    /// nil takes the surrounding foreground style (buttons, labels).
-    var color: Color? = Plex.muted
-
-    var body: some View {
-        let image = Image(MWIcon.asset(symbol))
-            .renderingMode(.template)
-            .resizable()
-            .interpolation(.high)
-            .frame(width: size * 1.2, height: size * 1.2)
-        if let color { image.foregroundStyle(color) } else { image }
-    }
-
-    /// The asset for a Lucide name, or a neutral fallback (logged in debug builds) when it's missing.
-    static func asset(_ name: String) -> String {
-        let key = "lucide-\(name)"
-        if NSImage(named: key) != nil { return key }
-        #if DEBUG
-        print("[icons] missing Lucide icon \"\(name)\"; add it to scripts/lucide-icons.txt")
-        #endif
-        return "lucide-circle"
-    }
-
-    static func exists(_ name: String) -> Bool { NSImage(named: "lucide-\(name)") != nil }
-}
-
-/// A Lucide glyph on a soft tile: a mint (or steel) wash, a hairline, a white lip on top.
-struct MWIconTile: View {
-    enum Tint { case neutral, green, steel, amber, ink }
-    let symbol: String
-    var tint: Tint = .green
-    var size: CGFloat = 30
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-        shape
-            .fill(LinearGradient(colors: fill, startPoint: .top, endPoint: .bottom))
-            .overlay(shape.strokeBorder(border, lineWidth: 1))
-            .overlay(shape.inset(by: 1).strokeBorder(
-                LinearGradient(colors: [.white.opacity(tint == .ink ? 0.12 : 0.9), .clear], startPoint: .top, endPoint: .center),
-                lineWidth: 1))
-            .overlay(MWIcon(symbol: symbol, size: size * 0.44, color: foreground))
-            .frame(width: size, height: size)
-            .shadow(color: shadow, radius: size * 0.1, y: size * 0.04)
-    }
-
-    private var fill: [Color] {
-        switch tint {
-        case .neutral: [Plex.surface, Plex.sunken]
-        case .green: [Plex.green50, Plex.green100]
-        case .steel: [Plex.steel50, Plex.steel100]
-        case .amber: [Plex.refundedBg, Plex.refundedBg]
-        case .ink: [Plex.ink2, Plex.ink]
-        }
-    }
-
-    private var border: Color {
-        switch tint {
-        case .neutral: Plex.line
-        case .green: Plex.green200.opacity(0.8)
-        case .steel: Plex.steel200.opacity(0.8)
-        case .amber: Plex.refunded.opacity(0.15)
-        case .ink: .clear
-        }
-    }
-
-    var foreground: Color { Self.foreground(tint) }
-
-    static func foreground(_ tint: Tint) -> Color {
-        switch tint {
-        case .neutral: Plex.ink2
-        case .green: Plex.green800
-        case .steel: Plex.steel700
-        case .amber: Plex.refunded
-        case .ink: .white
-        }
-    }
-
-    private var shadow: Color {
-        switch tint {
-        case .green: Plex.green700.opacity(0.10)
-        case .steel: Plex.steel700.opacity(0.10)
-        default: MWLook.shadow
-        }
-    }
-}
-
-/// A Label with a Lucide icon, for buttons ("New routine", "Run now").
-struct MWLabel: View {
-    let title: String
-    let icon: String
-
-    init(_ title: String, icon: String) {
-        self.title = title
-        self.icon = icon
-    }
-
-    var body: some View {
-        Label { Text(title) } icon: { MWIcon(symbol: icon, size: 12, color: nil) }
-    }
-}
-
 // MARK: Buttons
 
 /// Plex's button roles in Slice's shape: capsules. Primary (ink) for the main action, with an arrow
@@ -318,7 +205,7 @@ struct MWButtonStyle: ButtonStyle {
                 .labelStyle(MWButtonLabelStyle())
                 .lineLimit(1)
             if arrow {
-                MWIcon(symbol: "arrow-right", size: size == .large ? 11 : 10, color: nil)
+                PlexIcon(symbol: "arrow-right", size: size == .large ? 11 : 10, color: nil)
                     .foregroundStyle(kind == .brand ? Plex.green700 : Plex.ink)
                     .frame(width: badge, height: badge)
                     .background(Circle().fill(.white))
@@ -417,7 +304,7 @@ struct MWIconButton: View {
 
     var body: some View {
         Button(action: action) {
-            MWIcon(symbol: symbol, size: 12.5, color: hovering ? Plex.ink : color)
+            PlexIcon(symbol: symbol, size: 12.5, color: hovering ? Plex.ink : color)
                 .frame(width: size, height: size)
                 .background(hovering ? Plex.sunken : .clear, in: RoundedRectangle(cornerRadius: Plex.radiusXS, style: .continuous))
                 .contentShape(Rectangle())
@@ -439,7 +326,7 @@ struct MWBadge: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            if let symbol { MWIcon(symbol: symbol, size: 9.5, color: nil) }
+            if let symbol { PlexIcon(symbol: symbol, size: 9.5, color: nil) }
             Text(text).font(.system(size: 11.5, weight: .medium))
         }
         .lineLimit(1)
@@ -644,7 +531,7 @@ struct MWReceiptRow: View {
         HStack(alignment: .top, spacing: 12) {
             Circle()
                 .fill(receipt.isIncoming ? Plex.green50 : Plex.steel50)
-                .overlay(MWIcon(symbol: receipt.isIncoming ? "arrow-down-left" : WindowFormat.receiptSymbol(receipt.kind), size: 12.5,
+                .overlay(PlexIcon(symbol: receipt.isIncoming ? "arrow-down-left" : WindowFormat.receiptSymbol(receipt.kind), size: 12.5,
                                 color: receipt.isIncoming ? Plex.green700 : Plex.steel600))
                 .frame(width: 30, height: 30)
             VStack(alignment: .leading, spacing: 3) {
@@ -660,7 +547,7 @@ struct MWReceiptRow: View {
                 }
                 HStack(spacing: 5) {
                     if showRule, !receipt.ruleText.isEmpty {
-                        MWIcon(symbol: "shield-check", size: 10, color: nil)
+                        PlexIcon(symbol: "shield-check", size: 10, color: nil)
                         Text(receipt.ruleText).lineLimit(1)
                         Text("\u{00B7}").foregroundStyle(Plex.faint)
                     } else {
@@ -735,7 +622,7 @@ struct MWEmptyState: View {
 
     var body: some View {
         VStack(spacing: compact ? 8 : 12) {
-            MWIconTile(symbol: icon ?? symbol, size: compact ? 44 : 60)
+            PlexIconTile(symbol: icon ?? symbol, size: compact ? 44 : 60)
             VStack(spacing: 5) {
                 Text(title)
                     .font(.system(size: compact ? 14 : 16, weight: .bold))
@@ -772,7 +659,7 @@ struct MWBanner: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            MWIcon(symbol: symbol, size: 12.5, color: foreground)
+            PlexIcon(symbol: symbol, size: 12.5, color: foreground)
             Text(message)
                 .font(.system(size: 12.5))
                 .foregroundStyle(foreground)
@@ -832,13 +719,13 @@ struct MWSearchField: View {
 
     var body: some View {
         HStack(spacing: 7) {
-            MWIcon(symbol: "search", size: 12, color: Plex.faint)
+            PlexIcon(symbol: "search", size: 12, color: Plex.faint)
             TextField(placeholder, text: $text)
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
             if !text.isEmpty {
                 Button { text = "" } label: {
-                    MWIcon(symbol: "circle-x", size: 12, color: nil).foregroundStyle(Plex.faint)
+                    PlexIcon(symbol: "circle-x", size: 12, color: nil).foregroundStyle(Plex.faint)
                 }
                 .buttonStyle(.plain)
             }

@@ -203,7 +203,7 @@ enum WindowFormat {
         ]
         let key = name.lowercased().trimmingCharacters(in: .whitespaces)
         let candidate = aliases[key] ?? key
-        if !candidate.isEmpty, MWIcon.exists(candidate) { return candidate }
+        if !candidate.isEmpty, PlexIcon.exists(candidate) { return candidate }
         return fallback
     }
 

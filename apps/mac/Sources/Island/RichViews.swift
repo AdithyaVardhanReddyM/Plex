@@ -17,7 +17,7 @@ struct TaskViewCard: View {
         case "insights": InsightsCard(view: view)
         case "cards", "gifts", "options":
             VStack(alignment: .leading, spacing: 8) {
-                if let title = view.title, title != taskTitle { CardHeading(symbol: "square.grid.2x2", text: title) }
+                if let title = view.title, title != taskTitle { CardHeading(symbol: "layout-grid", text: title) }
                 PicksRow(cards: view.cards ?? [])
             }
         default: EmptyView()
@@ -62,7 +62,7 @@ struct CardHeading: View {
     let text: String
 
     var body: some View {
-        Label(text, systemImage: symbol)
+        PlexLabel(text, icon: symbol)
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(.white.opacity(0.75))
             .lineLimit(1)
@@ -114,9 +114,7 @@ private struct StopRow: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Image(systemName: Self.symbol(stop.kind))
-                        .font(.system(size: 10.5))
-                        .foregroundStyle(.white.opacity(0.55))
+                    PlexIcon(symbol: Self.symbol(stop.kind), size: 10.5, color: .white.opacity(0.55))
                     Text(stop.title)
                         .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(.white)
@@ -145,21 +143,21 @@ private struct StopRow: View {
 
     static func symbol(_ kind: String?) -> String {
         switch kind ?? "" {
-        case "coffee", "cafe": "cup.and.saucer"
-        case "bakery": "birthday.cake"
-        case "record_store": "opticaldisc"
+        case "coffee", "cafe": "coffee"
+        case "bakery": "cake"
+        case "record_store": "disc-3"
         case "bookstore": "book"
-        case "museum": "building.columns"
+        case "museum": "landmark"
         case "park": "leaf"
-        case "restaurant", "dinner", "lunch": "fork.knife"
-        case "bar", "cocktail_bar", "wine_bar": "wineglass"
-        case "music_venue", "show", "concert", "jazz_club": "music.mic"
+        case "restaurant", "dinner", "lunch": "utensils"
+        case "bar", "cocktail_bar", "wine_bar": "wine"
+        case "music_venue", "show", "concert", "jazz_club": "mic-vocal"
         case "cinema": "film"
         case "home": "house"
-        case "flight": "airplane"
-        case "hotel": "bed.double"
+        case "flight": "plane"
+        case "hotel": "bed-double"
         case "calendar", "meeting": "calendar"
-        default: "mappin"
+        default: "map-pin"
         }
     }
 }
@@ -173,7 +171,7 @@ private struct NoteCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                CardHeading(symbol: "text.quote", text: view.title ?? "Note")
+                CardHeading(symbol: "quote", text: view.title ?? "Note")
                 Spacer()
                 Button(copied ? "Copied" : "Copy") {
                     NSPasteboard.general.clearContents()
@@ -201,8 +199,7 @@ private struct FileCard: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "doc.richtext")
-                .font(.system(size: 22))
+            PlexIcon(symbol: "file-text", size: 22, color: nil)
                 .foregroundStyle(IslandStyle.accent)
             VStack(alignment: .leading, spacing: 2) {
                 Text(view.title ?? "File")
@@ -232,8 +229,7 @@ private struct InsightsCard: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "chart.bar.xaxis")
-                .font(.system(size: 20))
+            PlexIcon(symbol: "chart-column", size: 20, color: nil)
                 .foregroundStyle(IslandStyle.accent)
             VStack(alignment: .leading, spacing: 2) {
                 Text(view.title ?? "Insights")

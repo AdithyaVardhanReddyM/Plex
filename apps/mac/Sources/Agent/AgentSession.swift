@@ -432,7 +432,7 @@ final class AgentSession {
         case "failed": text = "\(routine.name) didn't finish"
         default: text = "\(routine.name) stopped"
         }
-        show(Pill(id: task.id, symbol: task.status == "done" ? "checkmark.circle.fill" : "exclamationmark.circle.fill",
+        show(Pill(id: task.id, symbol: task.status == "done" ? "circle-check" : "circle-alert",
                   text: text, moved: moved))
     }
 

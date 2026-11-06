@@ -53,43 +53,37 @@ struct AuroraWash: View {
     }
 }
 
-/// One of the glossy 3D icons (Assets > Glossy: plex-mint-*, plex-steel-*, plex-money-*).
-struct GlossyIcon: View {
-    let name: String
+/// A Lucide icon tile that can bob gently (onboarding's hero art).
+struct FloatingIconTile: View {
+    let symbol: String
+    var size: CGFloat = 48
+    var tint: PlexIconTile.Tint = .green
     var floating = false
     var phase: Double = 0
     @Environment(\.stillRender) private var still
 
-    init(_ name: String, floating: Bool = false, phase: Double = 0) {
-        self.name = name
-        self.floating = floating
-        self.phase = phase
-    }
-
     var body: some View {
-        let image = Image(name).resizable().interpolation(.high).scaledToFit()
+        let tile = PlexIconTile(symbol: symbol, tint: tint, size: size)
         if floating, !still {
             TimelineView(.animation(minimumInterval: 1 / 30)) { context in
-                image.offset(y: CGFloat(sin(context.date.timeIntervalSinceReferenceDate * 1.2 + phase)) * 4)
+                tile.offset(y: CGFloat(sin(context.date.timeIntervalSinceReferenceDate * 1.2 + phase)) * 4)
             }
         } else {
-            image
+            tile
         }
     }
 }
 
-/// A glossy icon (or a logo) on a white, softly shadowed tile: the app-icon look.
-struct GlossyTile: View {
+/// An app's logo on a white, softly shadowed tile: the app-icon look.
+struct LogoTile: View {
     let image: String
     var size: CGFloat = 48
-    /// A logo fills less of the tile than a glossy icon.
-    var logo = false
 
     var body: some View {
         RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
             .fill(.white)
             .overlay(RoundedRectangle(cornerRadius: size * 0.28, style: .continuous).strokeBorder(Plex.line, lineWidth: 0.5))
-            .overlay(GlossyIcon(image).padding(size * (logo ? 0.22 : 0.12)))
+            .overlay(Image(image).resizable().interpolation(.high).scaledToFit().padding(size * 0.22))
             .frame(width: size, height: size)
             .shadow(color: Plex.steel900.opacity(0.08), radius: size * 0.16, y: size * 0.06)
     }
@@ -108,8 +102,7 @@ struct CapsulePrimaryButton: ButtonStyle {
             configuration.label
                 .font(.system(size: compact ? 12.5 : 14, weight: .semibold))
             if arrow {
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 11, weight: .bold))
+                PlexIcon(symbol: "arrow-right", size: 11, color: nil)
                     .foregroundStyle(Plex.ink)
                     .frame(width: 24, height: 24)
                     .background(Circle().fill(.white))
@@ -133,7 +126,7 @@ struct CapsuleSecondaryButton: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: 6) {
-            if let symbol { Image(systemName: symbol).font(.system(size: compact ? 11 : 12, weight: .semibold)) }
+            if let symbol { PlexIcon(symbol: symbol, size: compact ? 11 : 12, color: nil) }
             configuration.label
         }
         .font(.system(size: compact ? 12.5 : 13.5, weight: .semibold))
@@ -169,8 +162,7 @@ struct CircleCloseButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: "xmark")
-                .font(.system(size: 12, weight: .semibold))
+            PlexIcon(symbol: "x", size: 12, color: nil)
                 .foregroundStyle(Plex.ink2)
                 .frame(width: 30, height: 30)
                 .background(Circle().fill(.white.opacity(0.85)))

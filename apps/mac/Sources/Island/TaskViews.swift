@@ -75,14 +75,14 @@ struct ApprovalCard: View {
     var body: some View {
         IslandCard(highlighted: true, strip: IslandStyle.heldStrip) {
             CardTitle(title: task.title, trailing: task.routine?.name ?? "Needs your OK") {
-                GlossyIcon("plex-money-card")
+                PlexIconTile(symbol: "wallet", tint: .glass, size: 22)
             }
         } content: {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 AmountText(cents: approval.amountCents, size: 32, style: AnyShapeStyle(IslandGlow.money))
                 Spacer(minLength: 8)
                 if let pot = approval.potName {
-                    Label(pot, systemImage: "tray.full")
+                    PlexLabel(pot, icon: "inbox")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(IslandStyle.accent)
                         .padding(.horizontal, 9)
@@ -96,8 +96,7 @@ struct ApprovalCard: View {
                 .padding(.top, -4)
             if let rule = approval.ruleText, !rule.isEmpty {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Image(systemName: "shield")
-                        .font(.system(size: 11, weight: .medium))
+                    PlexIcon(symbol: "shield", size: 11, color: nil)
                     Text("Asked because: \(rule)")
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -148,7 +147,7 @@ struct TakeoverCard: View {
     var body: some View {
         IslandCard(highlighted: true) {
             CardTitle(title: "Plex needs you", trailing: task.title) {
-                GlossyIcon(isLogin ? "plex-mint-shield" : "plex-mint-cursor")
+                PlexIconTile(symbol: isLogin ? "shield-check" : "mouse-pointer-2", tint: .glass, size: 22)
             }
         } content: {
             Text(takeover?.title ?? task.title)
@@ -165,7 +164,7 @@ struct TakeoverCard: View {
             HStack(spacing: 8) {
                 if let link = takeover?.url, let url = URL(string: link) {
                     Button { NSWorkspace.shared.open(url) } label: {
-                        Label("Open", systemImage: "arrow.up.right")
+                        PlexLabel("Open", icon: "arrow-up-right")
                     }
                     .buttonStyle(IslandButtonStyle(.secondary))
                     .help(link)
@@ -193,7 +192,7 @@ struct QuestionCard: View {
     var body: some View {
         IslandCard(highlighted: true) {
             CardTitle(title: task.title, trailing: task.routine?.name) {
-                GlossyIcon("plex-mint-chat")
+                PlexIconTile(symbol: "message-circle", tint: .glass, size: 22)
             }
         } content: {
             ViewsList(task: task, agent: agent)
@@ -257,7 +256,7 @@ struct ProgressCard: View {
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 if task.isOver {
-                    IconButton(symbol: "xmark", help: "Dismiss") { agent.dismiss(task) }
+                    IconButton(symbol: "x", help: "Dismiss") { agent.dismiss(task) }
                 } else {
                     Button("Stop") { agent.cancel(task) }
                         .buttonStyle(.plain)
@@ -277,14 +276,14 @@ struct ProgressCard: View {
             Bars(level: { t in 0.18 + 0.12 * sin(t * 4) }, spread: 1.2)
                 .scaleEffect(0.8)
         case "needs_confirmation":
-            Image(systemName: "hand.raised.fill").font(.system(size: 13)).foregroundStyle(IslandStyle.accent)
+            PlexIcon(symbol: "hand", size: 13, color: nil).foregroundStyle(IslandStyle.accent)
         case "done":
-            Image(systemName: "checkmark.circle.fill").font(.system(size: 13))
+            PlexIcon(symbol: "circle-check", size: 13, color: nil)
                 .foregroundStyle(task.receipt.map { !$0.isRefund } ?? false ? IslandStyle.money : IslandStyle.text2)
         case "failed":
-            Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 13)).foregroundStyle(IslandStyle.bad)
+            PlexIcon(symbol: "triangle-alert", size: 13, color: nil).foregroundStyle(IslandStyle.bad)
         default:
-            Image(systemName: "xmark.circle").font(.system(size: 13)).foregroundStyle(IslandStyle.text3)
+            PlexIcon(symbol: "circle-x", size: 13, color: nil).foregroundStyle(IslandStyle.text3)
         }
     }
 
@@ -383,11 +382,10 @@ struct ReceiptCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 7) {
                     if receipt.isRefund {
-                        Image(systemName: "arrow.uturn.backward.circle.fill")
-                            .font(.system(size: 14))
+                        PlexIcon(symbol: "undo-2", size: 14, color: nil)
                             .foregroundStyle(IslandStyle.accent)
                     } else {
-                        GlossyIcon("plex-money-receipt").frame(width: 24, height: 24)
+                        PlexIconTile(symbol: "receipt", tint: .glass, size: 22)
                     }
                     Text("\(AgentSession.verb(receipt).capitalized) \(receipt.payee)")
                         .font(.system(size: 12.5, weight: .semibold))
@@ -416,7 +414,7 @@ struct ReceiptCard: View {
                 }
                 if let rule = receipt.ruleText, !rule.isEmpty {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Image(systemName: "checkmark.shield").font(.system(size: 10.5, weight: .medium))
+                        PlexIcon(symbol: "shield-check", size: 10.5, color: nil)
                         Text(rule).lineLimit(1)
                     }
                     .font(.system(size: 11.5))

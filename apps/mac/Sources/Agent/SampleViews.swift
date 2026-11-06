@@ -38,7 +38,7 @@ enum SampleViews {
     )
 
     static let routinePill = AgentSession.Pill(
-        id: "p-sample", symbol: "checkmark.circle.fill", text: "Rent check ran · paid $1,850", moved: true
+        id: "p-sample", symbol: "circle-check", text: "Rent check ran · paid $1,850", moved: true
     )
 
     static let note = TaskItem(

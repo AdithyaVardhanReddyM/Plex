@@ -15,7 +15,7 @@ struct MoneyPage: View {
                          icon: "wallet",
                          subtitle: "What agents may spend, what's due, and a receipt for every dollar that moved.") {
                 Button { model.go(.insights) } label: {
-                    MWLabel("Insights", icon: "chart-column")
+                    PlexLabel("Insights", icon: "chart-column")
                 }
                 .mwButton(.secondary)
             }
@@ -178,7 +178,7 @@ struct PotCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                MWIconTile(symbol: WindowFormat.potSymbol(pot.icon), tint: .green, size: 28)
+                PlexIconTile(symbol: WindowFormat.potSymbol(pot.icon), tint: .green, size: 28)
                 Text(pot.name)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Plex.ink2)
@@ -269,7 +269,7 @@ private struct BillRow: View {
                 MWAmount(cents: bill.amountCents, size: 13)
                 if bill.isSpike {
                     HStack(spacing: 3) {
-                        MWIcon(symbol: "arrow-up-right", size: 8.5, color: nil)
+                        PlexIcon(symbol: "arrow-up-right", size: 8.5, color: nil)
                         Text("\(bill.spikePercent)% above usual")
                     }
                     .font(.system(size: 11, weight: .medium))
@@ -353,7 +353,7 @@ private struct SubscriptionRow: View {
                 if sub.priceWentUp, let old = sub.previousAmountCents {
                     HStack(spacing: 3) {
                         Text(Money.format(old)).strikethrough(color: Plex.refunded.opacity(0.6))
-                        MWIcon(symbol: "arrow-right", size: 8, color: nil)
+                        PlexIcon(symbol: "arrow-right", size: 8, color: nil)
                         Text(Money.format(sub.amountCents))
                     }
                     .font(.system(size: 11, weight: .medium))

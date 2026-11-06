@@ -16,7 +16,7 @@ struct ConnectionsPage: View {
             apps
             permissions
             tools
-            MWLabel("Sign-ins run through Composio, so Plex never sees your passwords or tokens. Disconnect an app at any time.", icon: "lock")
+            PlexLabel("Sign-ins run through Composio, so Plex never sees your passwords or tokens. Disconnect an app at any time.", icon: "lock")
                 .font(.system(size: 12))
                 .foregroundStyle(Plex.faint)
         }
@@ -31,7 +31,7 @@ struct ConnectionsPage: View {
                 let on = model.apps.filter(\.isOn).count
                 if model.loaded, on > 0 {
                     HStack(spacing: 5) {
-                        MWIcon(symbol: "check", size: 10.5, color: nil)
+                        PlexIcon(symbol: "check", size: 10.5, color: nil)
                         Text("\(on) connected").font(.system(size: 12, weight: .semibold))
                     }
                     .foregroundStyle(Plex.green700)
@@ -341,7 +341,7 @@ private struct AppCard: View {
     @ViewBuilder private var status: some View {
         switch app.status {
         case .connected, .allowed:
-            MWIcon(symbol: "circle-check", size: 13, color: nil)
+            PlexIcon(symbol: "circle-check", size: 13, color: nil)
                 .foregroundStyle(Plex.green500)
                 .help(app.status == .connected ? "Connected" : "Allowed")
         case .expired: MWBadge(text: "Sign in again", tone: .amber)
@@ -397,7 +397,7 @@ private struct AppMark: View {
                     if let logo = NSImage(named: "logo-\(app.slug)") {
                         Image(nsImage: logo).resizable().interpolation(.high).scaledToFit().padding(size * 0.2)
                     } else {
-                        MWIcon(symbol: Self.symbol(app.slug), size: 18, color: Plex.ink2)
+                        PlexIcon(symbol: Self.symbol(app.slug), size: 18, color: Plex.ink2)
                     }
                 }
                 .frame(width: size, height: size)
@@ -436,7 +436,7 @@ private struct PermissionRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            MWIconTile(symbol: icon, size: 36)
+            PlexIconTile(symbol: icon, size: 36)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(kind.title)
@@ -494,7 +494,7 @@ private struct ToolRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            MWIconTile(symbol: symbol, size: 36)
+            PlexIconTile(symbol: symbol, size: 36)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(name)

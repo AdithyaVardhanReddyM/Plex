@@ -103,7 +103,7 @@ struct TodayPage: View {
                 let asks = model.withSettling(doc.needsYou)
                 if asks.isEmpty {
                     HStack(spacing: 10) {
-                        MWIcon(symbol: "circle-check", size: 14, color: Plex.green600)
+                        PlexIcon(symbol: "circle-check", size: 14, color: Plex.green600)
                         Text("You're all caught up. Approvals and questions from Plex land here.")
                             .font(.system(size: 13))
                             .foregroundStyle(Plex.muted)
@@ -219,7 +219,7 @@ struct StatTile: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            MWIconTile(symbol: icon, size: 40)
+            PlexIconTile(symbol: icon, size: 40)
             VStack(alignment: .leading, spacing: 3) {
                 Text(label)
                     .font(.system(size: 12, weight: .medium))
@@ -309,7 +309,7 @@ struct UpcomingRoutineRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            MWIconTile(symbol: WindowFormat.routineIcon(routine.icon, trigger: .manual, money: false), size: 36)
+            PlexIconTile(symbol: WindowFormat.routineIcon(routine.icon, trigger: .manual, money: false), size: 36)
             VStack(alignment: .leading, spacing: 3) {
                 Text(routine.name)
                     .font(.system(size: 13, weight: .medium))
@@ -321,7 +321,7 @@ struct UpcomingRoutineRow: View {
                     .lineLimit(1)
             }
             Spacer(minLength: 6)
-            MWIcon(symbol: "chevron-right", size: 10, color: Plex.faint)
+            PlexIcon(symbol: "chevron-right", size: 10, color: Plex.faint)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -336,7 +336,7 @@ struct PotLine: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                MWIconTile(symbol: WindowFormat.potSymbol(pot.icon), tint: .green, size: 28)
+                PlexIconTile(symbol: WindowFormat.potSymbol(pot.icon), tint: .green, size: 28)
                 Text(pot.name)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Plex.ink)
@@ -379,7 +379,7 @@ struct ActivityRow: View {
                 Circle()
                     .fill(tileColor)
                     .overlay(Circle().strokeBorder(Plex.surface, lineWidth: 2))
-                    .overlay(MWIcon(symbol: WindowFormat.activitySymbol(item.kind), size: 11, color: iconColor))
+                    .overlay(PlexIcon(symbol: WindowFormat.activitySymbol(item.kind), size: 11, color: iconColor))
                     .frame(width: 26, height: 26)
                     .padding(.top, 0)
             }

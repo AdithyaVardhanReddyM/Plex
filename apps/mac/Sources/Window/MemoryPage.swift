@@ -120,7 +120,7 @@ struct MemoryRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            MWIconTile(symbol: WindowFormat.memorySymbol(memory.kind), size: 28)
+            PlexIconTile(symbol: WindowFormat.memorySymbol(memory.kind), size: 28)
             VStack(alignment: .leading, spacing: 6) {
                 if editing {
                     TextField("", text: $draft, axis: .vertical)

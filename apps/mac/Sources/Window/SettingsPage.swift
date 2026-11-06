@@ -121,7 +121,7 @@ struct SettingsPage: View {
 
     private func row<Control: View>(symbol: String, title: String, note: String, @ViewBuilder control: () -> Control) -> some View {
         HStack(spacing: 12) {
-            MWIcon(symbol: symbol, size: 14, color: Plex.muted).frame(width: 20)
+            PlexIcon(symbol: symbol, size: 14, color: Plex.muted).frame(width: 20)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(Plex.ink)
                 Text(note)
@@ -137,7 +137,7 @@ struct SettingsPage: View {
 
     private func fieldRow(symbol: String, title: String, note: String, text: Binding<String>, placeholder: String, save: @escaping () -> Void) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            MWIcon(symbol: symbol, size: 14, color: Plex.muted).frame(width: 20).padding(.top, 7)
+            PlexIcon(symbol: symbol, size: 14, color: Plex.muted).frame(width: 20).padding(.top, 7)
             VStack(alignment: .leading, spacing: 6) {
                 Text(title).font(.system(size: 13, weight: .medium)).foregroundStyle(Plex.ink)
                 HStack(spacing: 8) {

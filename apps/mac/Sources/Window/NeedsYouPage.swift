@@ -59,7 +59,7 @@ struct AskCard: View {
                 header
                 content
                 if let problem {
-                    MWLabel(problem, icon: "triangle-alert")
+                    PlexLabel(problem, icon: "triangle-alert")
                         .font(.system(size: 12))
                         .foregroundStyle(Plex.disputed)
                 }
@@ -87,7 +87,7 @@ struct AskCard: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            MWIcon(symbol: kindIcon, size: 14, color: Plex.steel600)
+            PlexIcon(symbol: kindIcon, size: 14, color: Plex.steel600)
             Text(ask.sourceLine)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Plex.muted)
@@ -142,7 +142,7 @@ struct AskCard: View {
         }
         if ask.isMoney, ask.ruleText != nil || ask.potName != nil || ask.payee != nil {
             HStack(spacing: 6) {
-                MWIcon(symbol: "shield-check", size: 11.5, color: Plex.steel600)
+                PlexIcon(symbol: "shield-check", size: 11.5, color: Plex.steel600)
                 Text(ruleLine)
                     .font(.system(size: 12.5))
                     .foregroundStyle(Plex.steel700)
@@ -223,7 +223,7 @@ struct AskCard: View {
                 Text(title)
             }
         } else if let symbol {
-            MWLabel(title, icon: symbol)
+            PlexLabel(title, icon: symbol)
         } else {
             Text(title)
         }
@@ -258,7 +258,7 @@ struct SettlingLine: View {
         VStack(alignment: .leading, spacing: 8) {
             if let receipt = item.receipt {
                 HStack(spacing: 8) {
-                    MWIcon(symbol: "circle-check", size: 13, color: Plex.green600)
+                    PlexIcon(symbol: "circle-check", size: 13, color: Plex.green600)
                     Text("Paid \(Money.format(receipt.amountCents)) to \(receipt.payeeLabel). Receipt written.")
                         .font(.system(size: 12.5, weight: .medium))
                         .foregroundStyle(Plex.green700)
@@ -273,7 +273,7 @@ struct SettlingLine: View {
             }
             if item.always, let payee = item.ask.payee, let cents = item.ask.amountCents {
                 HStack(spacing: 6) {
-                    MWIcon(symbol: "shield-check", size: 11.5, color: Plex.muted)
+                    PlexIcon(symbol: "shield-check", size: 11.5, color: Plex.muted)
                     Text("Plex will pay \(payee) up to \(Money.format(cents, whole: true)) without asking\(item.ask.potName.map { ", from the \($0) pot" } ?? "").")
                         .font(.system(size: 12))
                         .foregroundStyle(Plex.muted)
