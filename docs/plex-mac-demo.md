@@ -121,6 +121,40 @@ triggers.
 
 ### A. Computer use + payment, with the agent doing something clever
 
+#### A0 (worked example). The lamp: research in your browser, buy in Plex's
+
+**Scene.** *"The desk lamp I bought in March died. Find me a replacement under sixty."*
+
+1. Plex searches Gmail for the March order and reads the confirmation: Lumen & Oak arc desk lamp, matte black,
+   $63.90, two-year warranty; it cross-checks the receipt. *"Found it, the Lumen & Oak arc lamp from March,
+   sixty-three ninety. It's still under a two-year warranty. Want me to start a claim, or just replace it?"*
+   *"Just replace it, I need it this week."*
+2. Plex searches the web for arc desk lamps under $60 and checks Northlight Goods, a shop Adi has bought from
+   before (from receipts), in its own browser. Three tabs open in Adi's Chrome, one per lamp, and an options card
+   on the notch lists name, price, shipping and delivery day. *"Three that match. I've opened them in your browser.
+   The Northlight one is the closest to yours and delivers Thursday."*
+3. *"Get the Northlight one, but in brass if they have it."* Plex's browser opens Northlight, finds the lamp, picks
+   the brass finish ($57.50), adds it to the cart, fills name and address from memory, chooses Pay with Plex. The
+   page shows an order reference, waiting for payment. No card field is ever touched.
+4. Approval card: **$57.50 · Northlight Goods · Shopping · Ask before anything over $50**. Allow. Payout, receipt card
+   with the user's words on it. The Northlight tab flips to **Order NL-1041 · Paid · Arrives Thursday**.
+5. *"Ordered. Fifty-seven fifty, brass, arrives Thursday. Receipt's in the notch, and I'll remind you Thursday
+   evening to check it came."* Reminder set; the purchase is remembered.
+
+**Clever.** Reads the warranty off the email and offers the claim; research is visible as real tabs in the user's
+own browser plus a card; the "brass if they have it" pick proves the browsing is real; the rule, approval, Payout
+and receipt land in the last twenty seconds.
+
+**Trace.** `gmail_search` ✅ → `recent_money` ✅ → `ask_user` ✅ → `search_the_web` ✅ → `operate(browser: Northlight)`
+✅ → `open_link` ×3 (Adi's browser) ✅ → options card (`show_view` type "options") ✅ → `operate(browser: variant,
+cart, shipping from memory, Pay with Plex, read reference)` ✅ → `pay(purchase, Shopping, 5750, "Northlight Goods")`
+→ policy → approval → Payout → receipt ✅ → `add_reminder` ✅ → reflect remembers ✅. 🔧 the Northlight storefront
+(brass variant, Pay with Plex checkout that flips to paid when the receipt exists), the March order email in the
+demo Gmail, a March lamp receipt and the home address in the seed.
+
+**Filming.** Notch at the top, Adi's Chrome on the left (tabs appear), Plex's browser on the right (the agent
+works). About seventy seconds.
+
 #### A1. Book the Saturday class, but check the calendar first
 
 **Scene.** *"Book me into the pottery class at Clay Commons on Saturday and put it in my calendar."* Plex: *"Saturday's
@@ -171,9 +205,6 @@ request as two money movements with the right instrument for each: a Payout out,
 40000, "Hollow Pine Cabins")` → approval → Payout → receipt ✅ → `recall_memory(roommates' emails)` ✅ →
 `request_money(3 people)` → 3 Invoices ✅ → `add_calendar_event` ✅ → `add_reminder` ✅. 🔧 the listing page. "I'll
 tell you when they've paid" is a PayPal `INVOICING.INVOICE.PAID` webhook, hosted Convex needed.
-
-*Also considered:* the desk-lamp reorder with price comparison across three shops (fine, but A1 to A3 each show
-something the lamp doesn't).
 
 ### B. Bills and reminding
 

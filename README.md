@@ -26,7 +26,7 @@ Agents got wallets this year, and they started hiring people. Two things are mis
 | **Ledger** | Every receipt in one AG Grid, with Personal, Task poster and Cause dashboards. **Ask the Ledger** a question and the Analyst builds the grid or chart that answers it; **Watchdog** flags refund spikes, failing proofs in one area and unusual spending. See [docs/ag-grid.md](docs/ag-grid.md). |
 | **Receipts** | Every receipt, and each one's full page: amount, parties, why, rule, evidence, timeline and PayPal IDs. |
 
-**Plex for Mac** (a voice agent in the MacBook notch that shops and pays within your pots) is in progress. In the web app its purchases, approvals and dinner splits appear as seeded history.
+**Plex for Mac** (a voice agent in the MacBook notch) is an experiment that is shelved and not part of this submission. In the web app its purchases, approvals and dinner splits appear as seeded history.
 
 ## Try it
 
