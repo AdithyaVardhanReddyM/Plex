@@ -119,6 +119,7 @@ The rule everywhere: **the model interprets, code decides.** Limits, proof thres
 - **Next.js 16** (App Router, Cache Components), **React 19**, **Tailwind CSS v4**, **lucide-react** icons.
 - **Clerk** for sign-in (wired; guest mode is the default, see `convex/auth.config.ts.example`).
 - **Stageshow** (a Claude Code skill) for the landing page's product demos.
+- **DiceBear** for Plex for Mac's avatar: "Dylan" by Natalia Spivak, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - **Claude Code** for building it.
 - **OpenStreetMap** tiles for cause maps. The seeded Proof Reel uses two openly licensed stand-in photos, credited in [apps/web/public/demo/reel/CREDITS.md](apps/web/public/demo/reel/CREDITS.md).
 

@@ -63,7 +63,7 @@ struct SettingsPage: View {
             }
 
             group("About") {
-                row(symbol: "info.circle", title: "Plex for Mac", note: "Version \(version). Money moves through the PayPal sandbox, and every payment has a receipt.") {
+                row(symbol: "info.circle", title: "Plex for Mac", note: "Version \(version). Money moves through the PayPal sandbox, and every payment has a receipt. Avatars are \u{201C}Dylan\u{201D} by Natalia Spivak (CC BY 4.0), drawn by DiceBear.") {
                     EmptyView()
                 }
             }

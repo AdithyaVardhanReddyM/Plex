@@ -98,8 +98,8 @@ struct MainSidebar: View {
     }
 }
 
-/// Who Plex works for: their avatar, name and PayPal email. Opens Settings. The brain's status shows
-/// here only when something is wrong.
+/// Who Plex works for: their avatar (DiceBear "Dylan", as in Slice) and name. Opens Settings. The
+/// brain's status shows here only when something is wrong.
 private struct UserCard: View {
     let model: MainWindowModel
     let agent: AgentSession
@@ -133,12 +133,6 @@ private struct UserCard: View {
                                 .foregroundStyle(Plex.muted)
                                 .lineLimit(1)
                         }
-                    } else if let email = model.viewer.value?.email, !email.isEmpty {
-                        Text(email)
-                            .font(.system(size: 11.5))
-                            .foregroundStyle(Plex.muted)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
                     }
                 }
                 Spacer(minLength: 0)
