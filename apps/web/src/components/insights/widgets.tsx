@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Coffee,
   Briefcase,
+  Landmark,
   ListChecks,
   PiggyBank,
   ReceiptText,
@@ -89,14 +90,21 @@ const WEB_ONLY = new Set(["errands", "giving"]);
 const isMacReceipt = (r: Doc<"receipts">) =>
   r.kind !== "task_funding" && r.kind !== "donation" && !WEB_ONLY.has((r.category ?? "").toLowerCase());
 
-function useMacReceipts() {
+/** A cancellation or a declined payment is on the record, but it isn't money spent. */
+const isSpend = (r: Doc<"receipts">) => r.state !== "declined" && r.kind !== "subscription";
+
+function useMacReceipts(sumsOnly: boolean) {
   const data = useQuery(api.ledger.receipts, { role: "personal" });
-  return useMemo(() => (data ? { receipts: data.receipts.filter(isMacReceipt) } : undefined), [data]);
+  return useMemo(
+    () => (data ? { receipts: data.receipts.filter((r) => isMacReceipt(r) && (!sumsOnly || isSpend(r))) } : undefined),
+    [data, sumsOnly],
+  );
 }
 
 export function ReceiptsWidget({ widget, now, className }: { widget: Of<"receipts">; now: number; className?: string }) {
-  const data = useMacReceipts();
   const { spec } = widget;
+  // Charts and totals add up money that moved; a grid lists every receipt, cancellations included.
+  const data = useMacReceipts(spec.kind !== "grid");
   if (spec.kind === "stat") {
     return (
       <Card className={cn("flex min-w-0 flex-col px-0 pt-0", className)}>
@@ -128,6 +136,7 @@ const POT_ICONS: Record<string, React.ComponentType<{ size?: number; strokeWidth
   briefcase: Briefcase,
   "piggy-bank": PiggyBank,
   receipt: ReceiptText,
+  landmark: Landmark,
 };
 
 export function PotsWidget({ widget, className }: { widget: Of<"pots">; className?: string }) {

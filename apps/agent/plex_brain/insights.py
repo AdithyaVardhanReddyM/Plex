@@ -76,8 +76,8 @@ async def show_insights(title: str, widgets_json: str, tool_context: ToolContext
     did I do this month", "plan my week", "where does my money go"). It opens on the user's Mac.
     Gather the facts first (recent_money, money_overview, calendar_events, app_usage), then pick
     3 to 7 widgets that answer the question; lead with a figure or two. Data widgets draw live
-    data, so you only choose the view. To update a page after acting on it (a new saving), call
-    again with its insights_id and the whole new list.
+    data, so you only choose the view. To update a page after acting on it, call again with its
+    insights_id and the whole new list, led by a figure for what you did ("Saving $16.99 a month").
 
     Args:
         title: The page's title ("October so far", "Your week").
