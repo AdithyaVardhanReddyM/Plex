@@ -10,9 +10,9 @@ struct RoutinesPage: View {
     var body: some View {
         MWPage {
             MWPageHeader(title: "Routines",
-                         glossy: "plex-money-loop",
+                         icon: "refresh-cw",
                          subtitle: "Things Plex does on its own, on a schedule or when something happens. Every money step is checked against your limits, every time.") {
-                Button { model.newRoutine() } label: { Label("New routine", systemImage: "plus") }
+                Button { model.newRoutine() } label: { MWLabel("New routine", icon: "plus") }
                     .mwButton(.primary)
                     .keyboardShortcut("n", modifiers: .command)
             }
@@ -21,9 +21,9 @@ struct RoutinesPage: View {
             if let list = routines.value {
                 if list.isEmpty {
                     VStack(spacing: 14) {
-                        MWEmptyState(symbol: "arrow.triangle.2.circlepath", title: "No routines yet",
+                        MWEmptyState(symbol: "refresh-cw", title: "No routines yet",
                                      message: "Tell Plex what to do and when, the way you'd tell a person. It turns that into steps you can check before anything runs.")
-                        Button { model.newRoutine() } label: { Label("New routine", systemImage: "plus") }
+                        Button { model.newRoutine() } label: { MWLabel("New routine", icon: "plus") }
                             .mwButton(.primary)
                     }
                 } else {
@@ -80,7 +80,7 @@ struct RoutineRow: View {
         HStack(spacing: 14) {
             Button(action: open) {
                 HStack(spacing: 14) {
-                    MWGlossyTile(name: WindowFormat.routineGlossy(routine.icon, trigger: routine.spec.trigger, money: routine.spec.movesMoney), size: 40)
+                    MWIconTile(symbol: WindowFormat.routineIcon(routine.icon, trigger: routine.spec.trigger, money: routine.spec.movesMoney), size: 40)
                         .opacity(enabled ? 1 : 0.6)
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 8) {
@@ -89,7 +89,7 @@ struct RoutineRow: View {
                                 .foregroundStyle(enabled ? Plex.ink : Plex.muted)
                                 .lineLimit(1)
                             if routine.spec.movesMoney {
-                                MWIcon(symbol: "dollarsign.circle", size: 11.5, color: Plex.steel500)
+                                MWIcon(symbol: "circle-dollar-sign", size: 11.5, color: Plex.steel500)
                                     .help("Moves money, within your limits")
                             }
                         }

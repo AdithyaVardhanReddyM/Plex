@@ -8,7 +8,7 @@ struct RoutineFlow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            stage("When", glossy: WindowFormat.triggerGlossy(spec.trigger), last: false) {
+            stage("When", icon: WindowFormat.triggerIcon(spec.trigger), last: false) {
                 block {
                     HStack(spacing: 10) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -27,12 +27,12 @@ struct RoutineFlow: View {
                 }
             }
             if !spec.conditions.isEmpty {
-                stage("If", glossy: "plex-mint-shield", last: false) {
+                stage("If", icon: "shield-check", last: false) {
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(spec.conditions.indices, id: \.self) { i in
                             block {
                                 HStack(spacing: 10) {
-                                    MWIcon(symbol: "checkmark.circle", size: 13, color: Plex.ink2)
+                                    MWIcon(symbol: "circle-check", size: 13, color: Plex.ink2)
                                         .frame(width: 18)
                                     Text(spec.conditions[i].text)
                                         .font(.system(size: 13))
@@ -45,7 +45,7 @@ struct RoutineFlow: View {
                     }
                 }
             }
-            stage("Then", glossy: spec.movesMoney ? "plex-money-hand" : "plex-mint-cursor", last: true) {
+            stage("Then", icon: spec.movesMoney ? "hand" : "mouse-pointer-2", last: true) {
                 VStack(alignment: .leading, spacing: 6) {
                     if spec.steps.isEmpty {
                         block {
@@ -69,11 +69,11 @@ struct RoutineFlow: View {
         }
     }
 
-    /// A stage: a glossy node and its label on the left rail, its blocks on the right, a gradient line down to the next.
-    private func stage<Content: View>(_ label: String, glossy: String, last: Bool, @ViewBuilder content: () -> Content) -> some View {
+    /// A stage: a icon node and its label on the left rail, its blocks on the right, a gradient line down to the next.
+    private func stage<Content: View>(_ label: String, icon: String, last: Bool, @ViewBuilder content: () -> Content) -> some View {
         HStack(alignment: .top, spacing: 14) {
             VStack(spacing: 3) {
-                MWGlossyTile(name: glossy, size: compact ? 34 : 38)
+                MWIconTile(symbol: icon, size: compact ? 34 : 38)
                 Text(label)
                     .font(.system(size: 10.5, weight: .bold))
                     .tracking(0.4)
@@ -145,7 +145,7 @@ struct StepBlock: View {
             }
             if let guardrails, let text = Self.guardrailText(guardrails) {
                 HStack(spacing: 6) {
-                    MWIcon(symbol: "checkmark.shield", size: 11, color: Plex.steel600)
+                    MWIcon(symbol: "shield-check", size: 11, color: Plex.steel600)
                     Text(text)
                         .font(.system(size: 12))
                         .foregroundStyle(Plex.steel700)

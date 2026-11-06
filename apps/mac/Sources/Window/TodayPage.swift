@@ -11,7 +11,7 @@ struct TodayPage: View {
             MWQueryBanner(query: today)
             if model.paused {
                 MWBanner(message: "All agent spending is paused. Every payment is blocked until you resume, whatever the pot's rules say.",
-                         symbol: "pause.circle", action: ("Resume", { Task { await model.setPaused(false) } }))
+                         symbol: "circle-pause", action: ("Resume", { Task { await model.setPaused(false) } }))
             }
             HStack(alignment: .top, spacing: 24) {
                 VStack(alignment: .leading, spacing: 28) {
@@ -49,12 +49,12 @@ struct TodayPage: View {
         }
     }
 
-    /// The money pulse: this month at a glance, as three glossy tiles.
+    /// The money pulse: this month at a glance, as three icon tiles.
     @ViewBuilder private var pulse: some View {
         HStack(spacing: 12) {
-            StatTile(glossy: "plex-money-card", label: "Spent this month", cents: doc?.spentMonthCents)
-            StatTile(glossy: "plex-mint-calendar", label: "Bills due in 14 days", cents: doc?.billsDueCents)
-            StatTile(glossy: "plex-money-loop", label: "Saved this month", cents: doc?.savedMonthCents)
+            StatTile(icon: "wallet", label: "Spent this month", cents: doc?.spentMonthCents)
+            StatTile(icon: "calendar", label: "Bills due in 14 days", cents: doc?.billsDueCents)
+            StatTile(icon: "refresh-cw", label: "Saved this month", cents: doc?.savedMonthCents)
         }
     }
 
@@ -91,7 +91,7 @@ struct TodayPage: View {
 
     @ViewBuilder private var needsYou: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MWSectionTitle(title: "Needs you", count: doc.map { $0.needsYou.count }, glossy: "plex-money-hand") {
+            MWSectionTitle(title: "Needs you", count: doc.map { $0.needsYou.count }, icon: "hand", tint: .steel) {
                 if (doc?.needsYou.count ?? 0) > 2 {
                     Button("See all") { model.go(.needsYou) }
                         .buttonStyle(.plain)
@@ -103,7 +103,7 @@ struct TodayPage: View {
                 let asks = model.withSettling(doc.needsYou)
                 if asks.isEmpty {
                     HStack(spacing: 10) {
-                        MWIcon(symbol: "checkmark.circle", size: 14, color: Plex.green600)
+                        MWIcon(symbol: "circle-check", size: 14, color: Plex.green600)
                         Text("You're all caught up. Approvals and questions from Plex land here.")
                             .font(.system(size: 13))
                             .foregroundStyle(Plex.muted)
@@ -124,7 +124,7 @@ struct TodayPage: View {
 
     private var recent: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MWSectionTitle(title: "Recent activity", glossy: "plex-mint-chat") {
+            MWSectionTitle(title: "Recent activity", icon: "message-circle") {
                 Button("All activity") { model.go(.activity) }
                     .buttonStyle(.plain)
                     .font(.system(size: 12.5, weight: .medium))
@@ -132,7 +132,7 @@ struct TodayPage: View {
             }
             if let doc {
                 if doc.recent.isEmpty {
-                    MWEmptyState(symbol: "list.bullet", title: "Nothing yet",
+                    MWEmptyState(symbol: "list", title: "Nothing yet",
                                  message: "What Plex does, from routines to payments, shows up here as it happens.", compact: true)
                 } else {
                     MWListCard {
@@ -152,7 +152,7 @@ struct TodayPage: View {
 
     private var comingUp: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MWSectionTitle("Coming up", glossy: "plex-mint-calendar")
+            MWSectionTitle("Coming up", icon: "calendar")
             if let doc {
                 if doc.bills.isEmpty && doc.routines.isEmpty {
                     MWEmptyState(symbol: "calendar", title: "A clear week", message: "Bills due and routines about to run show up here.", compact: true)
@@ -185,7 +185,7 @@ struct TodayPage: View {
 
     private var pots: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MWSectionTitle(title: "Pots", glossy: "plex-money-card") {
+            MWSectionTitle(title: "Pots", icon: "wallet") {
                 Button("Money") { model.go(.money) }
                     .buttonStyle(.plain)
                     .font(.system(size: 12.5, weight: .medium))
@@ -193,7 +193,7 @@ struct TodayPage: View {
             }
             if let doc {
                 if doc.pots.isEmpty {
-                    MWEmptyState(symbol: "circle.grid.2x2", title: "No pots yet", message: "Pots set what agents may spend, in your words.", compact: true)
+                    MWEmptyState(symbol: "layout-grid", title: "No pots yet", message: "Pots set what agents may spend, in your words.", compact: true)
                 } else {
                     MWListCard {
                         ForEach(doc.pots.indices, id: \.self) { i in
@@ -211,15 +211,15 @@ struct TodayPage: View {
 
 // MARK: Rows
 
-/// One number of the money pulse on a white tile with its glossy icon.
+/// One number of the money pulse on a white tile with its icon.
 struct StatTile: View {
-    let glossy: String
+    let icon: String
     let label: String
     let cents: Int?
 
     var body: some View {
         HStack(spacing: 12) {
-            MWGlossy(glossy, size: 40)
+            MWIconTile(symbol: icon, size: 40)
             VStack(alignment: .leading, spacing: 3) {
                 Text(label)
                     .font(.system(size: 12, weight: .medium))
@@ -309,7 +309,7 @@ struct UpcomingRoutineRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            MWGlossyTile(name: WindowFormat.routineGlossy(routine.icon, trigger: .manual, money: false), size: 36)
+            MWIconTile(symbol: WindowFormat.routineIcon(routine.icon, trigger: .manual, money: false), size: 36)
             VStack(alignment: .leading, spacing: 3) {
                 Text(routine.name)
                     .font(.system(size: 13, weight: .medium))
@@ -321,7 +321,7 @@ struct UpcomingRoutineRow: View {
                     .lineLimit(1)
             }
             Spacer(minLength: 6)
-            MWIcon(symbol: "chevron.right", size: 10, color: Plex.faint)
+            MWIcon(symbol: "chevron-right", size: 10, color: Plex.faint)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)

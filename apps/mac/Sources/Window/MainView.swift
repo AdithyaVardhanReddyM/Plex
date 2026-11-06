@@ -172,8 +172,8 @@ private struct SidebarRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                MWGlossy(section.glossy, size: 22)
-                    .saturation(selected ? 1 : 0.85)
+                MWIcon(symbol: section.icon, size: 15, color: selected ? Plex.green800 : Plex.muted)
+                    .frame(width: 20)
                 Text(section.title)
                     .font(.system(size: 14, weight: selected ? .semibold : .medium))
                     .foregroundStyle(selected ? Plex.ink : Plex.ink2)
@@ -214,7 +214,7 @@ private struct SidebarFooter: View {
             if model.paused {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 7) {
-                        MWIcon(symbol: "pause.circle.fill", size: 13, color: Plex.refunded)
+                        MWIcon(symbol: "circle-pause", size: 13, color: Plex.refunded)
                         Text("Spending paused")
                             .font(.system(size: 12.5, weight: .semibold))
                             .foregroundStyle(Plex.refunded)
@@ -248,7 +248,7 @@ private struct SidebarFooter: View {
 
                 Button { Task { await model.setPaused(true) } } label: {
                     HStack(spacing: 7) {
-                        MWIcon(symbol: "pause.circle", size: 12, color: Plex.muted)
+                        MWIcon(symbol: "circle-pause", size: 12, color: Plex.muted)
                         Text("Pause all spending").font(.system(size: 12, weight: .medium)).foregroundStyle(Plex.muted)
                     }
                     .padding(.horizontal, 8)

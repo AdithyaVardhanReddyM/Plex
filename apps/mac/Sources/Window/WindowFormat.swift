@@ -110,42 +110,33 @@ enum WindowFormat {
         }
     }
 
-    static func triggerGlossy(_ trigger: RoutineTrigger) -> String {
+    static func triggerIcon(_ trigger: RoutineTrigger) -> String {
         switch trigger {
-        case .schedule: "plex-mint-calendar"
-        case .email: "plex-mint-chat"
-        case .paypal: "plex-money-card"
-        case .folder: "plex-mint-folder"
-        case .manual: "plex-mint-cursor"
-        case .other: "plex-mint-orb"
+        case .schedule: "calendar-clock"
+        case .email: "mail"
+        case .paypal: "wallet"
+        case .folder: "folder"
+        case .manual: "play"
+        case .other: "zap"
         }
     }
 
-    /// A routine's glossy icon: from its own icon name when there's a match, else from its trigger.
-    static func routineGlossy(_ icon: String, trigger: RoutineTrigger, money: Bool) -> String {
-        switch icon.lowercased() {
-        case "home", "house", "hand-coins", "coins", "send", "split", "users", "arrow-right-left": return "plex-money-hand"
-        case "piggy-bank", "banknote", "wallet", "dollar-sign", "credit-card": return "plex-money-card"
-        case "receipt", "file-text", "zap", "bolt", "lightbulb", "plug": return "plex-money-receipt"
-        case "repeat", "refresh-cw", "trending-up": return "plex-money-loop"
-        case "calendar", "calendar-clock", "clock", "sun": return "plex-mint-calendar"
-        case "mail", "inbox", "bell", "bell-ring": return "plex-mint-chat"
-        case "shield", "shield-check": return "plex-mint-shield"
-        case "shopping-bag", "shopping-cart", "gift": return "plex-mint-bag"
-        case "folder": return "plex-mint-folder"
-        case "map-pin": return "plex-mint-pin"
-        default: return money ? "plex-money-hand" : triggerGlossy(trigger)
-        }
+
+    /// A routine's icon: its own Lucide icon when Plex has it, else its trigger's.
+    static func routineIcon(_ icon: String, trigger: RoutineTrigger, money: Bool) -> String {
+        let own = symbol(icon, fallback: "")
+        if !own.isEmpty { return own }
+        return money ? "hand-coins" : triggerIcon(trigger)
     }
 
     static func triggerSymbol(_ trigger: RoutineTrigger) -> String {
         switch trigger {
         case .schedule: "clock"
-        case .email: "envelope"
-        case .paypal: "dollarsign.circle"
+        case .email: "mail"
+        case .paypal: "circle-dollar-sign"
         case .folder: "folder"
-        case .manual: "hand.tap"
-        case .other: "bolt"
+        case .manual: "pointer"
+        case .other: "zap"
         }
     }
 
@@ -202,39 +193,29 @@ enum WindowFormat {
 
     // MARK: Symbols
 
-    /// A lucide-style icon name from Convex → an SF Symbol that exists on this Mac.
-    static func symbol(_ lucide: String, fallback: String = "arrow.triangle.2.circlepath") -> String {
-        let map: [String: String] = [
-            "home": "house", "house": "house", "calendar": "calendar", "calendar-clock": "calendar.badge.clock",
-            "repeat": "repeat", "refresh-cw": "arrow.triangle.2.circlepath", "zap": "bolt", "bolt": "bolt",
-            "mail": "envelope", "inbox": "tray", "receipt": "doc.plaintext", "file-text": "doc.text", "file": "doc",
-            "wallet": "wallet.bifold", "piggy-bank": "banknote", "banknote": "banknote", "credit-card": "creditcard",
-            "dollar-sign": "dollarsign.circle", "hand-coins": "dollarsign.circle", "coins": "dollarsign.circle",
-            "bell": "bell", "bell-ring": "bell", "shield": "shield", "shield-check": "checkmark.shield",
-            "trending-up": "chart.line.uptrend.xyaxis", "chart": "chart.bar", "bar-chart": "chart.bar",
-            "coffee": "cup.and.saucer", "utensils": "fork.knife", "shopping-bag": "bag", "shopping-cart": "cart",
-            "map-pin": "mappin.and.ellipse", "plane": "airplane", "car": "car", "gift": "gift", "heart": "heart",
-            "users": "person.2", "user": "person", "send": "paperplane", "arrow-right-left": "arrow.left.arrow.right",
-            "split": "arrow.triangle.branch", "folder": "folder", "lightbulb": "lightbulb", "plug": "powerplug",
-            "wifi": "wifi", "phone": "phone", "smartphone": "iphone", "tv": "tv", "music": "music.note",
-            "dumbbell": "dumbbell", "key": "key", "clock": "clock", "sun": "sun.max", "moon": "moon",
-            "briefcase": "briefcase", "building": "building.2", "landmark": "building.columns", "tag": "tag",
-            "scissors": "scissors", "check": "checkmark.circle", "list-checks": "checklist", "sparkle": "star",
+    /// An icon name from Convex (Lucide, as on the web) → a Lucide icon Plex for Mac has, through a few
+    /// aliases for older or looser names.
+    static func symbol(_ name: String, fallback: String = "refresh-cw") -> String {
+        let aliases: [String: String] = [
+            "home": "house", "bolt": "zap", "chart": "chart-column", "bar-chart": "chart-column",
+            "bar-chart-3": "chart-column", "check": "circle-check", "sparkle": "star", "sparkles": "star",
+            "dollar": "circle-dollar-sign", "dollar-sign": "circle-dollar-sign", "money": "banknote",
         ]
-        let candidate = map[lucide.lowercased()] ?? lucide
-        if NSImage(systemSymbolName: candidate, accessibilityDescription: nil) != nil { return candidate }
+        let key = name.lowercased().trimmingCharacters(in: .whitespaces)
+        let candidate = aliases[key] ?? key
+        if !candidate.isEmpty, MWIcon.exists(candidate) { return candidate }
         return fallback
     }
 
-    static func potSymbol(_ icon: String) -> String { symbol(icon, fallback: "circle.grid.2x2") }
+    static func potSymbol(_ icon: String) -> String { symbol(icon, fallback: "wallet") }
 
     static func stepSymbol(_ kind: StepKind) -> String {
         switch kind {
-        case .check: "checklist"
-        case .act: "cursorarrow.click.2"
-        case .money: "dollarsign.circle"
+        case .check: "list-checks"
+        case .act: "mouse-pointer-click"
+        case .money: "circle-dollar-sign"
         case .notify: "bell"
-        case .ask: "person.crop.circle.badge.questionmark"
+        case .ask: "message-circle-question-mark"
         case .wait: "hourglass"
         case .other: "circle"
         }
@@ -242,48 +223,48 @@ enum WindowFormat {
 
     static func activitySymbol(_ kind: ActivityKind) -> String {
         switch kind {
-        case .voice: "waveform"
-        case .task: "checklist"
-        case .routine: "arrow.triangle.2.circlepath"
-        case .money: "dollarsign.circle"
-        case .memory: "text.book.closed"
-        case .handoff: "person.crop.circle.badge.exclamationmark"
-        case .system: "gearshape"
+        case .voice: "audio-waveform"
+        case .task: "list-checks"
+        case .routine: "refresh-cw"
+        case .money: "circle-dollar-sign"
+        case .memory: "brain"
+        case .handoff: "circle-user-round"
+        case .system: "settings"
         }
     }
 
     static func runStepSymbol(_ kind: String) -> String {
         switch kind {
-        case "tool": "wrench.and.screwdriver"
-        case "money": "dollarsign.circle"
-        case "ask": "person.crop.circle.badge.questionmark"
-        case "done": "checkmark.circle"
-        case "error": "exclamationmark.triangle"
-        default: "circle.fill"
+        case "tool": "wrench"
+        case "money": "circle-dollar-sign"
+        case "ask": "message-circle-question-mark"
+        case "done": "circle-check"
+        case "error": "triangle-alert"
+        default: "circle-dot"
         }
     }
 
     static func memorySymbol(_ kind: MemoryKind) -> String {
         switch kind {
-        case .fact: "info.circle"
-        case .preference: "slider.horizontal.3"
-        case .person: "person"
-        case .merchant: "storefront"
+        case .fact: "info"
+        case .preference: "sliders-horizontal"
+        case .person: "user"
+        case .merchant: "store"
         case .habit: "repeat"
-        case .note: "note.text"
+        case .note: "sticky-note"
         }
     }
 
     static func receiptSymbol(_ kind: String) -> String {
         switch kind {
-        case "task_funding": "dollarsign.circle"
-        case "payout": "arrow.up.right"
-        case "refund": "arrow.uturn.backward"
+        case "task_funding": "circle-dollar-sign"
+        case "payout": "arrow-up-right"
+        case "refund": "undo-2"
         case "donation": "heart"
-        case "purchase": "bag"
-        case "invoice": "doc.text"
+        case "purchase": "shopping-bag"
+        case "invoice": "file-text"
         case "subscription": "repeat"
-        default: "doc.plaintext"
+        default: "receipt"
         }
     }
 

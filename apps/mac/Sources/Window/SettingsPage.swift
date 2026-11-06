@@ -16,10 +16,10 @@ struct SettingsPage: View {
 
     var body: some View {
         MWPage(maxWidth: 760) {
-            MWPageHeader(title: "Settings", glossy: "plex-mint-gear")
+            MWPageHeader(title: "Settings", icon: "settings")
 
             group("Spending") {
-                row(symbol: model.paused ? "pause.circle.fill" : "pause.circle", title: "Pause all agent spending",
+                row(symbol: model.paused ? "circle-pause" : "circle-pause", title: "Pause all agent spending",
                     note: model.paused ? "Every payment is blocked until you turn this off, whatever the pot's rules say."
                         : "Blocks every payment by every agent at once. Pots and routines keep their settings.") {
                     MWSwitch(isOn: Binding(get: { model.paused }, set: { on in Task { await model.setPaused(on) } }))
@@ -29,14 +29,14 @@ struct SettingsPage: View {
 
             group("Addresses") {
                 VStack(alignment: .leading, spacing: 10) {
-                    fieldRow(symbol: "server.rack", title: "Brain", note: brainNote, text: $brainURL, placeholder: BrainSettings.localURL) {
+                    fieldRow(symbol: "server", title: "Brain", note: brainNote, text: $brainURL, placeholder: BrainSettings.localURL) {
                         BrainSettings.urlString = brainURL.trimmingCharacters(in: .whitespacesAndNewlines)
                         agent.reconnect()
                         saved = "brain"
                         Task { await checkBrain() }
                     }
                     MWDivider(inset: 30)
-                    fieldRow(symbol: "cylinder.split.1x2", title: "Convex", note: convexNote, text: $convexURL, placeholder: ConvexClient.defaultURL) {
+                    fieldRow(symbol: "database", title: "Convex", note: convexNote, text: $convexURL, placeholder: ConvexClient.defaultURL) {
                         ConvexClient.shared.urlString = convexURL
                         saved = "convex"
                     }
@@ -45,7 +45,7 @@ struct SettingsPage: View {
             }
 
             group("Voice") {
-                row(symbol: "waveform", title: "Plex's voice", note: "The voice Plex answers in when you talk to it.") {
+                row(symbol: "audio-waveform", title: "Plex's voice", note: "The voice Plex answers in when you talk to it.") {
                     Picker("", selection: $voice) {
                         ForEach(Self.voices, id: \.self) { Text($0).tag($0) }
                     }
@@ -63,7 +63,7 @@ struct SettingsPage: View {
             }
 
             group("About") {
-                row(symbol: "info.circle", title: "Plex for Mac", note: "Version \(version). Money moves through the PayPal sandbox, and every payment has a receipt. Avatars are \u{201C}Dylan\u{201D} by Natalia Spivak (CC BY 4.0), drawn by DiceBear.") {
+                row(symbol: "info", title: "Plex for Mac", note: "Version \(version). Money moves through the PayPal sandbox, and every payment has a receipt. Avatars are \u{201C}Dylan\u{201D} by Natalia Spivak (CC BY 4.0), drawn by DiceBear.") {
                     EmptyView()
                 }
             }

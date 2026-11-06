@@ -82,15 +82,16 @@ struct MWPage<Content: View>: View {
 
 struct MWPageHeader<Actions: View>: View {
     let title: String
-    var glossy: String?
+    var icon: String?
     var subtitle: String?
+    var tint: MWIconTile.Tint = .green
     @ViewBuilder var actions: Actions
 
     var body: some View {
         HStack(alignment: .top, spacing: 20) {
             VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 12) {
-                    if let glossy { MWGlossy(glossy, size: 40).padding(.leading, -4) }
+                HStack(spacing: 14) {
+                    if let icon { MWIconTile(symbol: icon, tint: tint, size: 38) }
                     Text(title)
                         .font(.system(size: 32, weight: .bold))
                         .tracking(-1)
@@ -113,8 +114,8 @@ struct MWPageHeader<Actions: View>: View {
 }
 
 extension MWPageHeader where Actions == EmptyView {
-    init(title: String, glossy: String? = nil, subtitle: String? = nil) {
-        self.init(title: title, glossy: glossy, subtitle: subtitle) { EmptyView() }
+    init(title: String, icon: String? = nil, subtitle: String? = nil, tint: MWIconTile.Tint = .green) {
+        self.init(title: title, icon: icon, subtitle: subtitle, tint: tint) { EmptyView() }
     }
 }
 
@@ -122,12 +123,13 @@ extension MWPageHeader where Actions == EmptyView {
 struct MWSectionTitle<Trailing: View>: View {
     let title: String
     var count: Int?
-    var glossy: String?
+    var icon: String?
+    var tint: MWIconTile.Tint = .green
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
-            if let glossy { MWGlossy(glossy, size: 26).padding(.leading, -3) }
+            if let icon { MWIcon(symbol: icon, size: 15, color: MWIconTile.foreground(tint)) }
             Text(title)
                 .font(.system(size: 17, weight: .bold))
                 .tracking(-0.35)
@@ -145,8 +147,8 @@ struct MWSectionTitle<Trailing: View>: View {
 }
 
 extension MWSectionTitle where Trailing == EmptyView {
-    init(_ title: String, count: Int? = nil, glossy: String? = nil) {
-        self.init(title: title, count: count, glossy: glossy) { EmptyView() }
+    init(_ title: String, count: Int? = nil, icon: String? = nil, tint: MWIconTile.Tint = .green) {
+        self.init(title: title, count: count, icon: icon, tint: tint) { EmptyView() }
     }
 }
 
@@ -181,101 +183,116 @@ struct MWDivider: View {
     }
 }
 
-/// One of the glossy 3D icons (Assets > Glossy): `plex-mint-*`, `plex-steel-*`, `plex-money-*`.
-struct MWGlossy: View {
-    let name: String
-    var size: CGFloat
-
-    init(_ name: String, size: CGFloat = 28) {
-        self.name = name
-        self.size = size
-    }
-
-    var body: some View {
-        Image(name)
-            .resizable()
-            .interpolation(.high)
-            .scaledToFit()
-            // The art has a margin around it; draw it a little larger than its box.
-            .frame(width: size * 1.22, height: size * 1.22)
-            .frame(width: size, height: size)
-    }
-}
-
-/// A glossy icon on a white, softly shadowed tile (the app-icon look).
-struct MWGlossyTile: View {
-    let name: String
-    var size: CGFloat = 44
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-            .fill(Plex.surface)
-            .overlay(RoundedRectangle(cornerRadius: size * 0.3, style: .continuous).strokeBorder(Plex.ink.opacity(0.07), lineWidth: 0.5))
-            .overlay(MWGlossy(name, size: size * 0.74))
-            .frame(width: size, height: size)
-            .shadow(color: MWLook.shadow, radius: size * 0.16, y: size * 0.06)
-    }
-}
-
 // MARK: Icons
 
-/// An SF Symbol at the window's one weight.
+// The window has one icon set: Lucide, the web app's set, drawn from the vector assets in
+// Assets > Lucide (`lucide-<name>`, made by scripts/lucide-icons.mjs). Two ways to show one:
+//  - MWIcon: the bare line glyph, beside text (the sidebar, section titles, badges, buttons).
+//  - MWIconTile: the glyph on a soft tile, where an icon stands for a thing (a page, a routine, a pot).
+// Mint is the default; steel is for what's held, waiting or needs you.
+
+/// A Lucide glyph. `size` matches a font size: the glyph's ink is about that tall.
 struct MWIcon: View {
     let symbol: String
     var size: CGFloat = 13
-    var color: Color = Plex.muted
+    /// nil takes the surrounding foreground style (buttons, labels).
+    var color: Color? = Plex.muted
 
     var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: size, weight: .medium))
-            .symbolRenderingMode(.monochrome)
-            .foregroundStyle(color)
+        let image = Image(MWIcon.asset(symbol))
+            .renderingMode(.template)
+            .resizable()
+            .interpolation(.high)
+            .frame(width: size * 1.2, height: size * 1.2)
+        if let color { image.foregroundStyle(color) } else { image }
     }
+
+    /// The asset for a Lucide name, or a neutral fallback (logged in debug builds) when it's missing.
+    static func asset(_ name: String) -> String {
+        let key = "lucide-\(name)"
+        if NSImage(named: key) != nil { return key }
+        #if DEBUG
+        print("[icons] missing Lucide icon \"\(name)\"; add it to scripts/lucide-icons.txt")
+        #endif
+        return "lucide-circle"
+    }
+
+    static func exists(_ name: String) -> Bool { NSImage(named: "lucide-\(name)") != nil }
 }
 
-/// A symbol on a small tinted tile (routine and pot icons).
+/// A Lucide glyph on a soft tile: a mint (or steel) wash, a hairline, a white lip on top.
 struct MWIconTile: View {
     enum Tint { case neutral, green, steel, amber, ink }
     let symbol: String
-    var tint: Tint = .neutral
+    var tint: Tint = .green
     var size: CGFloat = 30
 
     var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.27, style: .continuous)
-            .fill(background)
-            .overlay(RoundedRectangle(cornerRadius: size * 0.27, style: .continuous).strokeBorder(border, lineWidth: 1))
-            .overlay(MWIcon(symbol: symbol, size: size * 0.45, color: foreground))
+        let shape = RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
+        shape
+            .fill(LinearGradient(colors: fill, startPoint: .top, endPoint: .bottom))
+            .overlay(shape.strokeBorder(border, lineWidth: 1))
+            .overlay(shape.inset(by: 1).strokeBorder(
+                LinearGradient(colors: [.white.opacity(tint == .ink ? 0.12 : 0.9), .clear], startPoint: .top, endPoint: .center),
+                lineWidth: 1))
+            .overlay(MWIcon(symbol: symbol, size: size * 0.44, color: foreground))
             .frame(width: size, height: size)
+            .shadow(color: shadow, radius: size * 0.1, y: size * 0.04)
     }
 
-    private var background: Color {
+    private var fill: [Color] {
         switch tint {
-        case .neutral: Plex.sunken
-        case .green: Plex.green50
-        case .steel: Plex.steel50
-        case .amber: Plex.refundedBg
-        case .ink: Plex.ink
+        case .neutral: [Plex.surface, Plex.sunken]
+        case .green: [Plex.green50, Plex.green100]
+        case .steel: [Plex.steel50, Plex.steel100]
+        case .amber: [Plex.refundedBg, Plex.refundedBg]
+        case .ink: [Plex.ink2, Plex.ink]
         }
     }
 
     private var border: Color {
         switch tint {
         case .neutral: Plex.line
-        case .green: Plex.green200.opacity(0.7)
-        case .steel: Plex.steel200.opacity(0.7)
+        case .green: Plex.green200.opacity(0.8)
+        case .steel: Plex.steel200.opacity(0.8)
         case .amber: Plex.refunded.opacity(0.15)
         case .ink: .clear
         }
     }
 
-    private var foreground: Color {
+    var foreground: Color { Self.foreground(tint) }
+
+    static func foreground(_ tint: Tint) -> Color {
         switch tint {
         case .neutral: Plex.ink2
-        case .green: Plex.green700
-        case .steel: Plex.steel600
+        case .green: Plex.green800
+        case .steel: Plex.steel700
         case .amber: Plex.refunded
         case .ink: .white
         }
+    }
+
+    private var shadow: Color {
+        switch tint {
+        case .green: Plex.green700.opacity(0.10)
+        case .steel: Plex.steel700.opacity(0.10)
+        default: MWLook.shadow
+        }
+    }
+}
+
+/// A Label with a Lucide icon, for buttons ("New routine", "Run now").
+struct MWLabel: View {
+    let title: String
+    let icon: String
+
+    init(_ title: String, icon: String) {
+        self.title = title
+        self.icon = icon
+    }
+
+    var body: some View {
+        Label { Text(title) } icon: { MWIcon(symbol: icon, size: 12, color: nil) }
     }
 }
 
@@ -301,8 +318,7 @@ struct MWButtonStyle: ButtonStyle {
                 .labelStyle(MWButtonLabelStyle())
                 .lineLimit(1)
             if arrow {
-                Image(systemName: "arrow.right")
-                    .font(.system(size: size == .large ? 11 : 10, weight: .bold))
+                MWIcon(symbol: "arrow-right", size: size == .large ? 11 : 10, color: nil)
                     .foregroundStyle(kind == .brand ? Plex.green700 : Plex.ink)
                     .frame(width: badge, height: badge)
                     .background(Circle().fill(.white))
@@ -423,7 +439,7 @@ struct MWBadge: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            if let symbol { Image(systemName: symbol).font(.system(size: 9.5, weight: .bold)) }
+            if let symbol { MWIcon(symbol: symbol, size: 9.5, color: nil) }
             Text(text).font(.system(size: 11.5, weight: .medium))
         }
         .lineLimit(1)
@@ -610,11 +626,11 @@ extension ReceiptState {
 
     var symbol: String {
         switch self {
-        case .pending, .declined: "circle.dashed"
-        case .funded, .held: "lock.fill"
-        case .released, .paid: "checkmark"
-        case .refunded: "arrow.uturn.backward"
-        case .disputed: "exclamationmark.triangle.fill"
+        case .pending, .declined: "circle-dashed"
+        case .funded, .held: "lock"
+        case .released, .paid: "check"
+        case .refunded: "undo-2"
+        case .disputed: "triangle-alert"
         }
     }
 }
@@ -628,7 +644,7 @@ struct MWReceiptRow: View {
         HStack(alignment: .top, spacing: 12) {
             Circle()
                 .fill(receipt.isIncoming ? Plex.green50 : Plex.steel50)
-                .overlay(MWIcon(symbol: receipt.isIncoming ? "arrow.down.left" : WindowFormat.receiptSymbol(receipt.kind), size: 12.5,
+                .overlay(MWIcon(symbol: receipt.isIncoming ? "arrow-down-left" : WindowFormat.receiptSymbol(receipt.kind), size: 12.5,
                                 color: receipt.isIncoming ? Plex.green700 : Plex.steel600))
                 .frame(width: 30, height: 30)
             VStack(alignment: .leading, spacing: 3) {
@@ -644,7 +660,7 @@ struct MWReceiptRow: View {
                 }
                 HStack(spacing: 5) {
                     if showRule, !receipt.ruleText.isEmpty {
-                        Image(systemName: "checkmark.shield").font(.system(size: 10, weight: .medium))
+                        MWIcon(symbol: "shield-check", size: 10, color: nil)
                         Text(receipt.ruleText).lineLimit(1)
                         Text("\u{00B7}").foregroundStyle(Plex.faint)
                     } else {
@@ -715,11 +731,11 @@ struct MWEmptyState: View {
     let title: String
     let message: String
     var compact = false
-    var glossy: String?
+    var icon: String?
 
     var body: some View {
         VStack(spacing: compact ? 8 : 12) {
-            MWGlossy(glossy ?? Self.glossy(for: symbol), size: compact ? 52 : 84)
+            MWIconTile(symbol: icon ?? symbol, size: compact ? 44 : 60)
             VStack(spacing: 5) {
                 Text(title)
                     .font(.system(size: compact ? 14 : 16, weight: .bold))
@@ -745,26 +761,12 @@ struct MWEmptyState: View {
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Plex.ink.opacity(0.06)))
         .shadow(color: MWLook.shadow, radius: 14, y: 5)
     }
-
-    static func glossy(for symbol: String) -> String {
-        switch symbol {
-        case "checkmark": "plex-mint-shield"
-        case "list.bullet": "plex-mint-chat"
-        case "calendar", "clock": "plex-mint-calendar"
-        case "circle.grid.2x2": "plex-money-card"
-        case "arrow.triangle.2.circlepath", "repeat": "plex-money-loop"
-        case "questionmark.folder": "plex-mint-folder"
-        case "doc.text", "doc.plaintext": "plex-money-receipt"
-        case "text.book.closed": "plex-money-brain"
-        default: "plex-mint-orb"
-        }
-    }
 }
 
 /// A quiet inline problem: "Can't reach Convex at …". Never a blank page.
 struct MWBanner: View {
     let message: String
-    var symbol = "exclamationmark.triangle"
+    var symbol = "triangle-alert"
     var tone: MWTone = .amber
     var action: (title: String, run: () -> Void)?
 
@@ -816,7 +818,7 @@ struct MWQueryBanner<T: Decodable>: View {
 
     var body: some View {
         if let error = query.error {
-            MWBanner(message: error.message, symbol: error.kind == .unreachable ? "wifi.slash" : "exclamationmark.triangle")
+            MWBanner(message: error.message, symbol: error.kind == .unreachable ? "wifi-off" : "triangle-alert")
         }
     }
 }
@@ -830,13 +832,13 @@ struct MWSearchField: View {
 
     var body: some View {
         HStack(spacing: 7) {
-            MWIcon(symbol: "magnifyingglass", size: 12, color: Plex.faint)
+            MWIcon(symbol: "search", size: 12, color: Plex.faint)
             TextField(placeholder, text: $text)
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
             if !text.isEmpty {
                 Button { text = "" } label: {
-                    Image(systemName: "xmark.circle.fill").font(.system(size: 12)).foregroundStyle(Plex.faint)
+                    MWIcon(symbol: "circle-x", size: 12, color: nil).foregroundStyle(Plex.faint)
                 }
                 .buttonStyle(.plain)
             }

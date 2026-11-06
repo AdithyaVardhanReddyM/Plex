@@ -9,8 +9,9 @@ struct NeedsYouPage: View {
     var body: some View {
         MWPage {
             MWPageHeader(title: "Needs you",
-                         glossy: "plex-money-hand",
-                         subtitle: "When Plex needs a yes, an answer or your hands, it waits here and in the notch. Answer either one and it carries on.")
+                         icon: "hand",
+                         subtitle: "When Plex needs a yes, an answer or your hands, it waits here and in the notch. Answer either one and it carries on.",
+                         tint: .steel)
             MWQueryBanner(query: model.pending)
 
             if !model.pending.settled {
@@ -18,7 +19,7 @@ struct NeedsYouPage: View {
                     ForEach(0..<2, id: \.self) { _ in MWSkeleton(height: 150, radius: Plex.radiusLG) }
                 }
             } else if asks.isEmpty {
-                MWEmptyState(symbol: "checkmark", title: "Nothing needs you",
+                MWEmptyState(symbol: "check", title: "Nothing needs you",
                              message: "Approvals, questions and hand-offs from Plex show up here. You're all caught up.")
             } else {
                 group("Approvals", asks.filter { $0.kind == .approval })
@@ -31,7 +32,7 @@ struct NeedsYouPage: View {
     @ViewBuilder private func group(_ title: String, _ items: [AskDoc]) -> some View {
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                MWSectionTitle(title, count: items.count, glossy: title == "Approvals" ? "plex-money-hand" : (title == "Questions" ? "plex-mint-chat" : "plex-mint-cursor"))
+                MWSectionTitle(title, count: items.count, icon: title == "Approvals" ? "hand" : (title == "Questions" ? "message-circle" : "mouse-pointer-2"), tint: .steel)
                 ForEach(items) { ask in AskCard(ask: ask, model: model) }
             }
         }
@@ -58,7 +59,7 @@ struct AskCard: View {
                 header
                 content
                 if let problem {
-                    Label(problem, systemImage: "exclamationmark.triangle")
+                    MWLabel(problem, icon: "triangle-alert")
                         .font(.system(size: 12))
                         .foregroundStyle(Plex.disputed)
                 }
@@ -86,7 +87,7 @@ struct AskCard: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            MWGlossy(kindGlossy, size: 22)
+            MWIcon(symbol: kindIcon, size: 14, color: Plex.steel600)
             Text(ask.sourceLine)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Plex.muted)
@@ -98,23 +99,23 @@ struct AskCard: View {
         }
     }
 
-    private var kindGlossy: String {
+    private var kindIcon: String {
         switch ask.kind {
-        case .approval: ask.isMoney ? "plex-money-hand" : "plex-steel-shield"
-        case .question: "plex-mint-chat"
-        case .takeover: "plex-mint-cursor"
-        case .login: "plex-steel-shield"
-        case .other: "plex-mint-orb"
+        case .approval: ask.isMoney ? "hand" : "shield-check"
+        case .question: "message-circle"
+        case .takeover: "mouse-pointer-2"
+        case .login: "shield-check"
+        case .other: "inbox"
         }
     }
 
     private var kindSymbol: String {
         switch ask.kind {
-        case .approval: ask.isMoney ? "lock.fill" : "hand.raised"
-        case .question: "questionmark.bubble"
-        case .takeover: "hand.point.up.left"
-        case .login: "person.badge.key"
-        case .other: "tray"
+        case .approval: ask.isMoney ? "lock" : "hand"
+        case .question: "message-circle-question-mark"
+        case .takeover: "pointer"
+        case .login: "user-lock"
+        case .other: "inbox"
         }
     }
 
@@ -141,7 +142,7 @@ struct AskCard: View {
         }
         if ask.isMoney, ask.ruleText != nil || ask.potName != nil || ask.payee != nil {
             HStack(spacing: 6) {
-                MWIcon(symbol: "checkmark.shield", size: 11.5, color: Plex.steel600)
+                MWIcon(symbol: "shield-check", size: 11.5, color: Plex.steel600)
                 Text(ruleLine)
                     .font(.system(size: 12.5))
                     .foregroundStyle(Plex.steel700)
@@ -168,7 +169,7 @@ struct AskCard: View {
         case .approval:
             HStack(spacing: 8) {
                 Button { answer("allow", approved: true) } label: {
-                    buttonLabel("allow", ask.amountCents.map { "Allow \(Money.format($0, whole: true))" } ?? "Allow", symbol: "checkmark")
+                    buttonLabel("allow", ask.amountCents.map { "Allow \(Money.format($0, whole: true))" } ?? "Allow", symbol: "check")
                 }
                 .mwButton(ask.isMoney ? .brand : .primary)
                 Button { answer("deny", approved: false) } label: { buttonLabel("deny", "Deny") }
@@ -193,7 +194,7 @@ struct AskCard: View {
                 }
                 HStack(spacing: 8) {
                     MWTextField(placeholder: ask.options.isEmpty ? "Type your answer" : "Or type something else", text: $reply) { sendReply() }
-                    Button { sendReply() } label: { buttonLabel("reply", "Send", symbol: "arrow.up") }
+                    Button { sendReply() } label: { buttonLabel("reply", "Send", symbol: "arrow-up") }
                         .mwButton(.primary)
                         .disabled(reply.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
@@ -201,7 +202,7 @@ struct AskCard: View {
         case .takeover, .login:
             HStack(spacing: 8) {
                 Button { answer("done", approved: true, text: "done") } label: {
-                    buttonLabel("done", ask.kind == .login ? "I've signed in" : "I've done it", symbol: "checkmark")
+                    buttonLabel("done", ask.kind == .login ? "I've signed in" : "I've done it", symbol: "check")
                 }
                 .mwButton(.primary)
                 Button { answer("cancel", approved: false) } label: { buttonLabel("cancel", "Cancel") }
@@ -222,7 +223,7 @@ struct AskCard: View {
                 Text(title)
             }
         } else if let symbol {
-            Label(title, systemImage: symbol)
+            MWLabel(title, icon: symbol)
         } else {
             Text(title)
         }
@@ -257,7 +258,7 @@ struct SettlingLine: View {
         VStack(alignment: .leading, spacing: 8) {
             if let receipt = item.receipt {
                 HStack(spacing: 8) {
-                    MWIcon(symbol: "checkmark.circle.fill", size: 13, color: Plex.green600)
+                    MWIcon(symbol: "circle-check", size: 13, color: Plex.green600)
                     Text("Paid \(Money.format(receipt.amountCents)) to \(receipt.payeeLabel). Receipt written.")
                         .font(.system(size: 12.5, weight: .medium))
                         .foregroundStyle(Plex.green700)
@@ -272,7 +273,7 @@ struct SettlingLine: View {
             }
             if item.always, let payee = item.ask.payee, let cents = item.ask.amountCents {
                 HStack(spacing: 6) {
-                    MWIcon(symbol: "checkmark.shield", size: 11.5, color: Plex.muted)
+                    MWIcon(symbol: "shield-check", size: 11.5, color: Plex.muted)
                     Text("Plex will pay \(payee) up to \(Money.format(cents, whole: true)) without asking\(item.ask.potName.map { ", from the \($0) pot" } ?? "").")
                         .font(.system(size: 12))
                         .foregroundStyle(Plex.muted)

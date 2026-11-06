@@ -136,7 +136,7 @@ struct NewRoutineSheet: View {
                         .font(.system(size: 12.5, weight: .medium))
                         .foregroundStyle(Plex.faint)
                     HStack(spacing: 12) {
-                        MWGlossyTile(name: WindowFormat.routineGlossy(draft.icon, trigger: draft.spec.trigger, money: draft.spec.movesMoney), size: 46)
+                        MWIconTile(symbol: WindowFormat.routineIcon(draft.icon, trigger: draft.spec.trigger, money: draft.spec.movesMoney), size: 46)
                         if renaming {
                             TextField("Name", text: Binding(get: { self.draft?.name ?? "" }, set: { self.draft?.name = $0 }))
                                 .textFieldStyle(.plain)
@@ -177,7 +177,7 @@ struct NewRoutineSheet: View {
                 RoutineFlow(spec: draft.spec, compact: true)
 
                 VStack(spacing: 0) {
-                    option("Where it runs", symbol: draft.runWhere == "mac" ? "laptopcomputer" : "cloud",
+                    option("Where it runs", symbol: draft.runWhere == "mac" ? "laptop" : "cloud",
                            note: draft.runWhere == "mac" ? "Uses your Mac's apps and screen. Runs while it's awake." : "Runs through your connected apps, even while your Mac sleeps.") {
                         Picker("", selection: Binding(get: { self.draft?.runWhere ?? "cloud" }, set: { self.draft?.runWhere = $0 })) {
                             Text("On this Mac").tag("mac")
@@ -185,7 +185,7 @@ struct NewRoutineSheet: View {
                         }
                     }
                     MWDivider(inset: 42)
-                    option("If it's missed", symbol: "moon.zzz",
+                    option("If it's missed", symbol: "moon-star",
                            note: draft.missed == "skip" ? "Skips it and waits for the next time." : "Runs as soon as your Mac wakes up.") {
                         Picker("", selection: Binding(get: { self.draft?.missed ?? "run_on_wake" }, set: { self.draft?.missed = $0 })) {
                             Text("Run on wake").tag("run_on_wake")
@@ -225,7 +225,7 @@ struct NewRoutineSheet: View {
     private func questions(_ items: [String]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 7) {
-                MWIcon(symbol: "questionmark.bubble", size: 12.5, color: Plex.steel600)
+                MWIcon(symbol: "message-circle-question-mark", size: 12.5, color: Plex.steel600)
                 Text(items.count == 1 ? "One thing to check" : "Two things to check")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Plex.steel900)
@@ -240,7 +240,7 @@ struct NewRoutineSheet: View {
                         MWTextField(placeholder: "Your answer", text: Binding(get: { answers[q] ?? "" }, set: { answers[q] = $0 })) {
                             compile(refining: true)
                         }
-                        Button { compile(refining: true) } label: { Label("Update", systemImage: "arrow.clockwise") }
+                        Button { compile(refining: true) } label: { MWLabel("Update", icon: "rotate-cw") }
                             .mwButton(.secondary)
                             .disabled((answers[q] ?? "").trimmingCharacters(in: .whitespaces).isEmpty)
                     }
@@ -257,7 +257,7 @@ struct NewRoutineSheet: View {
     private var footer: some View {
         HStack(spacing: 10) {
             if phase == .review {
-                MWIcon(symbol: "checkmark.shield", size: 12, color: Plex.faint)
+                MWIcon(symbol: "shield-check", size: 12, color: Plex.faint)
                 Text("Money steps are checked against your pots every time it runs.")
                     .font(.system(size: 12))
                     .foregroundStyle(Plex.muted)
@@ -277,7 +277,7 @@ struct NewRoutineSheet: View {
                     if saving {
                         HStack(spacing: 6) { ProgressView().controlSize(.mini).tint(.white); Text("Saving") }
                     } else {
-                        Label(editingID == nil ? "Save routine" : "Save changes", systemImage: "checkmark")
+                        MWLabel(editingID == nil ? "Save routine" : "Save changes", icon: "check")
                     }
                 }
                 .mwButton(.primary)
@@ -367,7 +367,7 @@ private struct ExampleChip: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                MWIcon(symbol: "arrow.turn.down.right", size: 10, color: hovering ? Plex.ink2 : Plex.faint)
+                MWIcon(symbol: "corner-down-right", size: 10, color: hovering ? Plex.ink2 : Plex.faint)
                 Text(text)
                     .font(.system(size: 12.5))
                     .foregroundStyle(hovering ? Plex.ink : Plex.ink2)

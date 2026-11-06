@@ -32,7 +32,7 @@ struct ActivityPage: View {
 
     var body: some View {
         MWPage(maxWidth: 820) {
-            MWPageHeader(title: "Activity", glossy: "plex-mint-chat", subtitle: "Every run, task, hand-off and payment, as it happened.")
+            MWPageHeader(title: "Activity", icon: MainSection.activity.icon, subtitle: "Every run, task, hand-off and payment, as it happened.")
             HStack(spacing: 6) {
                 ForEach(Filter.allCases) { f in
                     MWChip(title: f.title, count: feed.value.map { list in list.filter(f.matches).count },
@@ -44,7 +44,7 @@ struct ActivityPage: View {
             if let items = feed.value {
                 let shown = items.filter(filter.matches)
                 if shown.isEmpty {
-                    MWEmptyState(symbol: "list.bullet", title: filter == .all ? "Nothing yet" : "Nothing here yet",
+                    MWEmptyState(symbol: "list", title: filter == .all ? "Nothing yet" : "Nothing here yet",
                                  message: filter == .all ? "What Plex does shows up here as it happens." : "Nothing of this kind has happened yet.")
                 } else {
                     ForEach(days(shown), id: \.0) { day, rows in

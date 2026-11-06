@@ -12,16 +12,16 @@ struct MoneyPage: View {
     var body: some View {
         MWPage(maxWidth: 1000) {
             MWPageHeader(title: "Money",
-                         glossy: "plex-money-card",
+                         icon: "wallet",
                          subtitle: "What agents may spend, what's due, and a receipt for every dollar that moved.") {
                 Button { model.go(.insights) } label: {
-                    Label("Insights", systemImage: "chart.bar.xaxis")
+                    MWLabel("Insights", icon: "chart-column")
                 }
                 .mwButton(.secondary)
             }
             if model.paused {
                 MWBanner(message: "All agent spending is paused. Pots keep their rules, but every payment is blocked until you resume.",
-                         symbol: "pause.circle", action: ("Resume", { Task { await model.setPaused(false) } }))
+                         symbol: "circle-pause", action: ("Resume", { Task { await model.setPaused(false) } }))
             }
             potsSection
             billsSection
@@ -43,11 +43,11 @@ struct MoneyPage: View {
 
     private var potsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MWSectionTitle("Pots", count: macPots?.count, glossy: "plex-mint-shield")
+            MWSectionTitle("Pots", count: macPots?.count, icon: "wallet")
             MWQueryBanner(query: pots)
             if let list = macPots {
                 if list.isEmpty {
-                    MWEmptyState(symbol: "circle.grid.2x2", title: "No pots yet", message: "Pots hold what agents may spend, with limits in your own words. Create them in Plex on the web.", compact: true)
+                    MWEmptyState(symbol: "layout-grid", title: "No pots yet", message: "Pots hold what agents may spend, with limits in your own words. Create them in Plex on the web.", compact: true)
                 } else {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 200, maximum: 400), spacing: 12, alignment: .top)], spacing: 12) {
                         ForEach(list) { PotCard(pot: $0) }
@@ -63,7 +63,7 @@ struct MoneyPage: View {
 
     private var billsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MWSectionTitle(title: "Bills", count: bills.value?.count, glossy: "plex-mint-calendar") {
+            MWSectionTitle(title: "Bills", count: bills.value?.count, icon: "calendar") {
                 if let list = bills.value, !list.isEmpty {
                     let due = list.filter { $0.status != "paid" }.reduce(0) { $0 + $1.amountCents }
                     Text("\(Money.format(due, whole: true)) still to pay")
@@ -75,7 +75,7 @@ struct MoneyPage: View {
             MWQueryBanner(query: bills)
             if let list = bills.value {
                 if list.isEmpty {
-                    MWEmptyState(symbol: "doc.text", title: "No bills yet", message: "Plex finds bills in your email and invoices, and lists them here before they're due.", compact: true)
+                    MWEmptyState(symbol: "file-text", title: "No bills yet", message: "Plex finds bills in your email and invoices, and lists them here before they're due.", compact: true)
                 } else {
                     MWListCard {
                         TableHeader(columns: [("Payee", nil), ("Due", 128), ("Amount", 118), ("Usual", 84), ("Autopay", 78), ("Status", 96)],
@@ -96,7 +96,7 @@ struct MoneyPage: View {
 
     private var subscriptionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MWSectionTitle(title: "Subscriptions", count: subscriptions.value?.count, glossy: "plex-money-loop") {
+            MWSectionTitle(title: "Subscriptions", count: subscriptions.value?.count, icon: "refresh-cw") {
                 if let list = subscriptions.value?.filter({ $0.status == "active" }), !list.isEmpty {
                     let monthly = list.reduce(0) { $0 + ($1.cadence == "yearly" ? $1.amountCents / 12 : $1.amountCents) }
                     Text("About \(Money.format(monthly, whole: true)) a month")
@@ -142,7 +142,7 @@ struct MoneyPage: View {
 
     private var receiptsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MWSectionTitle(title: "Recent receipts", glossy: "plex-money-receipt") {
+            MWSectionTitle(title: "Recent receipts", icon: "receipt") {
                 Button("See all in Activity") { model.go(.activity) }
                     .buttonStyle(.plain)
                     .font(.system(size: 12.5, weight: .medium))
@@ -151,7 +151,7 @@ struct MoneyPage: View {
             MWQueryBanner(query: receipts)
             if let list = receipts.value {
                 if list.isEmpty {
-                    MWEmptyState(symbol: "doc.plaintext", title: "No receipts yet", message: "Every time money moves, Plex writes a receipt: who, why in your words, and the rule that allowed it.", compact: true)
+                    MWEmptyState(symbol: "receipt", title: "No receipts yet", message: "Every time money moves, Plex writes a receipt: who, why in your words, and the rule that allowed it.", compact: true)
                 } else {
                     MWListCard {
                         // The foil edge every receipt carries.
@@ -269,7 +269,7 @@ private struct BillRow: View {
                 MWAmount(cents: bill.amountCents, size: 13)
                 if bill.isSpike {
                     HStack(spacing: 3) {
-                        Image(systemName: "arrow.up.right").font(.system(size: 8.5, weight: .bold))
+                        MWIcon(symbol: "arrow-up-right", size: 8.5, color: nil)
                         Text("\(bill.spikePercent)% above usual")
                     }
                     .font(.system(size: 11, weight: .medium))
@@ -290,7 +290,7 @@ private struct BillRow: View {
 
             Group {
                 if bill.autopay {
-                    MWBadge(text: "On", tone: .outline, symbol: "arrow.triangle.2.circlepath")
+                    MWBadge(text: "On", tone: .outline, symbol: "refresh-cw")
                 } else {
                     Text("Off").font(.system(size: 12.5)).foregroundStyle(Plex.faint)
                 }
@@ -353,7 +353,7 @@ private struct SubscriptionRow: View {
                 if sub.priceWentUp, let old = sub.previousAmountCents {
                     HStack(spacing: 3) {
                         Text(Money.format(old)).strikethrough(color: Plex.refunded.opacity(0.6))
-                        Image(systemName: "arrow.right").font(.system(size: 8, weight: .bold))
+                        MWIcon(symbol: "arrow-right", size: 8, color: nil)
                         Text(Money.format(sub.amountCents))
                     }
                     .font(.system(size: 11, weight: .medium))
@@ -371,7 +371,7 @@ private struct SubscriptionRow: View {
 
             Group {
                 if let days = unused, days > 60, active {
-                    MWBadge(text: "Unused \(days) days", tone: .amber, symbol: "moon.zzz")
+                    MWBadge(text: "Unused \(days) days", tone: .amber, symbol: "moon-star")
                 } else if let last = sub.lastUsedAt {
                     Text(WindowFormat.relative(last))
                         .font(.system(size: 12.5))

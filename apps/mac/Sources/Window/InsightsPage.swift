@@ -26,10 +26,10 @@ struct InsightsPage: View {
     private var page: some View {
         VStack(alignment: .leading, spacing: 0) {
             MWPageHeader(title: "Insights",
-                         glossy: "plex-mint-screen",
+                         icon: MainSection.insights.icon,
                          subtitle: "Charts and tables Plex builds when you ask about your money. Ask “How did I do this month?” or “Plan my week”.") {
                 Button { NSWorkspace.shared.open(BrainSettings.webURL.appending(path: "insights")) } label: {
-                    Label("Open in browser", systemImage: "arrow.up.right")
+                    MWLabel("Open in browser", icon: "arrow-up-right")
                 }
                 .mwButton(.secondary)
             }
@@ -42,7 +42,7 @@ struct InsightsPage: View {
                     .id(reloads)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 if loadFailed {
-                    MWEmptyState(symbol: "chart.bar.xaxis", title: "Insights can't load",
+                    MWEmptyState(symbol: "chart-column", title: "Insights can't load",
                                  message: "It comes from Plex on the web at \(BrainSettings.webURLString). Is pnpm dev running?",
                                  compact: false)
                         .overlay(alignment: .bottom) {

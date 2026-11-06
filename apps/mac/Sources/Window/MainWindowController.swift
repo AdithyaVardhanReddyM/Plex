@@ -21,32 +21,18 @@ enum MainSection: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Its glossy icon (Assets > Glossy).
-    var glossy: String {
+    /// Its Lucide icon.
+    var icon: String {
         switch self {
-        case .today: "plex-mint-orb"
-        case .needsYou: "plex-money-hand"
-        case .routines: "plex-money-loop"
-        case .activity: "plex-mint-chat"
-        case .money: "plex-money-card"
-        case .insights: "plex-mint-screen"
-        case .memory: "plex-money-brain"
-        case .connections: "plex-money-link"
-        case .settings: "plex-mint-gear"
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .today: "sun.max"
-        case .needsYou: "tray"
-        case .routines: "arrow.triangle.2.circlepath"
-        case .activity: "list.bullet"
-        case .money: "dollarsign.circle"
-        case .insights: "chart.bar.xaxis"
-        case .memory: "text.book.closed"
-        case .connections: "link"
-        case .settings: "gearshape"
+        case .today: "sun"
+        case .needsYou: "hand"
+        case .routines: "refresh-cw"
+        case .activity: "activity"
+        case .money: "wallet"
+        case .insights: "chart-column"
+        case .memory: "brain"
+        case .connections: "plug"
+        case .settings: "settings"
         }
     }
 }

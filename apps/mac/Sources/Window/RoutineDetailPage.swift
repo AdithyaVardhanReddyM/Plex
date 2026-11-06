@@ -21,7 +21,7 @@ struct RoutineDetailPage: View {
     var body: some View {
         MWPage(maxWidth: 1000) {
             Button { model.openRoutineID = nil } label: {
-                Label("Routines", systemImage: "chevron.left")
+                MWLabel("Routines", icon: "chevron-left")
             }
             .mwButton(.ghost, size: .small)
             .padding(.leading, -8)
@@ -31,12 +31,12 @@ struct RoutineDetailPage: View {
 
             if let routine = detail.value?.routine {
                 header(routine)
-                if let note { MWBanner(message: note, symbol: "checkmark.circle", tone: .steel) }
+                if let note { MWBanner(message: note, symbol: "circle-check", tone: .steel) }
                 HStack(alignment: .top, spacing: 28) {
                     VStack(alignment: .leading, spacing: 22) {
                         if !routine.prompt.isEmpty { words(routine.prompt) }
                         VStack(alignment: .leading, spacing: 14) {
-                            MWSectionTitle("How it works", glossy: "plex-mint-apps")
+                            MWSectionTitle("How it works", icon: "layout-grid")
                             RoutineFlow(spec: routine.spec)
                         }
                         facts(routine)
@@ -46,7 +46,7 @@ struct RoutineDetailPage: View {
                         .frame(width: 340)
                 }
             } else if detail.settled {
-                MWEmptyState(symbol: "questionmark.folder", title: "This routine is gone", message: "It may have been deleted. Go back to see your routines.")
+                MWEmptyState(symbol: "folder-search", title: "This routine is gone", message: "It may have been deleted. Go back to see your routines.")
             } else {
                 VStack(alignment: .leading, spacing: 16) {
                     MWSkeleton(width: 280, height: 22)
@@ -69,7 +69,7 @@ struct RoutineDetailPage: View {
 
     private func header(_ routine: RoutineDoc) -> some View {
         HStack(alignment: .top, spacing: 16) {
-            MWGlossyTile(name: WindowFormat.routineGlossy(routine.icon, trigger: routine.spec.trigger, money: routine.spec.movesMoney), size: 52)
+            MWIconTile(symbol: WindowFormat.routineIcon(routine.icon, trigger: routine.spec.trigger, money: routine.spec.movesMoney), size: 52)
             VStack(alignment: .leading, spacing: 8) {
                 Text(routine.name)
                     .font(.system(size: 30, weight: .bold))
@@ -83,14 +83,14 @@ struct RoutineDetailPage: View {
                 }
                 HStack(spacing: 6) {
                     if routine.enabled {
-                        MWBadge(text: "Active", tone: .outline, symbol: "circle.fill")
+                        MWBadge(text: "Active", tone: .outline, symbol: "circle-dot")
                     } else {
-                        MWBadge(text: "Paused", tone: .amber, symbol: "pause.fill")
+                        MWBadge(text: "Paused", tone: .amber, symbol: "pause")
                     }
                     MWBadge(text: routine.runWhere == "mac" ? "On this Mac" : "In the cloud", tone: .neutral,
-                            symbol: routine.runWhere == "mac" ? "laptopcomputer" : "cloud")
+                            symbol: routine.runWhere == "mac" ? "laptop" : "cloud")
                     if routine.spec.movesMoney {
-                        MWBadge(text: "Moves money", tone: .steel, symbol: "lock.fill")
+                        MWBadge(text: "Moves money", tone: .steel, symbol: "lock")
                     }
                 }
                 .padding(.top, 2)
@@ -101,19 +101,19 @@ struct RoutineDetailPage: View {
                     if busy == "run" {
                         HStack(spacing: 6) { ProgressView().controlSize(.mini).tint(.white); Text("Run now") }
                     } else {
-                        Label("Run now", systemImage: "play.fill")
+                        MWLabel("Run now", icon: "play")
                     }
                 }
                 .mwButton(.primary)
                 Button { model.newRoutine(prompt: routine.prompt, draft: RoutineDraft(routine: routine), editing: routine.id) } label: {
-                    Label("Edit", systemImage: "pencil")
+                    MWLabel("Edit", icon: "pencil")
                 }
                 .mwButton(.secondary)
                 Button { setEnabled(routine, !routine.enabled) } label: {
-                    Label(routine.enabled ? "Pause" : "Resume", systemImage: routine.enabled ? "pause" : "play")
+                    MWLabel(routine.enabled ? "Pause" : "Resume", icon: routine.enabled ? "pause" : "play")
                 }
                 .mwButton(.secondary)
-                Button { confirmingDelete = true } label: { Image(systemName: "trash") }
+                Button { confirmingDelete = true } label: { MWIcon(symbol: "trash-2", size: 13, color: nil) }
                     .mwButton(.danger)
                     .help("Delete this routine")
             }
@@ -123,7 +123,7 @@ struct RoutineDetailPage: View {
 
     private func words(_ prompt: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            MWIcon(symbol: "quote.opening", size: 12, color: Plex.faint)
+            MWIcon(symbol: "quote", size: 12, color: Plex.faint)
                 .padding(.top, 3)
             VStack(alignment: .leading, spacing: 4) {
                 Text("In your words")
@@ -146,10 +146,10 @@ struct RoutineDetailPage: View {
     private func facts(_ routine: RoutineDoc) -> some View {
         MWListCard {
             fact("Runs", routine.runWhere == "mac" ? "On this Mac, while it's awake. It can use your apps and the screen." : "In the cloud, through your connected apps. Your Mac can be asleep.",
-                 symbol: routine.runWhere == "mac" ? "laptopcomputer" : "cloud")
+                 symbol: routine.runWhere == "mac" ? "laptop" : "cloud")
             MWDivider(inset: 42)
             fact("If it's missed", routine.missed == "skip" ? "Skips that run and waits for the next one." : "Runs as soon as your Mac wakes up.",
-                 symbol: "moon.zzz")
+                 symbol: "moon-star")
             MWDivider(inset: 42)
             fact("Next run", routine.enabled ? (routine.nextRunAt.map { "\($0.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().hour().minute())) (\(WindowFormat.relative($0)))" } ?? "When its trigger fires") : "Paused",
                  symbol: "calendar")
@@ -177,7 +177,7 @@ struct RoutineDetailPage: View {
 
     private var history: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MWSectionTitle("Run history", count: detail.value?.runs.count, glossy: "plex-mint-calendar")
+            MWSectionTitle("Run history", count: detail.value?.runs.count, icon: "calendar")
             if let runs = detail.value?.runs {
                 if runs.isEmpty {
                     MWEmptyState(symbol: "clock", title: "No runs yet", message: "Each time it runs, what it did and any receipts show up here.", compact: true)
@@ -273,7 +273,7 @@ struct RunRow: View {
                                 .padding(.top, 2)
                         }
                     }
-                    MWIcon(symbol: "chevron.right", size: 9.5, color: Plex.faint)
+                    MWIcon(symbol: "chevron-right", size: 9.5, color: Plex.faint)
                         .rotationEffect(.degrees(expanded ? 90 : 0))
                         .padding(.top, 4)
                 }

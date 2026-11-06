@@ -12,7 +12,7 @@ struct MemoryPage: View {
     var body: some View {
         MWPage(maxWidth: 860) {
             MWPageHeader(title: "Memory",
-                         glossy: "plex-money-brain",
+                         icon: "brain",
                          subtitle: "What Plex knows about you. It uses these to act like you would. Edit or forget anything.") {
                 MWSearchField(placeholder: "Search memories", text: $search)
                     .frame(width: 220)
@@ -31,10 +31,10 @@ struct MemoryPage: View {
             if let list = memories.value {
                 let shown = filtered(list)
                 if list.isEmpty {
-                    MWEmptyState(symbol: "text.book.closed", title: "Plex doesn't know you yet",
+                    MWEmptyState(symbol: "brain", title: "Plex doesn't know you yet",
                                  message: "Tell it things (\u{201C}my landlord is Sam Okafor\u{201D}) and it learns from what you do. Everything it keeps shows up here.")
                 } else if shown.isEmpty {
-                    MWEmptyState(symbol: "magnifyingglass", title: "No memories match", message: "Try another word, or show all kinds.", compact: true)
+                    MWEmptyState(symbol: "search", title: "No memories match", message: "Try another word, or show all kinds.", compact: true)
                 } else {
                     let pinned = shown.filter(\.pinned)
                     let rest = shown.filter { !$0.pinned }
@@ -70,7 +70,7 @@ struct MemoryPage: View {
     @ViewBuilder private func group(_ title: String?, _ items: [MemoryDoc], note: String?) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             if let title {
-                MWSectionTitle(title: title, count: items.count, glossy: title == "Pinned" ? "plex-mint-pin" : nil) {
+                MWSectionTitle(title: title, count: items.count, icon: title == "Pinned" ? "map-pin" : nil) {
                     if let note { Text(note).font(.system(size: 12)).foregroundStyle(Plex.faint) }
                 }
             }
@@ -146,7 +146,7 @@ struct MemoryRow: View {
                 }
                 HStack(spacing: 6) {
                     if let about = memory.about {
-                        MWBadge(text: about, tone: .outline, symbol: memory.kind == .merchant ? "storefront" : (memory.kind == .person ? "person" : "tag"))
+                        MWBadge(text: about, tone: .outline, symbol: memory.kind == .merchant ? "store" : (memory.kind == .person ? "user" : "tag"))
                     }
                     MWBadge(text: memory.sourceLabel, tone: memory.source == "said" ? .neutral : .outline)
                     Text(usage)
@@ -157,10 +157,10 @@ struct MemoryRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: 2) {
-                MWIconButton(symbol: memory.pinned ? "pin.fill" : "pin", help: memory.pinned ? "Unpin" : "Pin: always keep this in mind",
+                MWIconButton(symbol: memory.pinned ? "pin" : "pin", help: memory.pinned ? "Unpin" : "Pin: always keep this in mind",
                              color: memory.pinned ? Plex.ink : Plex.faint, action: pin)
                 MWIconButton(symbol: "pencil", help: "Edit", color: Plex.faint) { startEditing() }
-                MWIconButton(symbol: "trash", help: "Forget", color: Plex.faint, action: forget)
+                MWIconButton(symbol: "trash-2", help: "Forget", color: Plex.faint, action: forget)
             }
             .opacity(hovering || memory.pinned || editing ? 1 : 0)
         }

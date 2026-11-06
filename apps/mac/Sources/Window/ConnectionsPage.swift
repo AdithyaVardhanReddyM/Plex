@@ -11,13 +11,12 @@ struct ConnectionsPage: View {
     var body: some View {
         MWPage(maxWidth: 960) {
             MWPageHeader(title: "Connections",
-                         glossy: "plex-money-link",
+                         icon: "plug",
                          subtitle: "The apps Plex can read and act in, what macOS lets it do, and the tools it uses to work on your screen. It asks before it sends or changes anything.")
             apps
             permissions
             tools
-            Label("Sign-ins run through Composio, so Plex never sees your passwords or tokens. Disconnect an app at any time.",
-                  systemImage: "lock.fill")
+            MWLabel("Sign-ins run through Composio, so Plex never sees your passwords or tokens. Disconnect an app at any time.", icon: "lock")
                 .font(.system(size: 12))
                 .foregroundStyle(Plex.faint)
         }
@@ -28,11 +27,11 @@ struct ConnectionsPage: View {
 
     private var apps: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MWSectionTitle(title: "Apps", glossy: "plex-mint-apps") {
+            MWSectionTitle(title: "Apps", icon: "layout-grid") {
                 let on = model.apps.filter(\.isOn).count
                 if model.loaded, on > 0 {
                     HStack(spacing: 5) {
-                        Image(systemName: "checkmark").font(.system(size: 10.5, weight: .bold))
+                        MWIcon(symbol: "check", size: 10.5, color: nil)
                         Text("\(on) connected").font(.system(size: 12, weight: .semibold))
                     }
                     .foregroundStyle(Plex.green700)
@@ -42,7 +41,7 @@ struct ConnectionsPage: View {
                 }
             }
             if let problem = model.problem {
-                MWBanner(message: problem, symbol: "wifi.slash", action: ("Try again", { Task { await model.load() } }))
+                MWBanner(message: problem, symbol: "wifi-off", action: ("Try again", { Task { await model.load() } }))
             } else if model.loaded, !model.configured {
                 MWBanner(message: "Composio isn't set up on the brain yet. Add \(model.keyName) to apps/agent/.env to connect cloud apps.",
                          symbol: "key", tone: .neutral)
@@ -63,7 +62,7 @@ struct ConnectionsPage: View {
 
     private var permissions: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MWSectionTitle("This Mac", glossy: "plex-mint-shield")
+            MWSectionTitle("This Mac", icon: "shield-check")
             MWListCard {
                 ForEach(Array(Permissions.listed.enumerated()), id: \.offset) { i, kind in
                     if i > 0 { MWDivider(inset: 62) }
@@ -77,20 +76,20 @@ struct ConnectionsPage: View {
 
     private var tools: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MWSectionTitle(title: "Computer use", glossy: "plex-mint-cursor") {
+            MWSectionTitle(title: "Computer use", icon: "mouse-pointer-2") {
                 Text("Reads apps through accessibility, so it's fast and exact")
                     .font(.system(size: 12.5))
                     .foregroundStyle(Plex.faint)
             }
             if let problem = model.toolsProblem {
-                MWBanner(message: problem, symbol: "wifi.slash", tone: .neutral)
+                MWBanner(message: problem, symbol: "wifi-off", tone: .neutral)
             }
             MWListCard {
                 ToolRow(name: "agent-desktop", blurb: "Reads and works native Mac apps through the accessibility tree.",
-                        symbol: "plex-steel-screen", status: model.desktop)
+                        symbol: "monitor", status: model.desktop)
                 MWDivider(inset: 62)
                 ToolRow(name: "agent-browser", blurb: "Drives Plex's own Chrome profile, where you stay signed in.",
-                        symbol: "plex-steel-apps", status: model.browser)
+                        symbol: "layout-grid", status: model.browser)
             }
         }
     }
@@ -342,8 +341,7 @@ private struct AppCard: View {
     @ViewBuilder private var status: some View {
         switch app.status {
         case .connected, .allowed:
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 13))
+            MWIcon(symbol: "circle-check", size: 13, color: nil)
                 .foregroundStyle(Plex.green500)
                 .help(app.status == .connected ? "Connected" : "Allowed")
         case .expired: MWBadge(text: "Sign in again", tone: .amber)
@@ -409,13 +407,13 @@ private struct AppMark: View {
 
     static func symbol(_ slug: String) -> String {
         switch slug {
-        case "gmail": "envelope"
+        case "gmail": "mail"
         case "slack": "number"
         case "googlecalendar": "calendar"
-        case "googlesheets": "tablecells"
-        case "googledrive": "externaldrive"
-        case "googledocs": "doc.text"
-        case "notion": "doc.richtext"
+        case "googlesheets": "sheet"
+        case "googledrive": "hard-drive"
+        case "googledocs": "file-text"
+        case "notion": "file-text"
         default: "app"
         }
     }
@@ -438,7 +436,7 @@ private struct PermissionRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            MWGlossyTile(name: glossy, size: 36)
+            MWIconTile(symbol: icon, size: 36)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(kind.title)
@@ -456,7 +454,7 @@ private struct PermissionRow: View {
             Spacer(minLength: 12)
             switch status {
             case .granted:
-                MWBadge(text: "Allowed", tone: .outline, symbol: "checkmark")
+                MWBadge(text: "Allowed", tone: .outline, symbol: "check")
             case .onFirstUse:
                 Text("Asks when needed").font(.system(size: 12)).foregroundStyle(Plex.faint)
                 Button("Allow now") { Permissions.request(kind) }.mwButton(.ghost, size: .small)
@@ -475,15 +473,15 @@ private struct PermissionRow: View {
     }
 
     /// Keyed on the Settings pane, which stays put when the list of kinds changes.
-    private var glossy: String {
+    private var icon: String {
         switch kind.settingsAnchor {
-        case "Privacy_Microphone": "plex-mint-mic"
-        case "Privacy_Accessibility": "plex-mint-cursor"
-        case "Privacy_ScreenCapture": "plex-mint-screen"
-        case "Privacy_LocationServices": "plex-mint-pin"
-        case "Privacy_Automation": "plex-mint-apps"
-        case "Privacy_AllFiles": "plex-mint-folder"
-        default: "plex-mint-shield"
+        case "Privacy_Microphone": "mic"
+        case "Privacy_Accessibility": "mouse-pointer-2"
+        case "Privacy_ScreenCapture": "monitor"
+        case "Privacy_LocationServices": "map-pin"
+        case "Privacy_Automation": "layout-grid"
+        case "Privacy_AllFiles": "folder"
+        default: "shield-check"
         }
     }
 }
@@ -496,7 +494,7 @@ private struct ToolRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            MWGlossyTile(name: symbol, size: 36)
+            MWIconTile(symbol: symbol, size: 36)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(name)
@@ -519,7 +517,7 @@ private struct ToolRow: View {
                     if status.accessibility == false {
                         MWBadge(text: "Needs Accessibility", tone: .amber)
                     }
-                    MWBadge(text: "Installed", tone: .outline, symbol: "checkmark")
+                    MWBadge(text: "Installed", tone: .outline, symbol: "check")
                 } else {
                     MWBadge(text: "Not installed", tone: .amber)
                 }
