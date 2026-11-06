@@ -71,7 +71,13 @@ How to work:
   to understand it, or use_screen_control for the whole job.
 
 People first:
-- Before anything that can't be undone (pay, submit, send, post, delete, buy, cancel a plan),
+- Payments are never yours. When a page asks for payment (a Pay button, a card form, "send
+  $65 by PayPal to …"), stop there, don't click it, and report the amount, who gets paid (their
+  PayPal email if the page shows one) and the order, booking or citation number. Plex pays
+  through its own money tools, under the user's rules; then it may send you back to finish.
+- If the job says the payment is already done (it names a receipt or a reference), finish the
+  page without asking again: it already had the user's OK.
+- Before anything else that can't be undone (submit, send, post, delete, cancel a plan),
   ask_permission with one short question, and wait.
 - Something only the user knows (which account, which date): ask_user.
 - Never type a password, a card number or a one-time code, and never solve a CAPTCHA. For a
@@ -83,7 +89,8 @@ People first:
 - Stay on the job: no developer tools, settings or unrelated apps.
 
 When the job is done or you're blocked, answer in one or two plain sentences: what you did and
-what you saw (amounts, dates, confirmation numbers), and anything left for the user.
+what you saw (amounts, dates, confirmation numbers, the PayPal email and reference to pay),
+and anything left for the user. If you saved a PDF, give its path.
 """
 
 _genai: genai.Client | None = None
@@ -234,6 +241,7 @@ class Operator:
         self.surface = surface
         self.timings: list[tuple[str, float]] = []
         self._browser_started = False
+        self.saved: list[str] = []  # PDFs saved in this job, shown as file cards
 
     # helpers
     async def _desk(self, *args: str, timeout_ms: int = 15000, label: str = "") -> dict[str, Any]:
@@ -450,6 +458,21 @@ class Operator:
             return await self._browse("wait", "--text", text, timeout_ms=20000)
         return await self._browse("wait", str(min(max(int(ms or 1000), 0), 15000)), timeout_ms=20000)
 
+    async def browser_save_pdf(self, name: str) -> dict[str, Any]:
+        """Save the page as it is now as a PDF in ~/Documents/Plex (a confirmation, a statement, a
+        bill), to keep as proof. Returns its path.
+
+        Args:
+            name: A file name without the folder ("Parking citation 4417 paid").
+        """
+        safe = "".join(c for c in name if c.isalnum() or c in " -_.,()").strip()[:80] or "Plex page"
+        path = f"~/Documents/Plex/{safe.removesuffix('.pdf')}.pdf"
+        out = await self._browse("pdf", path, label="Saved the page as a PDF")
+        if out.get("ok", True) is not False:
+            out["path"] = path
+            self.saved.append(path)
+        return out
+
     async def browser_back(self) -> dict[str, Any]:
         """Go back a page."""
         return await self._browse("back")
@@ -523,7 +546,7 @@ class Operator:
                       "desktop_press", "desktop_launch", "desktop_scroll", "desktop_wait"]
         if self.surface in ("auto", "browser"):
             names += ["browser_open", "browser_snapshot", "browser_click", "browser_fill", "browser_type", "browser_press",
-                      "browser_get_text", "browser_wait", "browser_back"]
+                      "browser_get_text", "browser_wait", "browser_back", "browser_save_pdf"]
         return {n: getattr(self, n) for n in names}
 
 
@@ -653,7 +676,14 @@ async def operate(conn: Connection, task: Task, job: str, surface: str = "auto",
               "cli_calls": sum(1 for k, _ in op.timings if k.startswith(("desktop", "browser")))}
     print(f"plex: operator job done in {timing['total_s']}s ({timing['turns']} turns, model {timing['model_s']}s, "
           f"{timing['cli_calls']} CLI calls {timing['cli_s']}s)", flush=True)
-    return {"outcome": outcome, "timing": timing}
+    for path in op.saved:
+        name = path.rsplit("/", 1)[-1]
+        conn.tasks and conn.tasks.show_view(task, {"type": "file", "key": path, "title": name, "path": path,
+                                                   "detail": "Saved in Documents › Plex"})
+    out: dict[str, Any] = {"outcome": outcome, "timing": timing}
+    if op.saved:
+        out["saved"] = op.saved
+    return out
 
 
 async def operate_tool(job: str, tool_context: ToolContext, surface: str = "auto") -> dict[str, Any]:

@@ -8,6 +8,7 @@ connected Macs through `macs()`.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -34,10 +35,24 @@ class Connection:
     snapshot: dict[str, Any] = field(default_factory=dict)
     core_memories: list[dict[str, Any]] = field(default_factory=list)
     cloud: bool = False
+    # What the user actually said or typed, newest last: (monotonic time, words). A task keeps
+    # the words that started it, so a receipt's `why` is theirs, not the model's paraphrase.
+    heard: list[tuple[float, str]] = field(default_factory=list)
 
     @property
     def has_mac(self) -> bool:
         return self.bridge.has_mac
+
+    def hear(self, text: str) -> None:
+        text = " ".join(text.split())
+        if text and not text.startswith("[") and (not self.heard or self.heard[-1][1] != text):
+            self.heard = [*self.heard[-19:], (time.monotonic(), text)]
+
+    def last_said(self, within_s: float = 180.0) -> str | None:
+        """The user's latest words, if they spoke or typed recently."""
+        if self.heard and time.monotonic() - self.heard[-1][0] <= within_s:
+            return self.heard[-1][1]
+        return None
 
 
 _by_talker_session: dict[str, Connection] = {}

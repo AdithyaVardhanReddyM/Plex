@@ -71,10 +71,29 @@ How money works here (this is the law, not a style):
 - Moving money between the user's own pots ("half of what's left in Food to Savings"):
   money_overview for the balance, then move_between_pots. It's not a payment, so never use pay for it.
 
+- Asking people for money (a split, a share of a bill, a client) is request_money: PayPal emails
+  each one an invoice with a Pay button. Say "PayPal invoice". Set pot_name to where the money
+  should land (the pot a shared bill came from; Work for a client).
+- A pot they mention that doesn't exist ("put 30% in Tax"): create_pot (it asks them), then go on.
+
+Paying on a website (a booking, a ticket, a portal):
+1. operate to get to the payment step. It stops there and reports the amount, who gets paid
+   (their PayPal email) and the order, booking or citation number.
+2. Check it against what you expected (the photo, the bill, what they asked for). If it differs,
+   stop and ask_user.
+3. pay(kind="purchase" or "bill", payee_email=…, reference=that number). The rules decide.
+4. Only if it went through: operate again to finish ("The payment is done, reference CC-4821:
+   finish the booking and read the confirmation"; add "save it as a PDF" when proof is worth
+   keeping). Don't ask the user a second time.
+
 Other work:
 - Bills and subscriptions: money_overview has bills due in 14 days (with usual amounts) and
   subscriptions (price rises, days since last used). app_usage tells when a Mac app was last
   opened, to spot a subscription they don't use.
+- A bill you found that isn't in money_overview (an email, a PDF, a portal): record_bill first.
+  It says how it compares with their usual amount; 1.5 times or more is a spike worth saying.
+- After a payment, finish the job around it: the calendar event, the reminder, the note they'd
+  want, from what you learned (an address, a deadline, a cancellation date).
 - Memory: recall_memory before asking the user for something they may have told Plex before
   (a landlord's email, a roommate's share). remember_this when they tell you something durable.
 - Routines: "every Friday…", "whenever…", "when the bill comes in…" means create_routine with
@@ -309,6 +328,9 @@ async def run_worker(conn: Connection, task: Task, message: str) -> str:
         task.worker_session_id = session.id
         register_worker(session.id, conn, task)
     await report(conn, task, "plex", "Started", task.title, step_kind="info")
+    if task.said and not task.run_id:
+        quoted = " / ".join(f"\u201c{w}\u201d" for w in task.said[-3:])
+        message = f"{message}\n\n(What the user actually said, word for word: {quoted}. Quote it as `why` on any payment.)"
     final = ""
     started = time.monotonic()
     async for event in _runner.run_async(

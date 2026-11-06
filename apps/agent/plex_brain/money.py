@@ -62,9 +62,32 @@ def _guard(task: Task, pot_name: str, amount_cents: int) -> str | None:
     return None
 
 
+def _words(text: str) -> set[str]:
+    return {w for w in "".join(c.lower() if c.isalnum() else " " for c in text).split() if len(w) > 2}
+
+
+def users_why(task: Task, why: str) -> str:
+    """A receipt's why is the user's own words. The model quotes them most of the time; when its
+    `why` is a paraphrase (most of its words aren't in anything the user said), use what they said.
+    A routine's run quotes the routine as they wrote it."""
+    said = list(task.said)
+    if task.run_id and (task.routine or {}).get("prompt"):
+        said.append(str(task.routine["prompt"]))
+    said = [w for w in said if w.strip()]
+    if not said:
+        return why
+    mine = _words(why)
+    theirs = set().union(*(_words(w) for w in said))
+    if mine and len(mine & theirs) / len(mine) >= 0.6:
+        return why
+    # The longest thing they said is usually the request itself ("yes" or "do both" isn't a why).
+    return max(said, key=len)
+
+
 async def pay_flow(conn: Connection, task: Task, args: dict[str, Any]) -> dict[str, Any]:
     """agentMoney:pay with the approval round trip and the receipt frame."""
     assert conn.tasks
+    args = {**args, "why": users_why(task, str(args.get("why") or ""))}
     payee = str(args["payee"]).strip().lower()
     pots = {str(p.get("name") or "").lower() for p in (conn.snapshot or {}).get("pots") or []}
     if payee in pots or "saving" in payee or payee in ("me", "myself", "my account"):
@@ -153,7 +176,7 @@ async def check_spend(pot_name: str, amount_cents: int, payee: str, tool_context
 
 
 async def pay(kind: str, pot_name: str, amount_cents: int, payee: str, why: str, tool_context: ToolContext,
-              payee_email: str = "", category: str = "", bill_id: str = "") -> dict[str, Any]:
+              payee_email: str = "", category: str = "", bill_id: str = "", reference: str = "") -> dict[str, Any]:
     """Pay someone from one of the user's pots. Convex checks the pot's rules: it goes through,
     asks the user (the notch shows Allow / Deny / Always, and this waits for the answer) or is
     blocked. Never say money moved unless this returns ok with a receiptId. Don't ask the user to
@@ -168,12 +191,15 @@ async def pay(kind: str, pot_name: str, amount_cents: int, payee: str, why: str,
         payee_email: The payee's PayPal email, if known (from memory or the bill).
         category: Optional spending category.
         bill_id: For kind=bill, the bill's _id from money_overview.
+        reference: The order, booking, invoice or citation number this pays, as the merchant's page
+            shows it ("CC-4821"). It goes on the PayPal payment so the merchant can match it.
     """
     conn, task = for_worker(tool_context)
     if kind not in ("bill", "send", "purchase"):
         return {"error": "kind must be bill, send or purchase"}
     args = {"kind": kind, "potName": pot_name, "amountCents": int(amount_cents), "payee": payee, "why": why,
-            "payeeEmail": payee_email or None, "category": category or None, "billId": bill_id or None}
+            "payeeEmail": payee_email or None, "category": category or None, "billId": bill_id or None,
+            "reference": reference.strip() or None}
     return await pay_flow(conn, task, args)
 
 
@@ -241,25 +267,90 @@ async def pay_bill(payee: str, why: str, tool_context: ToolContext, pot_name: st
     return res
 
 
-async def request_money(people_json: str, why: str, tool_context: ToolContext, note: str = "") -> dict[str, Any]:
-    """Ask people to pay the user back (a split): one PayPal invoice per person, each with a receipt.
-    Asks the user before sending.
+async def record_bill(payee: str, amount_cents: int, due_date: str, why: str, tool_context: ToolContext,
+                      category: str = "", payee_email: str = "", note: str = "") -> dict[str, Any]:
+    """Add a bill you found (in an email, a PDF, on a biller's site) to the user's bills, or update
+    it if it's already there. Returns the usual amount for this payee and how many times the usual
+    this one is, worked out from their bill history (a spike is 1.5 times or more). Do this before
+    paying a bill that isn't in money_overview yet; then pay_bill finds it.
+
+    Args:
+        payee: The biller as the bill names it ("Pacific Power").
+        amount_cents: The amount due in integer cents ($212.40 is 21240).
+        due_date: The due date, YYYY-MM-DD.
+        why: Where it came from, briefly ("Emailed bill, 4 Nov").
+        category: "Utilities", "Internet", "Phone", "Insurance", "Rent"...
+        payee_email: The biller's PayPal email if the bill gives one.
+        note: Anything worth keeping (account number's last digits, usage).
+    """
+    import datetime as _dt
+
+    conn, task = for_worker(tool_context)
+    try:
+        day = _dt.datetime.strptime(due_date.strip()[:10], "%Y-%m-%d")
+    except ValueError:
+        return {"error": "due_date must be YYYY-MM-DD"}
+    due_ms = int(day.replace(hour=12).timestamp() * 1000)
+    res = dict(await convex.mutation("bills:record", payee=payee, amountCents=int(amount_cents), dueAt=due_ms,
+                                     category=category or None, payeeEmail=payee_email or None, source="email",
+                                     note=(note or why or None)) or {})
+    times = res.get("timesUsual")
+    detail = f"{usd(amount_cents)}, due {day:%-d %b}" + (f", {times}× usual" if times and times >= 1.5 else "")
+    await report(conn, task, "money", f"{'Updated' if res.get('updated') else 'Added'} the {payee} bill", detail)
+    if times and times >= 1.5:
+        res["spike"] = f"{usd(amount_cents)} is {times} times the usual {usd(res.get('usualCents'))}."
+    return res
+
+
+async def create_pot(name: str, why: str, tool_context: ToolContext, rules: str = "", monthly_budget_cents: int = 0) -> dict[str, Any]:
+    """Make a new pot when the user asks for one, or when a routine or payment needs a pot they
+    don't have ("put 30% in Tax" and there's no Tax pot). Asks the user first. It starts empty.
+
+    Args:
+        name: The pot's name ("Tax").
+        why: The user's words.
+        rules: The pot's rules in plain words, if they gave any ("Never spend from it without asking").
+        monthly_budget_cents: Optional monthly budget in integer cents.
+    """
+    conn, task = for_worker(tool_context)
+    assert conn.tasks
+    detail = f"Rules: {rules}" if rules else "It starts empty; money gets in when you move it there."
+    if not await conn.tasks.confirm_action(task, f"Make a {name.strip()} pot?", detail):
+        return {"ok": False, "cancelled": True}
+    res = dict(await convex.action("agentMoney:createPot", name=name, rulesText=rules or None,
+                                   monthlyBudgetCents=int(monthly_budget_cents) or None) or {})
+    if res.get("ok"):
+        await report(conn, task, "money", f"Made a {name} pot", "; ".join(res.get("rules") or []) or None, step_kind="money")
+        conn.snapshot = await snapshot()
+    return res
+
+
+async def request_money(people_json: str, why: str, tool_context: ToolContext, note: str = "",
+                        pot_name: str = "") -> dict[str, Any]:
+    """Ask people to pay the user: a split, a share of a bill, or a client's invoice. PayPal emails
+    each person an invoice with a Pay button (one per person, each with a receipt); when they pay,
+    the money lands in pot_name and the user hears about it. Asks the user before sending.
 
     Args:
         people_json: JSON list of {"name", "email", "items": [{"name", "amountCents"}]}.
         why: The user's own words ("split last night's dinner").
         note: Optional message on the invoices.
+        pot_name: The pot the money goes into when they pay: the pot a shared bill came out of, or
+            Work for a client. Empty to leave it in their balance.
     """
     conn, task = for_worker(tool_context)
     assert conn.tasks
+    why = users_why(task, why)
     try:
         people = json.loads(people_json)
         assert isinstance(people, list) and people
     except Exception:
         return {"error": "people_json must be a JSON list of {name, email, items: [{name, amountCents}]}"}
     lines = [f"{p.get('name')}: {usd(sum(int(i.get('amountCents') or 0) for i in p.get('items') or []))}" for p in people]
-    if not await conn.tasks.confirm_action(task, f"Send PayPal requests to {len(people)} {'person' if len(people) == 1 else 'people'}?",
-                                           "\n".join(lines)):
+    title = (f"Send {people[0].get('name')} a PayPal invoice?" if len(people) == 1
+             else f"Send PayPal invoices to {len(people)} people?")
+    into = f"\nWhen they pay, it goes into {pot_name}." if pot_name else ""
+    if not await conn.tasks.confirm_action(task, title, "\n".join(lines) + into):
         return {"ok": False, "cancelled": True}
     # agentMoney:request takes one line item per person: each person's items become one line.
     items = [{"name": ", ".join(str(i.get("name") or "Share") for i in p.get("items") or [])[:120] or "Share",
@@ -267,10 +358,15 @@ async def request_money(people_json: str, why: str, tool_context: ToolContext, n
     res = await convex.action(
         "agentMoney:request",
         **{"from": [{"name": str(p.get("name") or ""), "email": str(p.get("email") or "")} for p in people]},
-        items=items, why=why, note=note or None,
+        items=items, why=why, note=note or None, potName=pot_name or None,
     )
-    await report(conn, task, "money", f"Sent {len(people)} PayPal requests" if (res or {}).get("ok") else "Requests didn't go out",
-                 step_kind="money")
+    sent = len((res or {}).get("invoiceIds") or [])
+    await report(conn, task, "money",
+                 f"PayPal emailed {sent} invoice{'s' if sent != 1 else ''}" if (res or {}).get("ok") else "The invoices didn't go out",
+                 ", ".join(str(p.get("name")) for p in people), step_kind="money")
+    if (res or {}).get("ok"):
+        res["note"] = ("PayPal emailed each of them an invoice with a Pay button. Call it a PayPal invoice, not a request; "
+                       "the user hears when they pay.")
     return res
 
 
@@ -284,6 +380,7 @@ async def cancel_subscription(merchant: str, why: str, tool_context: ToolContext
     """
     conn, task = for_worker(tool_context)
     assert conn.tasks
+    why = users_why(task, why)
     data = await snapshot()
     subs = list(data.get("subscriptions") or [])
     words = [w for w in merchant.lower().split() if len(w) > 2]
@@ -340,4 +437,5 @@ async def move_between_pots(from_pot: str, to_pot: str, amount_cents: int, why: 
     return res
 
 
-TOOLS = [money_overview, move_between_pots, check_spend, pay, pay_bill, request_money, cancel_subscription, recent_money]
+TOOLS = [money_overview, move_between_pots, check_spend, pay, pay_bill, record_bill, request_money, cancel_subscription,
+         recent_money, create_pot]

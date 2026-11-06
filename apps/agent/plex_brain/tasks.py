@@ -76,7 +76,7 @@ class Task:
     # The last receipt this task wrote: {id, amountCents, payee, why, ruleText, state, kind}.
     receipt: dict[str, Any] | None = None
     # A routine's run: {"id", "name"} for the island's quiet card, and the run record.
-    routine: dict[str, str] | None = None
+    routine: dict[str, str] | None = None  # {id, name, prompt}
     run_id: str | None = None
     # The routine's guardrails ({potName?, maxSpendCents?, approval}), enforced by money.py on top of the policy.
     guardrails: dict[str, Any] | None = None
@@ -92,6 +92,9 @@ class Task:
     asked_at: float = 0.0
     # The operator is on the screen: the talker doesn't narrate every click.
     on_screen: bool = False
+    # The user's own words for this task, verbatim (what started it, then follow-ups and answers).
+    # A receipt's `why` must come from these (money.pay_flow).
+    said: list[str] = field(default_factory=list)
     # Called once when the task ends (routines.finish_run).
     on_end: list[Callable[["Task"], Awaitable[None]]] = field(default_factory=list)
     _reply: asyncio.Future[Any] | None = None
@@ -115,7 +118,7 @@ class Task:
             "takeover": self.takeover,
             "approval": self.approval,
             "receipt": self.receipt,
-            "routine": self.routine,
+            "routine": {k: v for k, v in self.routine.items() if k != "prompt"} if self.routine else None,
             "ask_id": self.ask_id,
             "say": self.say,
             "views": self.views,
@@ -180,6 +183,8 @@ class TaskManager:
                     routine=routine, run_id=run_id)
         if on_end:
             task.on_end.append(on_end)
+        if routine is None and (words := self.conn.last_said()):
+            task.said.append(words)
         self.tasks[task.id] = task
         self._launch(task, goal)
         return task
@@ -187,6 +192,8 @@ class TaskManager:
     def follow_up(self, task: Task, message: str) -> None:
         """More work on a finished task, in the same worker session (it remembers what it did)."""
         task.say, task.error, task.question, task.confirm, task.receipt = None, None, None, None, None
+        if (words := self.conn.last_said(60)) and words not in task.said:
+            task.said.append(words)
         self._launch(task, message)
 
     async def until_stop(self, task: Task, timeout: float = TALKER_WAIT_S) -> dict[str, Any]:

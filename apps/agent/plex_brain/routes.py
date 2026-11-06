@@ -232,6 +232,7 @@ class LiveConversation:
         self.conn = conn
         self.session = session
         self.queue: LiveRequestQueue | None = None
+        self._heard = ""  # the user's words in this turn, from partial transcriptions
         self.task: asyncio.Task[None] | None = None
 
     def ensure(self) -> LiveRequestQueue:
@@ -270,6 +271,11 @@ class LiveConversation:
         for role, tx in (("user", event.input_transcription), ("agent", event.output_transcription)):
             if tx and tx.text:
                 await bridge.send_json({"type": "transcript", "role": role, "text": tx.text, "partial": bool(event.partial)})
+                if role == "user":
+                    self._heard += tx.text if event.partial else ""
+                    if not event.partial or tx.finished:
+                        self.conn.hear(tx.text if not event.partial else self._heard)
+                        self._heard = ""
         if event.interrupted:
             await bridge.send_json({"type": "interrupted"})
         if event.turn_complete:
@@ -397,6 +403,7 @@ async def live(ws: WebSocket) -> None:
             if kind in ("text", "talk_start", "talk_end", "task_reply", "task_confirm", "task_continue", "ask_answer"):
                 conn.last_input_at = time.monotonic()
             if kind == "text" and (msg.get("text") or "").strip():
+                conn.hear(str(msg["text"]))
                 convo.ensure().send_content(types.Content(role="user", parts=[types.Part(text=msg["text"])]))
             elif kind == "talk_start":
                 convo.ensure().send_activity_start()

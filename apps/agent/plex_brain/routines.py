@@ -423,7 +423,7 @@ class Scheduler:
             if routine.get("runWhere") == "mac" and not has_mac:
                 continue  # waits for the Mac
             await self.start_run(routine, str(run.get("reason") or "Run now"), run_id=str(run["_id"]),
-                                 recent=(ctx or {}).get("recentRuns"))
+                                 recent=(ctx or {}).get("recentRuns"), payload=run.get("trigger") or None)
         for routine in data.get("due") or []:
             rid = str(routine["_id"])
             if rid in self.running:
@@ -476,7 +476,8 @@ class Scheduler:
             await conn.bridge.send_json({"type": "asks_changed"})
 
         task = conn.tasks.start(goal, str(routine.get("name") or "Routine"), quiet=True,
-                                routine={"id": rid, "name": str(routine.get("name") or "Routine")}, run_id=run_id, on_end=finish)
+                                routine={"id": rid, "name": str(routine.get("name") or "Routine"),
+                                         "prompt": str(routine.get("prompt") or "")}, run_id=run_id, on_end=finish)
         task.guardrails = (routine.get("spec") or {}).get("guardrails")
         self.running[rid] = task
         return run_id
