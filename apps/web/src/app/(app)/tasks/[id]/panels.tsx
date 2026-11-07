@@ -13,12 +13,14 @@ import {
   Clock,
   Hourglass,
   Landmark,
+  Link2,
   Loader2,
   Lock,
   MessageSquareQuote,
   RefreshCw,
   RotateCcw,
   Scale,
+  Search,
   Send,
   Star,
   Upload,
@@ -39,9 +41,12 @@ import {
   PolicyLine,
   SpecIcon,
   VerdictPill,
+  errorMessage,
   verdictRows,
 } from "@/components/tasks/task-ui";
-import { isImageSpec } from "@plex/backend/lib/hire";
+import { isImageSpec, needsAccountAction } from "@plex/backend/lib/hire";
+import { servicesIn } from "@plex/backend/lib/connect";
+import type { FunctionReturnType } from "convex/server";
 import { cn, formatCents, relativeTime, shortDate } from "@/lib/utils";
 import type { TaskPage } from "./task-detail";
 
@@ -51,6 +56,141 @@ function ErrorLine({ message }: { message?: string }) {
     <p className="flex items-start gap-2 text-[12.5px] leading-snug text-disputed" role="alert">
       <CircleAlert className="mt-px size-4 flex-none" strokeWidth={1.9} /> {message}
     </p>
+  );
+}
+
+/**
+ * Connections: the poster lends this task access to an account (GitHub, or any
+ * MCP server) so the hired agent can act there. Tokens are encrypted, never
+ * shown again, and deleted when the task is paid or refunded.
+ */
+export function ConnectionsCard({ data }: { data: TaskPage }) {
+  const as = useAs();
+  const { task } = data;
+  const conn = useQuery(api.connections.list, { taskId: task._id, as });
+  const add = useAction(api.connections.add);
+  const remove = useMutation(api.connections.remove);
+  const { run, busy, errorFor } = useRun();
+  const [kind, setKind] = useState<"github" | "mcp">("github");
+  const [token, setToken] = useState("");
+  const [url, setUrl] = useState("");
+  const [allow, setAllow] = useState("");
+  const needed = needsAccountAction(task);
+  if (!conn || (!needed && !conn.rows.length) || !data.digital) return null;
+  const live = conn.rows.filter((r) => !r.wiped);
+  return (
+    <Card>
+      <CardHeader
+        title={
+          <span className="flex items-center gap-2">
+            <Link2 className="size-4 text-faint" strokeWidth={1.9} /> Connections
+            {live.length ? <Badge tone="green">{live.length} connected</Badge> : needed ? <Badge tone="amber">Needed</Badge> : null}
+          </span>
+        }
+        description="Lend the hired agent access to an account for this task only. Plex encrypts the token, only the agent's tool calls and the proof check use it, and it's deleted when the task is paid or refunded."
+      />
+      {conn.rows.length ? (
+        <ul className="divide-y divide-line border-t border-line">
+          {conn.rows.map((r) => (
+            <li key={r._id} className={cn("flex items-center justify-between gap-3 px-5 py-3", r.wiped && "opacity-60")}>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-[13.5px] font-medium text-ink">
+                  {r.label} <Badge tone={r.kind === "github" ? "steel" : "neutral"}>{r.kind === "github" ? "GitHub MCP" : "MCP server"}</Badge>
+                </div>
+                <div className="truncate text-[12px] text-faint">
+                  {r.url} · {r.wiped ? "token deleted" : r.hasToken ? "token encrypted" : "no token"}
+                  {r.allow.length ? ` · only ${r.allow.join(", ")}` : ""}
+                </div>
+              </div>
+              {conn.canEdit && !r.wiped ? (
+                <Button variant="ghost" size="sm" onClick={() => run(`rm-${r._id}`, () => remove({ connectionId: r._id, as }))} disabled={!!busy}>
+                  Remove
+                </Button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {conn.canEdit && live.length < 3 ? (
+        <div className="grid gap-3 border-t border-line px-5 pt-4 pb-5">
+          {!conn.ready ? <p className="text-[12.5px] text-disputed">This deployment has no CONNECTIONS_KEY, so it can&apos;t store tokens.</p> : null}
+          <div className="inline-flex self-start rounded-sm bg-sunken p-0.5" role="group" aria-label="Connection type">
+            {(
+              [
+                ["github", "GitHub"],
+                ["mcp", "Any MCP server"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setKind(value)}
+                aria-pressed={kind === value}
+                className={cn(
+                  "inline-flex h-7 items-center rounded-[6px] px-3 text-[13px] font-medium transition-colors",
+                  kind === value ? "bg-surface text-ink shadow-card" : "text-muted hover:text-ink",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {kind === "mcp" ? (
+            <>
+              <RegistrySearch task={task} onPick={(u) => setUrl(u)} />
+              <div>
+                <Label htmlFor="conn-url">MCP server URL (https)</Label>
+                <Input id="conn-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://mcp.example.com/mcp" />
+                <p className="mt-1 text-[12px] leading-snug text-faint">
+                  One URL for thousands of apps works too: Zapier MCP, Composio or Pipedream give you a personal MCP URL with the logins already handled. Plex encrypts the URL; only its host is shown.
+                </p>
+              </div>
+            </>
+          ) : null}
+          <div>
+            <Label htmlFor="conn-token">{kind === "github" ? "GitHub token" : "Bearer token (optional)"}</Label>
+            <Input id="conn-token" type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} placeholder={kind === "github" ? "github_pat_…" : ""} />
+            {kind === "github" ? (
+              <p className="mt-1 text-[12px] leading-snug text-faint">
+                Use a fine-grained token limited to the one repository, with Pull requests and Contents (read and write) and Checks (read). Plex uses GitHub&apos;s own MCP server; deleting, forking and settings tools are never offered to the agent.
+              </p>
+            ) : null}
+          </div>
+          {kind === "mcp" ? (
+            <div>
+              <Label htmlFor="conn-allow">Only these tools (optional)</Label>
+              <Input id="conn-allow" value={allow} onChange={(e) => setAllow(e.target.value)} placeholder="search_docs, create_ticket" />
+            </div>
+          ) : null}
+          <div className="flex items-center justify-between gap-3">
+            <ErrorLine message={errorFor("connect")} />
+            <Button
+              variant="brand"
+              size="sm"
+              className="ml-auto"
+              disabled={!!busy || !conn.ready || (kind === "github" ? token.trim().length < 20 : url.trim().length < 10)}
+              onClick={() =>
+                run("connect", async () => {
+                  await add({
+                    taskId: task._id,
+                    kind,
+                    url: kind === "mcp" ? url.trim() : undefined,
+                    token: token.trim() || undefined,
+                    allow: allow.split(",").map((s) => s.trim()).filter(Boolean),
+                    as,
+                  });
+                  setToken("");
+                  setUrl("");
+                  setAllow("");
+                })
+              }
+            >
+              {busy === "connect" ? <Loader2 className="animate-spin" /> : <Link2 />} Connect
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </Card>
   );
 }
 
@@ -477,7 +617,9 @@ function AgentBidding({ data }: { data: TaskPage }) {
         <Bot className="size-4 flex-none text-faint" strokeWidth={1.9} />
         {human
           ? "This is digital work, so an AI agent could do it too."
-          : agentBids
+          : fit && !fit.digital
+            ? `Agents can't take this one. ${fit.reason ?? ""}`
+            : agentBids
             ? `${agentBids} agent${agentBids > 1 ? "s" : ""} bid. Prices stay between each agent's floor and what you hold.`
             : names.length
               ? `${names.slice(0, 3).join(", ")} can do this and bid when asked.`
@@ -953,6 +1095,81 @@ export function MoneyCard({ data }: { data: TaskPage }) {
         </div>
       ) : null}
     </Card>
+  );
+}
+
+/** Search the official MCP Registry; the task's own words suggest what to look for. */
+function RegistrySearch({ task, onPick }: { task: TaskPage["task"]; onPick: (url: string) => void }) {
+  const search = useAction(api.connections.search);
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const [results, setResults] = useState<FunctionReturnType<typeof api.connections.search> | null>(null);
+  const suggested = servicesIn(`${task.title} ${task.description}`);
+
+  async function find(term: string) {
+    setQ(term);
+    setBusy(true);
+    setError(undefined);
+    try {
+      setResults(await search({ q: term }));
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-md bg-canvas px-3.5 py-3 ring-1 ring-line ring-inset">
+      <div className="text-[12.5px] font-medium text-ink">Find a server in the MCP Registry</div>
+      <p className="mt-0.5 text-[12px] leading-snug text-faint">Prefer Official servers: a third-party server sees everything the agent sends it, including your token.</p>
+      {suggested.length ? (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-[12px] text-faint">This task mentions</span>
+          {suggested.map((s) => (
+            <button key={s} type="button" onClick={() => find(s)} className="rounded-full bg-surface px-2.5 py-0.5 text-[12px] text-ink-2 ring-1 ring-line ring-inset hover:bg-sunken">
+              {s}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <form
+        className="mt-2 flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (q.trim().length >= 2) void find(q.trim());
+        }}
+      >
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="notion, linear, slack…" className="h-8" />
+        <Button type="submit" variant="secondary" size="sm" disabled={busy || q.trim().length < 2}>
+          {busy ? <Loader2 className="animate-spin" /> : <Search />} Search
+        </Button>
+      </form>
+      {error ? <p className="mt-2 text-[12px] text-disputed">{error}</p> : null}
+      {results ? (
+        results.length ? (
+          <ul className="mt-2 divide-y divide-line">
+            {results.map((r) => (
+              <li key={r.name} className="flex items-start justify-between gap-3 py-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 truncate text-[12.5px] font-medium text-ink">
+                    {r.title} {r.official ? <Badge tone="green">Official</Badge> : <Badge tone="neutral">Third party</Badge>}
+                  </div>
+                  <div className="truncate text-[11.5px] text-faint">{new URL(r.url).host}</div>
+                  {r.description ? <div className="line-clamp-2 text-[12px] leading-snug text-muted">{r.description}</div> : null}
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => onPick(r.url)}>
+                  Use
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-[12px] text-muted">No remote server found for “{q}”. Try a one-URL service like Zapier MCP.</p>
+        )
+      ) : null}
+    </div>
   );
 }
 

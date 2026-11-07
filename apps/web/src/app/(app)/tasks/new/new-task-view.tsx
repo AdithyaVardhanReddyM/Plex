@@ -20,6 +20,7 @@ import {
   UserCheck,
   UserRound,
   UsersRound,
+  Wand2,
   Zap,
 } from "lucide-react";
 import type { TaskDraft } from "@plex/backend/tasks";
@@ -68,8 +69,8 @@ interface Form {
 
 const REMOTE_KINDS: Category[] = ["remote", "data", "creator", "agent"];
 
-/** Can any agent on Plex do this? If not, the poster creates one after funding. */
-function AgentFitLine({ form }: { form: Form }) {
+/** Can any agent on Plex do this? If not, the poster creates one right here. */
+function AgentFitLine({ form, onBuild, building }: { form: Form; onBuild: () => void; building: boolean }) {
   const fit = useQuery(api.agentBuilder.fit, {
     draft: {
       title: form.title,
@@ -81,15 +82,22 @@ function AgentFitLine({ form }: { form: Form }) {
     },
   });
   if (!fit) return null;
+  if (!fit.digital)
+    return <p className="mt-1.5 text-[12.5px] leading-snug text-refunded">Agents can&apos;t take this one. {fit.reason}</p>;
   const names = fit.fits.map((f) => f.name);
   return names.length ? (
     <p className="mt-1.5 flex items-center gap-1.5 text-[12.5px] text-green-700">
       <Check className="size-3.5" strokeWidth={2.2} /> {names.slice(0, 3).join(", ")} can do this. They bid once it&apos;s funded.
     </p>
   ) : (
-    <p className="mt-1.5 text-[12.5px] leading-snug text-refunded">
-      No agent on Plex can do this yet. Fund it, and you can create one for it in a minute with the agent builder.
-    </p>
+    <div className="mt-2 flex flex-wrap items-center justify-between gap-2.5 rounded-md bg-refunded-bg px-3 py-2.5 ring-1 ring-refunded/15 ring-inset">
+      <span className="text-[12.5px] leading-snug text-ink-2">
+        <span className="font-medium text-ink">No agent on Plex can do this yet.</span> Create one for it with the agent builder; it bids once you fund the task.
+      </span>
+      <Button variant="brand" size="sm" onClick={onBuild} disabled={building}>
+        {building ? <Loader2 className="animate-spin" /> : <Wand2 />} Create an agent for this
+      </Button>
+    </div>
   );
 }
 
@@ -141,7 +149,7 @@ export function NewTaskView() {
   const [model, setModel] = useState<string>();
   const [form, setForm] = useState<Form | null>(null);
   const [error, setError] = useState<string>();
-  const [saving, setSaving] = useState<"draft" | "fund" | null>(null);
+  const [saving, setSaving] = useState<"draft" | "fund" | "build" | null>(null);
 
   const payoutCents = form ? Math.round(Number(form.payout || 0) * 100) : 0;
   const pots = useQuery(api.pots.list);
@@ -177,10 +185,10 @@ export function NewTaskView() {
     }
   }
 
-  async function save(andFund: boolean) {
+  async function save(mode: "draft" | "fund" | "build") {
     if (!form) return;
     setError(undefined);
-    setSaving(andFund ? "fund" : "draft");
+    setSaving(mode);
     try {
       const remote = REMOTE_KINDS.includes(form.category);
       const id: Id<"tasks"> = await createDraft({
@@ -204,9 +212,10 @@ export function NewTaskView() {
         invitedHandle: invited ? invitedHandle : undefined,
         autoHire: digitalForm(form) && form.workerType !== "human" && form.autoHire,
       });
-      if (andFund) {
+      if (mode === "fund") {
         if (await fund(id)) router.push(`/tasks/${id}`);
-      } else router.push(`/tasks/${id}`);
+      } else if (mode === "build") router.push(`/hire/new?task=${id}`);
+      else router.push(`/tasks/${id}`);
     } catch (err) {
       setError(errorMessage(err));
       setSaving(null);
@@ -296,7 +305,7 @@ export function NewTaskView() {
           </Card>
 
           {writing && !form ? <WriterSkeleton /> : null}
-          {form ? <Editor form={form} set={set} /> : null}
+          {form ? <Editor form={form} set={set} onBuild={() => save("build")} building={saving === "build"} /> : null}
         </div>
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-10">
@@ -326,7 +335,7 @@ export function NewTaskView() {
                   <Button
                     variant="brand"
                     size="lg"
-                    onClick={() => save(true)}
+                    onClick={() => save("fund")}
                     disabled={!!saving || funding || payoutCents < 100 || policy?.outcome === "deny"}
                   >
                     {saving === "fund" || funding ? <Loader2 className="animate-spin" /> : null}
@@ -336,7 +345,7 @@ export function NewTaskView() {
                         ? <>Hold <Amount cents={payoutCents} size="md" className="text-white" /> with auto-pay</>
                         : <>Fund <Amount cents={payoutCents} size="md" className="text-white" /> with PayPal</>}
                   </Button>
-                  <Button variant="ghost" onClick={() => save(false)} disabled={!!saving}>
+                  <Button variant="ghost" onClick={() => save("draft")} disabled={!!saving}>
                     Save as draft
                   </Button>
                   {error || fundError ? (
@@ -486,7 +495,17 @@ const WHO: { value: WorkerType; label: string; body: string; icon: React.ReactNo
   { value: "agent", label: "An AI agent", body: "Agents bid; three proofers score the work.", icon: <Bot /> },
 ];
 
-function Editor({ form, set }: { form: Form; set: <K extends keyof Form>(k: K, v: Form[K]) => void }) {
+function Editor({
+  form,
+  set,
+  onBuild,
+  building,
+}: {
+  form: Form;
+  set: <K extends keyof Form>(k: K, v: Form[K]) => void;
+  onBuild: () => void;
+  building: boolean;
+}) {
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string>();
   const remote = REMOTE_KINDS.includes(form.category);
@@ -585,7 +604,7 @@ function Editor({ form, set }: { form: Form; set: <K extends keyof Form>(k: K, v
               Agents can take work delivered as text, files or links with no place to be. This one needs a person.
             </p>
           ) : form.workerType !== "human" ? (
-            <AgentFitLine form={form} />
+            <AgentFitLine form={form} onBuild={onBuild} building={building} />
           ) : null}
         </div>
 

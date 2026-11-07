@@ -15,7 +15,7 @@ import { ReceiptCard, ReceiptRow } from "@/components/receipt/receipt";
 import { PersonaSwitch, useAs } from "@/components/tasks/persona";
 import { CategoryLabel, SpecIcon, StatusBadge, errorMessage, timeLeft } from "@/components/tasks/task-ui";
 import { cn } from "@/lib/utils";
-import { ActionPanel, Applicants, ApplyCard, MoneyCard, PayPalDeskCard, ProofPanel } from "./panels";
+import { ActionPanel, Applicants, ApplyCard, ConnectionsCard, MoneyCard, PayPalDeskCard, ProofPanel } from "./panels";
 
 export type TaskPage = NonNullable<FunctionReturnType<typeof api.tasks.get>>;
 
@@ -91,6 +91,7 @@ export function TaskDetail({ id }: { id: string }) {
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="flex min-w-0 flex-col gap-5">
           <ActionPanel data={data} />
+          <ConnectionsCard data={data} />
           {data.proof ? <ProofPanel data={data} /> : null}
           {task.status === "open" || task.status === "draft" ? (
             isPoster ? (

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAction, useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Bot, Check, CircleAlert, ImageIcon, Loader2, Search, Send, Sparkles, Wand2 } from "lucide-react";
+import { ArrowLeft, Bot, Check, CircleAlert, ImageIcon, Link2, Loader2, Search, Send, Sparkles, Wand2 } from "lucide-react";
 import { agentFit } from "@plex/backend/lib/hire";
 import { api } from "@/lib/convex";
 import type { Id } from "@/lib/convex";
@@ -21,6 +21,7 @@ type Msg = { from: "builder" | "you"; text: string };
 const TOOL_INFO = {
   web_search: { label: "Web search", body: "Google Search for current facts, with the source next to each one", icon: Search },
   image: { label: "Image making", body: "Logos, icons and banners with Gemini's image model", icon: ImageIcon },
+  mcp: { label: "Connected accounts", body: "Acts in GitHub or any MCP server the poster connects to a task", icon: Link2 },
 } as const;
 
 const ASKS = ["Make it cite a source for every fact", "Make it cheaper", "Keep answers short and plain", "Add image making"];
@@ -48,6 +49,7 @@ export function BuilderView() {
   const [busy, setBusy] = useState<"draft" | "create" | null>(null);
   const [error, setError] = useState<string>();
   const [model, setModel] = useState<string>();
+  const [warning, setWarning] = useState<string | null>(null);
   const started = useRef(false);
 
   async function runDraft(request?: string) {
@@ -64,6 +66,7 @@ export function BuilderView() {
       setDraft(r.draft);
       setSkillsText(r.draft.skills.join(", "));
       setModel(r.model);
+      setWarning(r.warning);
       setMsgs((m) => [...m, { from: "builder", text: r.reply }]);
     } catch (err) {
       setError(errorMessage(err));
@@ -86,7 +89,7 @@ export function BuilderView() {
     setError(undefined);
     try {
       const r = await create({ draft: { ...draft, skills: skillsFrom(skillsText) }, taskId, payoutEmail: payoutEmail.trim() || undefined, as });
-      router.push(r.bidding && taskId ? `/tasks/${taskId}` : `/hire/${r.handle}`);
+      router.push(taskId ? `/tasks/${taskId}` : `/hire/${r.handle}`);
     } catch (err) {
       setError(errorMessage(err));
       setBusy(null);
@@ -202,7 +205,7 @@ export function BuilderView() {
                       );
                     })}
                   </div>
-                  <p className="mt-1 text-[12px] text-faint">Writing is built in. It can&apos;t run code, log in anywhere, or act outside its deliverable.</p>
+                  <p className="mt-1 text-[12px] text-faint">Writing is built in. It can&apos;t run code, and it acts in an account only when the poster connects one to the task.</p>
                 </div>
                 <div>
                   <Label htmlFor="ag-ins">How it works</Label>
@@ -228,7 +231,11 @@ export function BuilderView() {
               </div>
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-canvas/60 px-5 py-4">
                 <span className="text-[12.5px] text-muted">
-                  {taskId ? "It bids on this task as soon as you create it." : "It bids on new tasks that fit its skills."}
+                  {taskId
+                    ? task?.status === "open"
+                      ? "It bids on this task as soon as you create it."
+                      : "Next you fund the task, and it bids right away."
+                    : "It bids on new tasks that fit its skills."}
                 </span>
                 <Button variant="brand" onClick={submit} disabled={!!busy || draft.name.trim().length < 2}>
                   {busy === "create" ? <Loader2 className="animate-spin" /> : <Bot />} Create {draft.name || "agent"}
@@ -236,6 +243,14 @@ export function BuilderView() {
               </div>
             </Card>
           )}
+          {warning ? (
+            <div className="flex items-start gap-2.5 rounded-md bg-refunded-bg px-3.5 py-3 text-[12.5px] leading-snug text-ink-2 ring-1 ring-refunded/15 ring-inset">
+              <CircleAlert className="mt-px size-4 flex-none text-refunded" strokeWidth={1.9} />
+              <span>
+                <span className="font-medium text-ink">An agent can&apos;t fully do this yet.</span> {warning} It can still prepare the work (a review, a plan, the text), and the proofers will judge what it delivers.
+              </span>
+            </div>
+          ) : null}
           {error ? (
             <p className="flex items-start gap-2 text-[12.5px] text-disputed" role="alert">
               <CircleAlert className="mt-px size-4 flex-none" strokeWidth={1.9} /> {error}
