@@ -6,10 +6,11 @@ import type { ColDef } from "ag-grid-community";
 import type { FunctionReturnType } from "convex/server";
 import { CalendarDays, Check, Repeat } from "lucide-react";
 import { api } from "@/lib/convex";
-import { Avatar, Badge, Card, CardHeader } from "@/components/ui/primitives";
+import { Avatar, Badge, Meter } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
 import { cn, formatCents, relativeTime } from "@/lib/utils";
-import { plexGridTheme, plexGridThemeCompact, registerAg } from "./ag";
+import { GRID_WRAP, plexGridTheme, plexGridThemeCompact, registerAg } from "./ag";
+import { WidgetFrame } from "./kit";
 import { useWidth } from "./use-width";
 
 registerAg();
@@ -82,10 +83,9 @@ export function DonationFeed({ feed }: { feed: Gift[] }) {
     [width],
   );
   return (
-    <Card className="flex flex-col overflow-hidden">
-      <CardHeader title="Donation feed" description="Live from PayPal, newest first" />
-      <div ref={ref} className="mt-3 border-t border-line" style={{ height: 40 + 7 * 56 }}>
-        {width !== null ? <AgGridReact<Gift>
+    <WidgetFrame flush title="Donation feed" description="Live from PayPal, newest first">
+      <div ref={ref} className={cn(GRID_WRAP, "relative min-h-[416px] flex-1")}>
+        {width !== null ? <div className="absolute inset-0"><AgGridReact<Gift>
           theme={plexGridTheme}
           rowData={feed}
           columnDefs={columnDefs}
@@ -93,9 +93,9 @@ export function DonationFeed({ feed }: { feed: Gift[] }) {
           getRowId={(p) => p.data._id}
           suppressCellFocus
           animateRows
-        /> : null}
+        /></div> : null}
       </div>
-    </Card>
+    </WidgetFrame>
   );
 }
 
@@ -125,7 +125,7 @@ function LeaderCell({ data }: CustomCellRendererProps<Leader>) {
         {data.recurring ? <Repeat size={13} strokeWidth={1.9} className="flex-none text-steel-500" aria-label="Monthly" /> : null}
       </div>
       <div className="h-1 max-w-48 overflow-hidden rounded-full bg-sunken">
-        <div className="h-full rounded-full bg-green-400" style={{ width: `${Math.max(data.share * 100, 4)}%` }} />
+        <div className="h-full rounded-full" style={{ width: `${Math.max(data.share * 100, 4)}%`, backgroundImage: "var(--meter-brand)" }} />
       </div>
     </div>
   );
@@ -154,9 +154,8 @@ export function DonorLeaderboard({ leaders }: { leaders: Cause["leaderboard"] })
     [width],
   );
   return (
-    <Card className="flex flex-col overflow-hidden">
-      <CardHeader title="Donor leaderboard" description="Named donors, by total given" />
-      <div ref={ref} className="mt-3 border-t border-line" style={{ height: 36 + Math.min(rows.length, 7) * 50 + 2 }}>
+    <WidgetFrame flush title="Donor leaderboard" description="Named donors, by total given">
+      <div ref={ref} className={GRID_WRAP} style={{ height: 36 + Math.min(rows.length, 7) * 50 + 2 }}>
         {width !== null ? <AgGridReact<Leader>
           theme={plexGridThemeCompact}
           rowData={rows}
@@ -167,7 +166,7 @@ export function DonorLeaderboard({ leaders }: { leaders: Cause["leaderboard"] })
           animateRows
         /> : null}
       </div>
-    </Card>
+    </WidgetFrame>
   );
 }
 
@@ -175,9 +174,8 @@ export function DonorLeaderboard({ leaders }: { leaders: Cause["leaderboard"] })
 
 export function CauseTasks({ tasks }: { tasks: Cause["tasks"] }) {
   return (
-    <Card className="flex flex-col">
-      <CardHeader title="Shifts funded and done" description="Each shift is paid local work, released on proof" />
-      <ul className="mt-2 divide-y divide-line px-5 pb-2">
+    <WidgetFrame flush title="Shifts funded and done" description="Each shift is paid local work, released on proof" bodyClassName="mt-3 border-t-0">
+      <ul className="divide-y divide-line px-5 pb-1.5">
         {tasks.map((t) => {
           const done = t.status === "paid" || t.status === "approved";
           const ratio = t.fundedCents / Math.max(t.neededCents, 1);
@@ -185,10 +183,12 @@ export function CauseTasks({ tasks }: { tasks: Cause["tasks"] }) {
             <li key={t._id} className="py-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="truncate text-[14px] font-medium text-ink">{t.title}</div>
-                  <div className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-muted">
-                    <CalendarDays size={13} strokeWidth={1.9} className="flex-none" />
-                    {relativeTime(t.when)} · {t.spots} spot{t.spots === 1 ? "" : "s"} · {formatCents(t.neededCents)}
+                  <div className="truncate text-[13.5px] font-medium text-ink">{t.title}</div>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-[12px] text-muted">
+                    <CalendarDays className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
+                    <span className="tabular truncate">
+                      {relativeTime(t.when)} · {t.spots} spot{t.spots === 1 ? "" : "s"} · {formatCents(t.neededCents)}
+                    </span>
                   </div>
                 </div>
                 {done ? (
@@ -209,14 +209,12 @@ export function CauseTasks({ tasks }: { tasks: Cause["tasks"] }) {
                       </span>
                     ))}
                   </div>
-                  <span className="tabular text-[12.5px] text-muted">{formatCents(t.paidCents)} to local workers</span>
+                  <span className="tabular text-[12px] text-muted">{formatCents(t.paidCents)} to local workers</span>
                 </div>
               ) : (
                 <div className="mt-2.5">
-                  <div className="h-1.5 overflow-hidden rounded-full bg-sunken">
-                    <div className="h-full rounded-full bg-steel-500" style={{ width: `${Math.min(ratio, 1) * 100}%` }} />
-                  </div>
-                  <div className="mt-1.5 text-[12px] text-muted">
+                  <Meter value={ratio} tone="steel" size="sm" label={`${t.title}: pledged so far`} />
+                  <div className="tabular mt-1.5 text-[12px] text-muted">
                     {formatCents(t.fundedCents)} pledged of {formatCents(t.neededCents)}
                   </div>
                 </div>
@@ -225,6 +223,6 @@ export function CauseTasks({ tasks }: { tasks: Cause["tasks"] }) {
           );
         })}
       </ul>
-    </Card>
+    </WidgetFrame>
   );
 }

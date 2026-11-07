@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useMutation } from "convex/react";
-import { ArrowUpRight, RotateCcw, X } from "lucide-react";
+import { ArrowUpRight, Lock, RotateCcw, X } from "lucide-react";
 import { ACTION_TOOLS, type ActionTool, type LedgerRole } from "@plex/backend/lib/ledgerSpec";
 import { api } from "@/lib/convex";
 import { ReceiptCard, type Receipt } from "@/components/receipt/receipt";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { IconTile } from "@/components/ui/primitives";
 import { formatCents } from "@/lib/utils";
 import { ConfirmDialog } from "./confirm";
 
@@ -50,20 +51,24 @@ export function ReceiptPanel({
 
   return createPortal(
     <>
-      <button type="button" aria-label="Close receipt" className="fixed inset-0 z-40 bg-ink/10 lg:bg-transparent" onClick={onClose} />
+      <button
+        type="button"
+        aria-label="Close receipt"
+        className="fixed inset-0 z-40 bg-ink/15 backdrop-blur-[1px] lg:bg-ink/[0.04] lg:backdrop-blur-none"
+        onClick={onClose}
+      />
       <aside
-        className="fixed inset-x-0 bottom-0 z-50 max-h-[88vh] animate-rise overflow-y-auto rounded-t-xl border-t border-line bg-canvas p-4 shadow-float sm:inset-x-auto sm:top-0 sm:right-0 sm:bottom-0 sm:max-h-none sm:w-[440px] sm:rounded-none sm:border-t-0 sm:border-l sm:p-5"
+        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[88vh] animate-rise flex-col overflow-hidden rounded-t-xl border border-line bg-canvas shadow-float sm:inset-x-auto sm:top-2 sm:right-2 sm:bottom-2 sm:max-h-none sm:w-[460px] sm:rounded-xl"
         aria-label="Receipt"
       >
-        <div className="mb-3 flex items-center justify-between">
-          <div className="text-[13px] font-medium text-muted">Receipt</div>
+        <div className="flex h-14 flex-none items-center justify-between gap-3 border-b border-line bg-surface/80 pr-3 pl-5 backdrop-blur">
+          <div className="min-w-0">
+            <div className="text-[14.5px] font-semibold tracking-[-0.012em] text-ink">Receipt</div>
+          </div>
           <div className="flex items-center gap-1">
-            <Link
-              href={`/receipts/${receipt._id}`}
-              className="inline-flex h-8 items-center gap-1.5 rounded-sm px-2.5 text-[13px] font-medium text-ink-2 hover:bg-sunken"
-            >
-              Open
-              <ArrowUpRight size={16} strokeWidth={1.9} />
+            <Link href={`/receipts/${receipt._id}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
+              Open page
+              <ArrowUpRight />
             </Link>
             <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
               <X />
@@ -71,32 +76,41 @@ export function ReceiptPanel({
           </div>
         </div>
 
-        <ReceiptCard receipt={receipt} />
-
-        {actions.length ? (
-          <div className="mt-4 rounded-lg border border-line bg-surface p-4 shadow-card">
-            <div className="text-[13.5px] font-semibold text-ink">{amount} is held for this task</div>
-            <p className="mt-1 text-[13px] leading-relaxed text-muted">
-              {requested
-                ? `${requested} requested. Tasks runs it through PayPal and this receipt updates.`
-                : "Release it to the worker, or refund it to you. Both ask first."}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {actions.includes("release_payout") && receipt.state !== "disputed" ? (
-                <Button variant="brand" size="sm" onClick={() => setConfirm("release_payout")} disabled={Boolean(requested)}>
-                  <ArrowUpRight />
-                  Release {amount}
-                </Button>
-              ) : null}
-              {actions.includes("refund") ? (
-                <Button variant="secondary" size="sm" onClick={() => setConfirm("refund")} disabled={Boolean(requested)}>
-                  <RotateCcw />
-                  Refund
-                </Button>
-              ) : null}
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+          {actions.length ? (
+            <div className="mb-4 rounded-lg border border-line bg-surface p-4 shadow-card">
+              <div className="flex items-start gap-3">
+                <IconTile tone="steel" size="sm">
+                  <Lock />
+                </IconTile>
+                <div className="min-w-0">
+                  <div className="text-[13.5px] font-semibold text-ink">{amount} is held for this task</div>
+                  <p className="mt-0.5 text-[12.5px] leading-relaxed text-muted">
+                    {requested
+                      ? `${requested} requested. Tasks runs it through PayPal and this receipt updates.`
+                      : "Release it to the worker, or refund it to you. Both ask first."}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3.5 flex flex-wrap gap-2 pl-10">
+                {actions.includes("release_payout") && receipt.state !== "disputed" ? (
+                  <Button variant="brand" size="sm" onClick={() => setConfirm("release_payout")} disabled={Boolean(requested)}>
+                    <ArrowUpRight />
+                    Release {amount}
+                  </Button>
+                ) : null}
+                {actions.includes("refund") ? (
+                  <Button variant="secondary" size="sm" onClick={() => setConfirm("refund")} disabled={Boolean(requested)}>
+                    <RotateCcw />
+                    Refund
+                  </Button>
+                ) : null}
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+
+          <ReceiptCard key={receipt._id} receipt={receipt} />
+        </div>
       </aside>
 
       <ConfirmDialog

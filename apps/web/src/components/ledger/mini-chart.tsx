@@ -18,6 +18,7 @@ export function MiniChart({
   values,
   labels,
   color,
+  accent,
   type = "bar",
   height = 36,
   width,
@@ -25,6 +26,8 @@ export function MiniChart({
   values: number[];
   labels?: string[];
   color?: string;
+  /** Bars only: the last bar (today) in this color, the rest in `color`. */
+  accent?: string;
   type?: "bar" | "area";
   height?: number;
   width?: number;
@@ -62,6 +65,7 @@ export function MiniChart({
               yKey: "v",
               fill,
               cornerRadius: 2,
+              ...(accent ? { itemStyler: ({ datum }: { datum: { i: string } }) => (datum.i === data[data.length - 1]?.i ? { fill: accent } : {}) } : {}),
               tooltip: { renderer: ({ datum }) => ({ heading: datum.i, data: [{ label: "Spent", value: formatCents(Math.round(datum.v * 100)) }] }) },
             }
           : {
@@ -82,7 +86,7 @@ export function MiniChart({
       },
       legend: { enabled: false },
     };
-  }, [values, labels, color, type, height, chartWidth, t]);
+  }, [values, labels, color, accent, type, height, chartWidth, t]);
   return (
     <div ref={box} style={{ height, width: width ?? "100%" }}>
       {chartWidth ? <AgCharts options={options} style={{ height, width: chartWidth }} /> : null}

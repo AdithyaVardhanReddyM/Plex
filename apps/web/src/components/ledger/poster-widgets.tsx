@@ -6,12 +6,13 @@ import { AgGridReact, type CustomCellRendererProps } from "ag-grid-react";
 import type { AgCartesianChartOptions } from "ag-charts-community";
 import type { ColDef } from "ag-grid-community";
 import type { FunctionReturnType } from "convex/server";
-import { Camera, Check, ChevronRight, MapPin, Star, TriangleAlert, X } from "lucide-react";
+import { Camera, Check, ChevronRight, Lock, MapPin, Star, TriangleAlert, X } from "lucide-react";
 import { api } from "@/lib/convex";
-import { Avatar, Badge, Card, CardHeader, EmptyState } from "@/components/ui/primitives";
+import { Avatar, Badge, Card, EmptyState, Meter } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
 import { cn, formatCents, relativeTime } from "@/lib/utils";
-import { plexChartTheme, plexGridTheme, registerAg, stateColor } from "./ag";
+import { GRID_WRAP, plexChartTheme, plexGridTheme, registerAg, stateColor } from "./ag";
+import { WidgetFrame } from "./kit";
 import { MiniChart } from "./mini-chart";
 import { useTokens } from "./widget";
 import { useWidth } from "./use-width";
@@ -37,7 +38,7 @@ export function MoneyFlow({ flow, count }: { flow: Poster["flow"]; count: Poster
     return {
       theme: plexChartTheme(t),
       data,
-      height: 196,
+      height: 188,
       series: [
         {
           type: "bar",
@@ -66,7 +67,7 @@ export function MoneyFlow({ flow, count }: { flow: Poster["flow"]; count: Poster
         },
       ],
       axes: {
-        x: { type: "category", position: "left", line: { enabled: false }, label: { color: t.ink2, fontSize: 12.5 }, paddingInner: 0.42 },
+        x: { type: "category", position: "left", line: { enabled: false }, label: { color: t.muted, fontSize: 12.5 }, paddingInner: 0.46 },
         y: { type: "number", position: "bottom", label: { enabled: false }, gridLine: { enabled: false }, line: { enabled: false }, nice: false },
       },
       legend: { enabled: false },
@@ -76,21 +77,26 @@ export function MoneyFlow({ flow, count }: { flow: Poster["flow"]; count: Poster
 
   const settled = flow.released + flow.refunded;
   return (
-    <Card className="flex flex-col">
-      <CardHeader title="Money flow" description="Every task you funded, by where the money is now" />
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-5 pt-4 text-[13px]">
-        <span className="font-medium text-ink">Funded {formatCents(flow.funded)}</span>
-        <ChevronRight size={14} strokeWidth={1.9} className="text-faint" />
-        <span className="text-steel-700">{formatCents(flow.held)} held</span>
-        <ChevronRight size={14} strokeWidth={1.9} className="text-faint" />
-        <span className="text-muted">
-          {formatCents(settled)} settled, {Math.round((flow.released / Math.max(settled, 1)) * 100)}% to workers
+    <WidgetFrame title="Money flow" description="Every task you funded, by where the money is now">
+      <div className="flex flex-wrap items-center gap-1.5 text-[12.5px]">
+        <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-sunken px-2.5 text-ink-2">
+          Funded <span className="tabular font-semibold text-ink">{formatCents(flow.funded)}</span>
+        </span>
+        <ChevronRight className="size-3.5 text-faint" strokeWidth={1.9} />
+        <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-steel-50 px-2.5 text-steel-700 ring-1 ring-inset ring-steel-100">
+          <Lock className="size-3" strokeWidth={2.2} />
+          <span className="tabular font-semibold">{formatCents(flow.held)}</span> held
+        </span>
+        <ChevronRight className="size-3.5 text-faint" strokeWidth={1.9} />
+        <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-green-50 px-2.5 text-green-800 ring-1 ring-inset ring-green-100">
+          <span className="tabular font-semibold">{formatCents(settled)}</span> settled,{" "}
+          {Math.round((flow.released / Math.max(settled, 1)) * 100)}% to workers
         </span>
       </div>
-      <div className="px-3 pt-1 pb-3">
+      <div className="mt-3">
         <AgCharts options={options} />
       </div>
-    </Card>
+    </WidgetFrame>
   );
 }
 
@@ -109,12 +115,12 @@ export function ProofWall({ proofs }: { proofs: Poster["proofs"] }) {
   if (!proofs.length) {
     return (
       <Card>
-        <EmptyState icon={<Camera />} title="No proof yet" body="When workers submit proof, the verdicts show up here." />
+        <EmptyState icon={<Camera />} title="No proof yet" body="When a worker submits proof, the proof engine checks it and the verdict lands here." />
       </Card>
     );
   }
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {proofs.slice(0, 6).map((p) => {
         const v = VERDICT[p.status];
         const checks = p.verdict?.checks ?? [];
@@ -136,7 +142,7 @@ export function ProofWall({ proofs }: { proofs: Poster["proofs"] }) {
                 {p.verdict ? ` · ${Math.round(p.verdict.confidence * 100)}%` : ""}
               </Badge>
             </div>
-            <div className="mt-3 line-clamp-2 text-[13.5px] leading-snug font-medium text-ink-2">{p.taskTitle}</div>
+            <div className="mt-3 line-clamp-2 text-[13.5px] leading-snug font-medium text-ink">{p.taskTitle}</div>
 
             {/* The evidence frames, by spec item: what was asked for, and whether it held up */}
             <div className="mt-3 grid grid-cols-3 gap-1.5">
@@ -146,8 +152,8 @@ export function ProofWall({ proofs }: { proofs: Poster["proofs"] }) {
                   <div
                     key={label + i}
                     className={cn(
-                      "flex h-14 flex-col justify-between rounded-sm border p-1.5",
-                      bad ? "border-disputed/25 bg-disputed-bg" : "border-line bg-canvas",
+                      "flex h-14 flex-col justify-between rounded-[8px] p-2 ring-1 ring-inset",
+                      bad ? "bg-disputed-bg ring-disputed/20" : "bg-canvas ring-line",
                     )}
                   >
                     <Camera size={14} strokeWidth={1.9} className={bad ? "text-disputed" : "text-faint"} />
@@ -157,7 +163,7 @@ export function ProofWall({ proofs }: { proofs: Poster["proofs"] }) {
               })}
             </div>
 
-            <div className="mt-3 text-[12.5px] leading-relaxed text-muted">
+            <div className="mt-3 line-clamp-2 text-[12.5px] leading-relaxed text-muted">
               {failed.length ? (
                 <span className="text-disputed">
                   {failed[0]!.check}: {failed[0]!.detail}
@@ -167,7 +173,7 @@ export function ProofWall({ proofs }: { proofs: Poster["proofs"] }) {
               )}
             </div>
 
-            <div className="mt-auto flex items-center justify-between gap-3 pt-3 text-[12px] text-faint">
+            <div className="mt-auto flex items-center justify-between gap-3 border-t border-line pt-3 text-[12px] text-faint">
               <span className="flex min-w-0 items-center gap-1">
                 <MapPin size={13} strokeWidth={1.9} className="flex-none" />
                 <span className="truncate">{p.location ?? "Remote"}</span>
@@ -206,9 +212,7 @@ function PassRateCell({ data }: WP) {
   const pct = Math.round(data.passRate * 100);
   return (
     <div className="flex h-full items-center gap-2.5">
-      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-sunken">
-        <div className={cn("h-full rounded-full", pct >= 90 ? "bg-green-500" : pct >= 70 ? "bg-steel-500" : "bg-refunded")} style={{ width: `${pct}%` }} />
-      </div>
+      <Meter value={pct / 100} tone={pct >= 90 ? "brand" : pct >= 70 ? "steel" : "amber"} className="w-16" label="Proof pass rate" />
       <span className="tabular text-[13px] text-ink-2">{pct}%</span>
     </div>
   );
@@ -260,9 +264,8 @@ export function TopWorkers({ workers }: { workers: Worker[] }) {
     [width],
   );
   return (
-    <Card className="overflow-hidden">
-      <CardHeader title="Top workers" description="Who you've paid, and how their proof holds up" />
-      <div ref={ref} className="mt-3 border-t border-line" style={{ height: 40 + Math.max(workers.length, 1) * 56 + 2 }}>
+    <WidgetFrame flush title="Top workers" description="Who you've paid, and how their proof holds up">
+      <div ref={ref} className={GRID_WRAP} style={{ height: 38 + Math.max(workers.length, 1) * 54 + 2 }}>
         {width !== null ? <AgGridReact<Worker>
           theme={plexGridTheme}
           rowData={workers}
@@ -273,7 +276,7 @@ export function TopWorkers({ workers }: { workers: Worker[] }) {
           animateRows
         /> : null}
       </div>
-    </Card>
+    </WidgetFrame>
   );
 }
 
@@ -291,31 +294,28 @@ export function ProofVerdicts({ counts, passRate }: { counts: Poster["proofCount
     return {
       theme: plexChartTheme(t),
       data,
-      height: 196,
+      height: 220,
       series: [
         {
           type: "donut" as const,
           angleKey: "value",
           legendItemKey: "label",
           fills: data.map((d) => d.color),
-          innerRadiusRatio: 0.74,
+          innerRadiusRatio: 0.76,
           sectorSpacing: 2,
           innerLabels: [
-            { text: passRate === null ? "—" : `${Math.round(passRate * 100)}%`, fontSize: 22, fontWeight: 600 as const, color: t.ink },
-            { text: "pass rate", fontSize: 12, color: t.faint, spacing: 4 },
+            { text: passRate === null ? "—" : `${Math.round(passRate * 100)}%`, fontSize: 24, fontWeight: 700 as const, color: t.ink },
+            { text: "pass rate", fontSize: 11.5, color: t.faint, spacing: 4 },
           ],
         },
       ],
-      legend: { position: "bottom" as const, item: { marker: { shape: "circle" as const, size: 8 } } },
+      legend: { position: "bottom" as const, spacing: 16, item: { marker: { shape: "circle" as const, size: 7 }, label: { color: t.muted, fontSize: 12 } } },
     };
   }, [counts, passRate, t]);
   const total = counts.pass + counts.fail + counts.unsure;
   return (
-    <Card className="flex flex-col">
-      <CardHeader title="Proof verdicts" description={`${total} proofs checked by the proof engine`} />
-      <div className="px-3 pt-2 pb-3">
-        <AgCharts options={options} />
-      </div>
-    </Card>
+    <WidgetFrame title="Proof verdicts" description={`${total} proofs checked by the proof engine`}>
+      <AgCharts options={options} />
+    </WidgetFrame>
   );
 }

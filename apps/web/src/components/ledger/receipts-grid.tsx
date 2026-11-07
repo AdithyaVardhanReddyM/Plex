@@ -21,7 +21,7 @@ import { direction, kindLabel, partyOf, stateLabel, type ColumnKey } from "@plex
 import { StatePill, type Receipt } from "@/components/receipt/receipt";
 import { Amount } from "@/components/ui/money";
 import { cn, formatCents, relativeTime, shortDate } from "@/lib/utils";
-import { plexGridTheme, registerAg } from "./ag";
+import { GRID_WRAP, plexGridTheme, registerAg } from "./ag";
 import { useWidth } from "./use-width";
 
 registerAg();
@@ -76,8 +76,12 @@ function PartyCell({ data, context }: CellProps) {
     <div className="flex h-full min-w-0 items-center gap-3">
       <span
         className={cn(
-          "flex size-8 flex-none items-center justify-center rounded-full",
-          dir === "in" ? "bg-green-50 text-green-700" : dir === "via" ? "bg-sunken text-muted" : "bg-steel-50 text-steel-600",
+          "flex size-8 flex-none items-center justify-center rounded-[10px] ring-1 ring-inset",
+          dir === "in"
+            ? "bg-green-50 text-green-700 ring-green-100"
+            : dir === "via"
+              ? "bg-sunken text-muted ring-line/70"
+              : "bg-surface text-ink-2 shadow-card ring-line",
         )}
       >
         {dir === "in" ? <ArrowDownLeft {...ICON} /> : dir === "via" ? <CornerDownRight {...ICON} /> : KIND_ICON[data.kind]}
@@ -106,7 +110,7 @@ function RuleCell({ data }: CellProps) {
   if (!data || isTotal(data)) return null;
   return (
     <div className="flex h-full min-w-0 items-center gap-2 text-muted">
-      <ShieldCheck size={14} strokeWidth={1.9} className="flex-none text-green-700" />
+      <ShieldCheck size={14} strokeWidth={1.9} className="flex-none text-green-600" />
       <span className="truncate text-[12.5px]">{data.rule.text}</span>
     </div>
   );
@@ -117,13 +121,8 @@ function AgentCell({ data }: CellProps) {
   const agent = data.agentLabel;
   return (
     <div className="flex h-full items-center">
-      <span
-        className={cn(
-          "inline-flex h-6 max-w-full items-center gap-1.5 truncate rounded-full px-2 text-[12px] font-medium",
-          agent ? "bg-steel-50 text-steel-700 ring-1 ring-inset ring-steel-200/70" : "text-muted",
-        )}
-      >
-        {agent ? <Bot size={13} strokeWidth={1.9} className="flex-none" /> : <User size={13} strokeWidth={1.9} className="flex-none" />}
+      <span className={cn("inline-flex min-w-0 items-center gap-1.5 text-[12.5px]", agent ? "font-medium text-ink-2" : "text-muted")}>
+        {agent ? <Bot size={14} strokeWidth={1.9} className="flex-none text-steel-500" /> : <User size={14} strokeWidth={1.9} className="flex-none text-faint" />}
         <span className="truncate">{agent ?? "You"}</span>
       </span>
     </div>
@@ -385,10 +384,10 @@ export const ReceiptsGrid = forwardRef<ReceiptsGridHandle, ReceiptsGridProps>(fu
   }, [selectedId, rows]);
 
   const visible = rows?.length ?? 0;
-  const autoHeight = 40 + Math.max(Math.min(visible, maxRows), 2) * 56 + (showTotal ? 56 : 0) + 2;
+  const autoHeight = 38 + Math.max(Math.min(visible, maxRows), 2) * 54 + (showTotal ? 54 : 0) + 2;
 
   return (
-    <div ref={wrapRef} className={cn("ledger-grid w-full", className)} style={{ height: height ?? autoHeight }}>
+    <div ref={wrapRef} className={cn("ledger-grid w-full", GRID_WRAP, className)} style={{ height: height ?? autoHeight }}>
       {measured === null ? null : <AgGridReact<Row>
         theme={plexGridTheme}
         rowData={rows}
@@ -410,7 +409,7 @@ export const ReceiptsGrid = forwardRef<ReceiptsGridHandle, ReceiptsGridProps>(fu
         animateRows
         suppressCellFocus={false}
         tooltipShowDelay={400}
-        overlayNoRowsTemplate='<span class="text-[13px] text-muted">No receipts match.</span>'
+        overlayNoRowsTemplate='<span class="text-[13px] text-muted">No receipts match. Try another filter or search.</span>'
       />}
     </div>
   );

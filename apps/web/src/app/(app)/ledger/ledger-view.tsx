@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
-import { HeartHandshake, ListChecks, MapPin, Wallet } from "lucide-react";
+import { Eye, HeartHandshake, ListChecks, MapPin, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { ROLE_LABEL, type LedgerRole, type WidgetSpec } from "@plex/backend/lib/ledgerSpec";
 import { api } from "@/lib/convex";
 import type { Receipt } from "@/components/receipt/receipt";
-import { Avatar, Card, PageHeader, Skeleton } from "@/components/ui/primitives";
+import { Avatar, Card, EmptyState, Meter, PageHeader, SectionHeading, Segmented } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
 import { cn, formatCents } from "@/lib/utils";
-import { Analyst, PinnedWidgets, SectionTitle, Watchdog, WidgetCard, type WidgetHost } from "@/components/ledger/analyst";
+import { Analyst, PinnedWidgets, Watchdog, WidgetCard, type WidgetHost } from "@/components/ledger/analyst";
+import { DashboardSkeleton, Figure, StatStrip } from "@/components/ledger/kit";
 import { ReceiptPanel } from "@/components/ledger/receipt-panel";
 import { ReceiptsCard } from "@/components/ledger/receipts-card";
 import { PotGauges } from "@/components/ledger/pots";
@@ -20,10 +21,16 @@ import { CauseTasks, DonationFeed, DonorLeaderboard } from "@/components/ledger/
 import { Toast } from "@/components/ledger/confirm";
 
 const ROLES: { key: LedgerRole; icon: React.ReactNode }[] = [
-  { key: "personal", icon: <Wallet size={16} strokeWidth={1.9} /> },
-  { key: "poster", icon: <ListChecks size={16} strokeWidth={1.9} /> },
-  { key: "cause", icon: <HeartHandshake size={16} strokeWidth={1.9} /> },
+  { key: "personal", icon: <Wallet /> },
+  { key: "poster", icon: <ListChecks /> },
+  { key: "cause", icon: <HeartHandshake /> },
 ];
+
+const ROLE_INTRO: Record<LedgerRole, { title: string; description: string }> = {
+  personal: { title: "Your money", description: "This week against your pots, and who still owes you." },
+  poster: { title: "Tasks you fund", description: "Money held on proof, what reached workers, and how their proof held up." },
+  cause: { title: "Your cause", description: "Gifts coming in and local work paid out, the way the organization sees it." },
+};
 
 function useRole(): [LedgerRole, (r: LedgerRole) => void] {
   const params = useSearchParams();
@@ -47,18 +54,26 @@ function useNow() {
   return now;
 }
 
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
 export function LedgerView() {
   const [role, setRole] = useRole();
   return (
-    <>
+    <div className="animate-rise">
       <PageHeader
         title="Ledger"
-        description="Where your money went and what it did. Ask a question and the Analyst builds the view; pin what you want to keep."
-        actions={<RoleTabs role={role} onChange={setRole} />}
+        description="Every payment, with its why, its rule and its proof. Ask a question and the Analyst builds the view; pin what you want to keep."
+        actions={
+          <Segmented
+            items={ROLES.map((r) => ({ value: r.key, label: ROLE_LABEL[r.key], icon: r.icon }))}
+            value={role}
+            onChange={setRole}
+          />
+        }
       />
       {/* Keyed by role, so the open receipt and the Analyst's canvas reset on switch */}
       <RoleLedger key={role} role={role} />
-    </>
+    </div>
   );
 }
 
@@ -82,20 +97,26 @@ function RoleLedger({ role }: { role: LedgerRole }) {
 
   return (
     <>
-      <div className="space-y-6">
-        <Analyst host={host} spotlight={spotlight} onClearSpotlight={clearSpotlight} />
-        <Watchdog
-          role={role}
-          onShow={(a) => {
-            setSpotlight(a);
-            (document.getElementById("app-scroll") ?? window).scrollTo({ top: 0, behavior: "smooth" });
-          }}
-        />
+      <div className="space-y-10">
+        <div className="space-y-4">
+          <Analyst host={host} spotlight={spotlight} onClearSpotlight={clearSpotlight} />
+          <Watchdog
+            role={role}
+            onShow={(a) => {
+              setSpotlight(a);
+              (document.getElementById("app-scroll") ?? window).scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
+        </div>
+
         <PinnedWidgets host={host} />
 
-        {role === "personal" ? <PersonalDashboard host={host} onToast={setToast} /> : null}
-        {role === "poster" ? <PosterDashboard /> : null}
-        {role === "cause" ? <CauseDashboard host={host} /> : null}
+        <section aria-label={ROLE_INTRO[role].title}>
+          <SectionHeading title={ROLE_INTRO[role].title} description={ROLE_INTRO[role].description} />
+          {role === "personal" ? <PersonalDashboard host={host} onToast={setToast} /> : null}
+          {role === "poster" ? <PosterDashboard /> : null}
+          {role === "cause" ? <CauseDashboard host={host} /> : null}
+        </section>
 
         <ReceiptsCard
           receipts={receipts}
@@ -121,52 +142,6 @@ function RoleLedger({ role }: { role: LedgerRole }) {
   );
 }
 
-function RoleTabs({ role, onChange }: { role: LedgerRole; onChange: (r: LedgerRole) => void }) {
-  return (
-    <div role="tablist" aria-label="Dashboard" className="flex w-full rounded-md bg-sunken p-1 sm:w-auto">
-      {ROLES.map((r) => (
-        <button
-          key={r.key}
-          type="button"
-          role="tab"
-          aria-selected={role === r.key}
-          onClick={() => onChange(r.key)}
-          className={cn(
-            "flex h-8 flex-1 items-center justify-center gap-2 rounded-sm px-3 text-[13px] font-medium whitespace-nowrap transition-[background-color,color,box-shadow] sm:flex-none",
-            role === r.key ? "bg-surface text-ink shadow-card" : "text-muted hover:text-ink",
-          )}
-        >
-          <span className={role === r.key ? "text-green-700" : "text-faint"}>{r.icon}</span>
-          {ROLE_LABEL[r.key]}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function Stat({ label, children, sub, tone }: { label: string; children: React.ReactNode; sub?: React.ReactNode; tone?: "steel" | "green" }) {
-  return (
-    <Card className="p-4">
-      <div className="flex items-center gap-1.5 text-[12.5px] font-medium text-muted">
-        {tone ? <span className={cn("size-1.5 rounded-full", tone === "steel" ? "bg-steel-500" : "bg-green-500")} /> : null}
-        {label}
-      </div>
-      <div className="mt-2">{children}</div>
-      {sub ? <div className="mt-1 truncate text-[12.5px] text-muted">{sub}</div> : null}
-    </Card>
-  );
-}
-
-function StatsSkeleton() {
-  return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {[0, 1, 2, 3].map((i) => (
-        <Skeleton key={i} className="h-[104px] w-full rounded-lg" />
-      ))}
-    </div>
-  );
-}
-
 // ── Personal ─────────────────────────────────────────────────────────────────
 
 const SPEND_BY_DAY: WidgetSpec = {
@@ -180,28 +155,48 @@ const SPEND_BY_DAY: WidgetSpec = {
 function PersonalDashboard({ host, onToast }: { host: WidgetHost; onToast: (m: string) => void }) {
   const p = useQuery(api.ledger.personal);
   const viewer = useQuery(api.users.viewer);
-  if (!p) return <StatsSkeleton />;
+  if (!p) return <DashboardSkeleton />;
   const k = p.kpis;
   const delta = k.spentWeekCents - k.spentPrevWeekCents;
   return (
-    <section aria-label="Personal dashboard" className="space-y-3">
-      <SectionTitle>Personal</SectionTitle>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Spent this week" sub={`${delta >= 0 ? "+" : "−"}${formatCents(Math.abs(delta))} vs last week`}>
-          <Amount cents={k.spentWeekCents} size="lg" />
-        </Stat>
-        <Stat label="Held by Plex" tone="steel" sub={`${k.heldCount} receipt${k.heldCount === 1 ? "" : "s"}, on proof`}>
-          <Amount cents={k.heldCents} size="lg" />
-        </Stat>
-        <Stat label="Owed to you" sub="From splits">
-          <Amount cents={k.owedCents} size="lg" />
-        </Stat>
-        <Stat label="Saved by agents" tone="green" sub="Off list prices">
-          <Amount cents={k.savedCents} size="lg" className="text-green-700" />
-        </Stat>
-      </div>
+    <div className="space-y-4">
+      <StatStrip
+        stats={[
+          {
+            label: "Spent this week",
+            value: <Amount cents={k.spentWeekCents} size="lg" />,
+            foot: (
+              <span className="inline-flex items-center gap-1">
+                {delta >= 0 ? (
+                  <TrendingUp className="size-3.5 text-faint" strokeWidth={1.9} />
+                ) : (
+                  <TrendingDown className="size-3.5 text-green-700" strokeWidth={1.9} />
+                )}
+                <span className={cn("tabular font-medium", delta < 0 ? "text-green-700" : "text-ink-2")}>
+                  {delta >= 0 ? "+" : "−"}
+                  {formatCents(Math.abs(delta))}
+                </span>
+                vs last week
+              </span>
+            ),
+          },
+          {
+            label: "Held by Plex",
+            tone: "steel",
+            value: <Amount cents={k.heldCents} size="lg" className="text-steel-800" />,
+            foot: `${plural(k.heldCount, "receipt")}, waiting on proof`,
+          },
+          { label: "Owed to you", value: <Amount cents={k.owedCents} size="lg" />, foot: "From splits, invoiced by PayPal" },
+          {
+            label: "Saved by agents",
+            tone: "green",
+            value: <Amount cents={k.savedCents} size="lg" className="text-green-700" />,
+            foot: "Off list prices",
+          },
+        ]}
+      />
       <PotGauges pots={p.pots} />
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <WidgetCard spec={SPEND_BY_DAY} host={host} />
         {p.splits[0] ? (
           <Scoreboard
@@ -213,7 +208,7 @@ function PersonalDashboard({ host, onToast }: { host: WidgetHost; onToast: (m: s
           />
         ) : null}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -221,33 +216,46 @@ function PersonalDashboard({ host, onToast }: { host: WidgetHost; onToast: (m: s
 
 function PosterDashboard() {
   const p = useQuery(api.ledger.poster);
-  if (!p) return <StatsSkeleton />;
+  if (!p) return <DashboardSkeleton />;
   const settled = p.flow.released + p.flow.refunded;
   return (
-    <section aria-label="Task poster dashboard" className="space-y-3">
-      <SectionTitle>Task poster</SectionTitle>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Held now" tone="steel" sub={`${p.flowCount.held} task${p.flowCount.held === 1 ? "" : "s"}, on proof`}>
-          <Amount cents={p.flow.held} size="lg" />
-        </Stat>
-        <Stat label="Paid to workers" tone="green" sub={`${p.flowCount.released} payouts, all on proof`}>
-          <Amount cents={p.flow.released} size="lg" />
-        </Stat>
-        <Stat label="Refunded" sub={`${Math.round((p.flow.refunded / Math.max(settled, 1)) * 100)}% of settled money`}>
-          <Amount cents={p.flow.refunded} size="lg" />
-        </Stat>
-        <Stat label="Open tasks" sub={`${p.flowCount.disputed} in dispute`}>
-          <span className="tabular text-[22px] font-semibold tracking-[-0.02em] text-ink">{p.openTasks}</span>
-        </Stat>
-      </div>
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+    <div className="space-y-4">
+      <StatStrip
+        stats={[
+          {
+            label: "Held now",
+            tone: "steel",
+            value: <Amount cents={p.flow.held} size="lg" className="text-steel-800" />,
+            foot: `${plural(p.flowCount.held, "task")}, waiting on proof`,
+          },
+          {
+            label: "Paid to workers",
+            tone: "green",
+            value: <Amount cents={p.flow.released} size="lg" />,
+            foot: `${plural(p.flowCount.released, "payout")}, all on proof`,
+          },
+          {
+            label: "Refunded to you",
+            value: <Amount cents={p.flow.refunded} size="lg" />,
+            foot: `${Math.round((p.flow.refunded / Math.max(settled, 1)) * 100)}% of settled money`,
+          },
+          {
+            label: "Open tasks",
+            value: <Figure>{p.openTasks}</Figure>,
+            foot: p.flowCount.disputed ? `${p.flowCount.disputed} in dispute` : "None in dispute",
+          },
+        ]}
+      />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <MoneyFlow flow={p.flow} count={p.flowCount} />
         <ProofVerdicts counts={p.proofCounts} passRate={p.passRate} />
       </div>
-      <SectionTitle>Proof wall</SectionTitle>
-      <ProofWall proofs={p.proofs} />
+      <div className="pt-6">
+        <SectionHeading title="Proof wall" description="What workers sent, and what the proof engine made of it." />
+        <ProofWall proofs={p.proofs} />
+      </div>
       <TopWorkers workers={p.workers} />
-    </section>
+    </div>
   );
 }
 
@@ -263,63 +271,78 @@ const DONATIONS_BY_WEEK: WidgetSpec = {
 
 function CauseDashboard({ host }: { host: WidgetHost }) {
   const c = useQuery(api.ledger.cause);
-  if (c === null) return null;
-  if (!c) return <StatsSkeleton />;
+  if (c === null) {
+    return (
+      <Card>
+        <EmptyState
+          icon={<HeartHandshake />}
+          title="No cause on this account"
+          body="When you run a cause on Plex, its gifts and the local work they paid for show up here."
+        />
+      </Card>
+    );
+  }
+  if (!c) return <DashboardSkeleton />;
   const raised = c.cause.raisedCents / Math.max(c.cause.goalCents, 1);
   return (
-    <section aria-label="Cause dashboard" className="space-y-3">
-      <SectionTitle>Cause</SectionTitle>
+    <div className="space-y-4">
       <Card className="overflow-hidden">
-        <div className="h-1 w-full" style={{ background: "var(--metal)" }} aria-hidden />
-        <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            {c.org ? <Avatar name={c.org.name} color={c.org.color} size={40} /> : null}
+        <div className="grid gap-5 p-5 md:grid-cols-[minmax(0,1fr)_320px] md:items-center md:gap-8">
+          <div className="flex min-w-0 items-center gap-3.5">
+            {c.org ? <Avatar name={c.org.name} color={c.org.color} size={44} square /> : null}
             <div className="min-w-0">
-              <div className="truncate text-[16px] font-semibold tracking-[-0.01em] text-ink">{c.cause.name}</div>
-              <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted">
+              <div className="truncate text-[17px] font-semibold tracking-[-0.015em] text-ink">{c.cause.name}</div>
+              <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[13px] text-muted">
                 <span className="truncate">{c.org?.name}</span>
-                <span className="text-faint">·</span>
-                <MapPin size={13} strokeWidth={1.9} className="flex-none" />
+                <span className="text-line-strong">·</span>
+                <MapPin className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
                 <span className="truncate">{c.cause.location}</span>
               </div>
             </div>
           </div>
-          <div className="w-full md:w-72">
-            <div className="flex items-baseline justify-between gap-2">
-              <Amount cents={c.cause.raisedCents} size="md" />
-              <span className="text-[12.5px] text-muted">of {formatCents(c.cause.goalCents)}</span>
+          <div className="min-w-0">
+            <div className="flex items-baseline justify-between gap-3">
+              <div className="flex items-baseline gap-1.5">
+                <Amount cents={c.cause.raisedCents} size="lg" />
+                <span className="tabular text-[12.5px] text-muted">of {formatCents(c.cause.goalCents)}</span>
+              </div>
+              <span className="tabular text-[12.5px] font-medium text-ink-2">{Math.round(Math.min(raised, 1) * 100)}%</span>
             </div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-sunken">
-              <div className="h-full rounded-full bg-green-500" style={{ width: `${Math.min(raised, 1) * 100}%` }} />
-            </div>
+            <Meter value={raised} className="mt-2.5" label="Raised toward the goal" />
           </div>
         </div>
-        <p className="border-t border-line px-5 py-3 text-[12.5px] text-muted">
-          The view {c.org?.name ?? "the cause"} sees. Donors get the same receipts for the shifts they fund.
-        </p>
+        <div className="flex items-center gap-2 border-t border-line bg-canvas/50 px-5 py-2.5 text-[12.5px] text-muted">
+          <Eye className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
+          <span className="truncate">
+            The view {c.org?.name ?? "the cause"} sees. Donors get the same receipts for the shifts they fund.
+          </span>
+        </div>
       </Card>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Raised, 21 days" tone="green" sub={`${c.totals.gifts} gifts, ${c.totals.recurring} monthly`}>
-          <Amount cents={c.totals.last21Cents} size="lg" />
-        </Stat>
-        <Stat label="Paid to local workers" sub="Released on proof">
-          <Amount cents={c.totals.paidToWorkersCents} size="lg" />
-        </Stat>
-        <Stat label="Shifts done" sub={`${c.totals.shiftsOpen} open`}>
-          <span className="tabular text-[22px] font-semibold tracking-[-0.02em] text-ink">{c.totals.shiftsDone}</span>
-        </Stat>
-        <Stat label="Donors, all time" sub={`${c.cause.workersPaidCount} workers paid so far`}>
-          <span className="tabular text-[22px] font-semibold tracking-[-0.02em] text-ink">{c.cause.donorsCount}</span>
-        </Stat>
-      </div>
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <StatStrip
+        stats={[
+          {
+            label: "Raised, 21 days",
+            tone: "green",
+            value: <Amount cents={c.totals.last21Cents} size="lg" />,
+            foot: `${plural(c.totals.gifts, "gift")}, ${c.totals.recurring} monthly`,
+          },
+          { label: "Paid to local workers", value: <Amount cents={c.totals.paidToWorkersCents} size="lg" />, foot: "Released on proof" },
+          { label: "Shifts done", value: <Figure>{c.totals.shiftsDone}</Figure>, foot: `${c.totals.shiftsOpen} open` },
+          {
+            label: "Donors, all time",
+            value: <Figure>{c.cause.donorsCount}</Figure>,
+            foot: `${plural(c.cause.workersPaidCount, "worker")} paid so far`,
+          },
+        ]}
+      />
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <WidgetCard spec={DONATIONS_BY_WEEK} host={host} />
         <DonorLeaderboard leaders={c.leaderboard} />
       </div>
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <DonationFeed feed={c.feed} />
         <CauseTasks tasks={c.tasks} />
       </div>
-    </section>
+    </div>
   );
 }

@@ -60,9 +60,10 @@ export function registerAg() {
 
 /**
  * The Plex grid theme. Built with the Theming API from the app's CSS tokens
- * (globals.css), so the grid follows the design system: canvas header, ink
- * text, hairline rows, a green focus ring and a green-50 selection. The grid
- * sits inside a Card, so it draws no wrapper border of its own.
+ * (globals.css), so the grid follows the design system: a 12px muted header on
+ * the canvas, ink text, 1px hairline rows (no zebra), a sunken hover, a green
+ * focus ring and a green-50 selection. The grid sits inside a Card, so it
+ * draws no wrapper border of its own.
  */
 export const plexGridTheme = themeQuartz.withPart(iconSetQuartzLight).withParams({
   fontFamily: "var(--font-sans)",
@@ -78,22 +79,22 @@ export const plexGridTheme = themeQuartz.withPart(iconSetQuartzLight).withParams
   borderRadius: 8,
   wrapperBorder: false,
   wrapperBorderRadius: 0,
-  headerBackgroundColor: "var(--color-surface)",
-  headerTextColor: "var(--color-faint)",
+  headerBackgroundColor: "color-mix(in srgb, var(--color-canvas) 70%, var(--color-surface))",
+  headerTextColor: "var(--color-muted)",
   headerFontSize: 12,
   headerFontWeight: 500,
-  headerHeight: 40,
+  headerHeight: 38,
   headerRowBorder: { color: "var(--color-line)" },
   headerColumnBorder: false,
-  headerColumnResizeHandleColor: "var(--color-line)",
-  headerCellHoverBackgroundColor: "var(--color-canvas)",
-  rowHeight: 56,
+  headerColumnResizeHandleColor: "transparent",
+  headerCellHoverBackgroundColor: "var(--color-sunken)",
+  rowHeight: 54,
   rowBorder: { color: "var(--color-line)" },
   columnBorder: false,
   oddRowBackgroundColor: "var(--color-surface)",
-  rowHoverColor: "var(--color-canvas)",
-  selectedRowBackgroundColor: "var(--color-green-50)",
-  cellHorizontalPadding: 14,
+  rowHoverColor: "color-mix(in srgb, var(--color-sunken) 60%, transparent)",
+  selectedRowBackgroundColor: "color-mix(in srgb, var(--color-green-50) 85%, var(--color-surface))",
+  cellHorizontalPadding: 16,
   spacing: 8,
   iconColor: "var(--color-faint)",
   iconSize: 14,
@@ -108,8 +109,8 @@ export const plexGridTheme = themeQuartz.withPart(iconSetQuartzLight).withParams
   tooltipBackgroundColor: "var(--color-ink)",
   tooltipTextColor: "var(--color-surface)",
   tooltipBorder: false,
-  pinnedRowBackgroundColor: "var(--color-canvas)",
-  pinnedRowBorder: { color: "var(--color-line-strong)" },
+  pinnedRowBackgroundColor: "color-mix(in srgb, var(--color-canvas) 70%, var(--color-surface))",
+  pinnedRowBorder: { color: "var(--color-line)" },
   pinnedRowFontWeight: 600,
   rangeSelectionBorderColor: "var(--color-green-400)",
   valueChangeValueHighlightBackgroundColor: "var(--color-green-100)",
@@ -118,6 +119,12 @@ export const plexGridTheme = themeQuartz.withPart(iconSetQuartzLight).withParams
 
 /** The same grid, tighter: for small widgets inside cards. */
 export const plexGridThemeCompact = plexGridTheme.withParams({ rowHeight: 50, headerHeight: 36 });
+
+/**
+ * Classes for the box a grid sits in: tabular figures in every cell, and a
+ * header label that reads as a label (sentence case, no bold).
+ */
+export const GRID_WRAP = "[&_.ag-cell]:tabular-nums [&_.ag-header-cell-text]:tracking-[-0.003em]";
 
 // ── Charts ──────────────────────────────────────────────────────────────────
 
@@ -168,9 +175,12 @@ export function readTokens() {
 }
 export type Tokens = ReturnType<typeof readTokens>;
 
-/** Category colors: green for spend that moved, steel for what's held, then quieter steps. */
+/**
+ * Category colors: the brand mint→aqua for spend that moved, steel for what's
+ * held, alternating so neighbours in a stack stay apart.
+ */
 export function categoryPalette(t: Tokens) {
-  return [t.green[500], t.steel[500], t.green[300], t.steel[300], t.green[700], t.steel[700], t.green[200], t.steel[200]];
+  return [t.green[500], t.steel[500], t.green[200], t.steel[300], t.green[700], t.steel[200], t.green[300], t.steel[700]];
 }
 
 /** Money states keep one color everywhere: the grid's pills and the charts agree. */
@@ -180,6 +190,16 @@ export function stateColor(t: Tokens, state: string) {
     Refunded: t.refunded, Disputed: t.disputed, Pending: t.lineStrong, Declined: t.faint,
   };
   return map[state] ?? t.steel[300];
+}
+
+/** Axis styling every cartesian chart shares: faint labels, faint dashed gridlines, no axis lines. */
+export function valueAxis(t: Tokens) {
+  return {
+    line: { enabled: false },
+    tick: { enabled: false },
+    gridLine: { style: [{ stroke: t.line, lineDash: [2, 4] }] },
+    label: { color: t.faint, fontSize: 11.5 },
+  };
 }
 
 export function plexChartTheme(t: Tokens): AgChartTheme {
@@ -203,14 +223,14 @@ export function plexChartTheme(t: Tokens): AgChartTheme {
       tooltipTextColor: t.surface,
       tooltipSubtleTextColor: t.lineStrong,
       tooltipBorder: false,
-      tooltipBorderRadius: 8,
-      chartPadding: 4,
+      tooltipBorderRadius: 10,
+      chartPadding: 0,
     },
     overrides: {
-      bar: { series: { cornerRadius: 4, strokeWidth: 0 } },
+      bar: { series: { cornerRadius: 3, strokeWidth: 0 } },
       donut: { series: { strokeWidth: 2, strokes: [t.surface] } },
       line: { series: { strokeWidth: 2, marker: { size: 0 } } },
-      area: { series: { strokeWidth: 2, fillOpacity: 0.18, marker: { enabled: false } } },
+      area: { series: { strokeWidth: 2, fillOpacity: 0.16, marker: { enabled: false } } },
     },
   };
 }
