@@ -64,22 +64,18 @@ export function RaisedBar({
   goalCents,
   className,
   thin,
-  onDark,
 }: {
   raisedCents: number;
   goalCents: number;
   className?: string;
   thin?: boolean;
-  /** On a spotlight (night) card. */
-  onDark?: boolean;
 }) {
   const reduce = useReducedMotion();
   const pct = goalCents > 0 ? Math.min(100, (raisedCents / goalCents) * 100) : 0;
   return (
     <div
       className={cn(
-        "relative w-full overflow-hidden rounded-full",
-        onDark ? "bg-white/10" : "bg-sunken",
+        "relative w-full overflow-hidden rounded-full bg-sunken",
         thin ? "h-1.5" : "h-2",
         className,
       )}
@@ -90,7 +86,7 @@ export function RaisedBar({
       aria-label={`${formatCents(raisedCents)} of ${formatCents(goalCents)}`}
     >
       <motion.div
-        className={cn("absolute inset-y-0 left-0 rounded-full", onDark && "shadow-[0_0_18px_rgb(62_224_216/0.55)]")}
+        className="absolute inset-y-0 left-0 rounded-full"
         style={{ backgroundImage: "var(--meter-brand)" }}
         initial={reduce ? false : { width: 0 }}
         animate={{ width: `${pct}%` }}
@@ -306,21 +302,6 @@ export function DateTile({ ms, muted, className }: { ms: number; muted?: boolean
       <span className={cn("tabular mt-1 font-display text-[19px] leading-none font-extrabold tracking-[-0.03em]", muted ? "text-muted" : "text-ink")}>
         {day}
       </span>
-    </span>
-  );
-}
-
-/** A glass chip for spotlight (night) cards. */
-export const GLASS =
-  "rounded-full bg-white/[0.08] px-2.5 py-1 text-[12px] font-medium text-white/75 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]";
-
-/** A big amount for dark grounds: the sign small and dim, the digits in the display face. */
-export function DarkMoney({ cents, className }: { cents: number; className?: string }) {
-  const f = formatCents(cents);
-  return (
-    <span className={cn("tabular inline-flex items-start font-display font-extrabold tracking-[-0.045em] text-white", className)}>
-      <span className="mt-[0.18em] mr-1 text-[0.42em] font-bold text-white/45">$</span>
-      {f.replace("$", "")}
     </span>
   );
 }

@@ -9,6 +9,7 @@ import { ACTION_TOOLS, type ActionTool, type LedgerRole } from "@plex/backend/li
 import { api } from "@/lib/convex";
 import { ReceiptCard, type Receipt } from "@/components/receipt/receipt";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/primitives";
 import { formatCents } from "@/lib/utils";
 import { ConfirmDialog } from "./confirm";
 
@@ -77,13 +78,13 @@ export function ReceiptPanel({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-4 sm:px-5 sm:pb-5">
           {actions.length ? (
-            <div className="metal-card mb-4 rounded-xl p-5">
-              <div className="flex items-center gap-2 text-[13px] font-semibold text-steel-800">
-                <Lock className="size-4" strokeWidth={2} />
+            <Card className="mb-4 p-5">
+              <div className="flex items-center gap-2 text-[13px] font-medium text-steel-700">
+                <Lock className="size-[18px]" strokeWidth={1.9} />
                 Held for this task
               </div>
-              <div className="tabular mt-3 font-display text-[36px] leading-none font-extrabold tracking-[-0.045em] text-steel-900">{amount}</div>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-steel-800/80">
+              <div className="tabular mt-3 font-display text-[40px] leading-none font-extrabold tracking-[-0.045em] text-steel-900">{amount}</div>
+              <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
                 {requested
                   ? `${requested} requested. Tasks runs it through PayPal and this receipt updates.`
                   : "Release it to the worker, or refund it to you. Both ask first."}
@@ -102,7 +103,7 @@ export function ReceiptPanel({
                   </Button>
                 ) : null}
               </div>
-            </div>
+            </Card>
           ) : null}
 
           <ReceiptCard key={receipt._id} receipt={receipt} />

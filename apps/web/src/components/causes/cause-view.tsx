@@ -24,10 +24,8 @@ import { DonatePanel, type CausePage } from "./donate-panel";
 import { CampaignBoard } from "./campaign-board";
 import {
   CauseCover,
-  DarkMoney,
   DateTile,
   FACE,
-  GLASS,
   LocationMap,
   PlaceChip,
   RaisedBar,
@@ -199,31 +197,29 @@ function Raised({ data }: { data: CausePage }) {
     [spots, "open spots"],
   ];
   return (
-    <div className="@container spotlight rounded-xl p-6 sm:p-7">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
-          <HeartHandshake className="size-4 text-green-300" strokeWidth={1.9} />
+    <Card className="@container p-6 sm:p-7">
+      <div className="flex items-center justify-between gap-3 text-[13px]">
+        <div className="flex items-center gap-2 font-medium text-ink-2">
+          <HeartHandshake className="size-[18px] text-green-700" strokeWidth={1.9} />
           Raised so far
         </div>
-        <span className="tabular flex items-center gap-1 rounded-full bg-green-300/15 px-2.5 py-1 text-[12px] font-medium text-green-200 shadow-[inset_0_0_0_1px_rgb(110_243_214/0.25)]">
-          {pct}% funded
-        </span>
+        <span className="tabular font-medium text-green-700">{pct}% funded</span>
       </div>
-      <div className="mt-4 flex flex-wrap items-end gap-x-3 gap-y-1">
-        <DarkMoney cents={data.cause.raisedCents} className="text-[52px] leading-none @[520px]:text-[64px]" />
-        <span className="tabular pb-1.5 text-[14px] text-white/55">of {formatCents(data.cause.goalCents)} goal</span>
+      <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <Amount cents={data.cause.raisedCents} size="xl" className="text-[52px]" />
+        <span className="tabular text-[14px] text-muted">of {formatCents(data.cause.goalCents)} goal</span>
       </div>
-      <RaisedBar raisedCents={data.cause.raisedCents} goalCents={data.cause.goalCents} onDark className="mt-6" />
+      <RaisedBar raisedCents={data.cause.raisedCents} goalCents={data.cause.goalCents} className="mt-6" />
       <div className="mt-6 flex flex-wrap items-end gap-x-10 gap-y-4">
         {figs.map(([n, label]) => (
           <div key={label}>
-            <div className="tabular font-display text-[28px] leading-none font-bold tracking-[-0.035em] text-white">{n}</div>
-            <div className="mt-1.5 text-[12.5px] text-white/55">{label}</div>
+            <div className="tabular font-display text-[28px] leading-none font-bold tracking-[-0.035em] text-ink">{n}</div>
+            <div className="mt-1.5 text-[12.5px] text-muted">{label}</div>
           </div>
         ))}
-        <span className={cn(GLASS, "ml-auto hidden @[520px]:inline-flex")}>Paid only after proof passes</span>
+        <span className="ml-auto hidden text-[12.5px] text-muted @[520px]:inline">Paid only after proof passes</span>
       </div>
-    </div>
+    </Card>
   );
 }
 

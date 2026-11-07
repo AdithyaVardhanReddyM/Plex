@@ -24,7 +24,7 @@ import { Badge, Card, CardHeader, SectionHeading, Skeleton } from "@/components/
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { WidgetBody } from "./widget";
-import { Chip, GLASS, WidgetFrame } from "./kit";
+import { Chip, WidgetFrame } from "./kit";
 
 export interface WidgetHost {
   receipts: Receipt[];
@@ -121,10 +121,10 @@ function Widgets({ specs, host, from, askId }: { specs: WidgetSpec[]; host: Widg
 
 const VIA_LABEL = { web: null, mcp: "From an agent over MCP" } as const;
 
-export function Analyst({ host, spotlight, onClearSpotlight }: {
+export function Analyst({ host, featured, onClearFeatured }: {
   host: WidgetHost;
-  spotlight: { title: string; spec: WidgetSpec } | null;
-  onClearSpotlight: () => void;
+  featured: { title: string; spec: WidgetSpec } | null;
+  onClearFeatured: () => void;
 }) {
   const asks = useQuery(api.ledger.asks, { role: host.role });
   const questions = useQuery(api.ledger.demoQuestions, { role: host.role });
@@ -140,11 +140,11 @@ export function Analyst({ host, spotlight, onClearSpotlight }: {
     if (latest && latest._id !== lastSeen.current) {
       if (lastSeen.current !== null) {
         setActiveId(latest._id);
-        onClearSpotlight();
+        onClearFeatured();
       }
       lastSeen.current = latest._id;
     }
-  }, [latest, onClearSpotlight]);
+  }, [latest, onClearFeatured]);
 
   // "/" jumps to the ask box from anywhere on the page.
   useEffect(() => {
@@ -168,26 +168,24 @@ export function Analyst({ host, spotlight, onClearSpotlight }: {
     setText("");
     const id = await ask({ role: host.role, question });
     setActiveId(id);
-    onClearSpotlight();
+    onClearFeatured();
   };
 
   return (
     <section aria-label="Ask the Ledger" className="space-y-4">
-      {/* The spotlight: the screen's one lit object is the question you ask */}
-      <div className="@container spotlight rounded-xl p-6 sm:p-8">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
-            <TextSearch className="size-[18px] text-green-300" strokeWidth={1.9} aria-hidden />
+      {/* The screen's focal object is the question you ask */}
+      <Card className="@container p-6 sm:p-8">
+        <div className="flex items-center justify-between gap-3 text-[13px]">
+          <div className="flex items-center gap-2 font-medium text-ink-2">
+            <TextSearch className="size-[18px] text-green-700" strokeWidth={1.9} aria-hidden />
             Plex Analyst
           </div>
-          <span className={cn(GLASS, "tabular rounded-full px-2.5 py-1 text-[11.5px] font-medium text-white/60")}>
-            Reads {host.receipts.length} receipts
-          </span>
+          <span className="tabular text-faint">Reads {host.receipts.length} receipts</span>
         </div>
-        <h2 className="mt-5 max-w-2xl font-display text-[30px] leading-[1.08] font-extrabold tracking-[-0.04em] text-balance text-white @[640px]:text-[40px]">
+        <h2 className="mt-5 max-w-2xl font-display text-[30px] leading-[1.08] font-extrabold tracking-[-0.04em] text-balance text-ink @[640px]:text-[40px]">
           Ask your money anything.
         </h2>
-        <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-white/55">
+        <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-muted">
           The Analyst reads every receipt and builds the view. Pin what you want to keep.
         </p>
 
@@ -201,9 +199,8 @@ export function Analyst({ host, spotlight, onClearSpotlight }: {
           <label
             htmlFor="ledger-ask"
             className={cn(
-              GLASS,
-              "flex h-[60px] min-w-0 cursor-text items-center gap-3 rounded-[18px] pr-2 pl-5 backdrop-blur-sm transition-[box-shadow,background-color] duration-200 hover:bg-white/[0.1]",
-              "focus-within:bg-white/[0.11] focus-within:shadow-[inset_0_0_0_1px_rgb(110_243_214/0.55),0_0_0_5px_rgb(110_243_214/0.12),0_0_36px_-6px_rgb(110_243_214/0.45)]",
+              "flex h-[60px] min-w-0 cursor-text items-center gap-3 rounded-[18px] bg-sunken/70 pr-2 pl-5 transition-[box-shadow,background-color] duration-200 hover:bg-sunken",
+              "focus-within:bg-surface focus-within:shadow-[inset_0_0_0_1px_var(--color-green-500),0_0_0_4px_var(--color-green-100)]",
             )}
           >
             <span className="sr-only">Ask the Ledger</span>
@@ -213,17 +210,17 @@ export function Analyst({ host, spotlight, onClearSpotlight }: {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="What did my agents buy this week?"
-              className="h-full min-w-0 flex-1 bg-transparent text-[16px] font-medium text-white placeholder:text-white/40 focus:outline-none sm:text-[17px]"
+              className="h-full min-w-0 flex-1 bg-transparent text-[16px] font-medium text-ink placeholder:text-faint focus:outline-none sm:text-[17px]"
               autoComplete="off"
             />
             {text ? null : (
-              <kbd className={cn(GLASS, "hidden h-6 min-w-6 items-center justify-center rounded-[7px] px-1.5 font-sans text-[12px] text-white/50 sm:inline-flex")}>/</kbd>
+              <kbd className="hidden h-6 min-w-6 items-center justify-center rounded-[7px] bg-surface px-1.5 font-sans text-[12px] text-muted shadow-[inset_0_0_0_1px_var(--color-line)] sm:inline-flex">/</kbd>
             )}
             <button
               type="submit"
               disabled={!text.trim()}
               aria-label="Ask"
-              className="flex size-11 flex-none items-center justify-center rounded-[14px] bg-white text-ink transition-[opacity,transform] hover:scale-[1.03] disabled:opacity-30 disabled:hover:scale-100 focus-visible:ring-[3px] focus-visible:ring-green-300/60 focus-visible:outline-none"
+              className="flex size-11 flex-none items-center justify-center rounded-[14px] bg-ink text-surface transition-[opacity,transform] hover:scale-[1.03] disabled:opacity-25 disabled:hover:scale-100 focus-visible:ring-[3px] focus-visible:ring-green-200 focus-visible:outline-none"
             >
               <ArrowUp className="size-5" strokeWidth={2.2} />
             </button>
@@ -232,17 +229,17 @@ export function Analyst({ host, spotlight, onClearSpotlight }: {
 
         <div className="mt-5 flex flex-wrap gap-2">
           {questions === undefined
-            ? ["w-40", "w-32", "w-44"].map((w) => <span key={w} className={cn("h-8 flex-none rounded-full bg-white/[0.07]", w)} />)
+            ? ["w-40", "w-32", "w-44"].map((w) => <Skeleton key={w} className={cn("h-8 flex-none rounded-full", w)} />)
             : questions.map((q) => (
-                <Chip key={q} glass onClick={() => void submit(q)}>
+                <Chip key={q} onClick={() => void submit(q)}>
                   {q}
                 </Chip>
               ))}
         </div>
 
-        {!spotlight && !active && earlier.length ? (
+        {!featured && !active && earlier.length ? (
           <div className="mt-6 flex items-center gap-2 overflow-x-auto [scrollbar-width:none]">
-            <span className="flex flex-none items-center gap-1.5 text-[12px] font-medium text-white/40">
+            <span className="flex flex-none items-center gap-1.5 text-[12px] font-medium text-faint">
               <History className="size-3.5" strokeWidth={1.9} />
               Earlier
             </span>
@@ -252,19 +249,19 @@ export function Analyst({ host, spotlight, onClearSpotlight }: {
                 type="button"
                 onClick={() => setActiveId(a._id)}
                 title={a.question}
-                className="max-w-[280px] flex-none truncate rounded-full px-2.5 py-1 text-[12.5px] text-white/55 transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:bg-white/[0.08] focus-visible:outline-none"
+                className="max-w-[280px] flex-none truncate rounded-full px-2.5 py-1 text-[12.5px] text-muted transition-colors hover:bg-sunken hover:text-ink focus-visible:bg-sunken focus-visible:outline-none"
               >
                 {a.question}
               </button>
             ))}
           </div>
         ) : null}
-      </div>
+      </Card>
 
-      {spotlight ? (
+      {featured ? (
         <div className="animate-rise space-y-4">
-          <AnswerHead label="Watchdog" text={spotlight.title} onClose={onClearSpotlight} />
-          <Widgets specs={[spotlight.spec]} host={host} from="Watchdog" />
+          <AnswerHead label="Watchdog" text={featured.title} onClose={onClearFeatured} />
+          <Widgets specs={[featured.spec]} host={host} from="Watchdog" />
         </div>
       ) : active ? (
         <div key={active._id} className="animate-rise space-y-4">

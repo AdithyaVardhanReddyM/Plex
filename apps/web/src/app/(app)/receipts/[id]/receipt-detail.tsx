@@ -153,18 +153,18 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 
 function AtAGlance({ receipt }: { receipt: Receipt }) {
   const last = receipt.timeline[receipt.timeline.length - 1];
-  // Money still held by PayPal sits on brushed metal, like Home's held card.
+  // Money still held by PayPal is toned steel, like Home's held card.
   const held = receipt.state === "held" || receipt.state === "funded";
   return (
-    <div className={cn("rounded-xl p-6", held ? "metal-card [&_dd]:text-steel-900 [&_dt]:text-steel-800/75" : "bg-surface shadow-card")}>
+    <div className="rounded-xl bg-surface p-6 shadow-card">
       <div className="flex items-center justify-between gap-3">
-        <span className={cn("text-[13px] font-medium", held ? "text-steel-800" : "text-muted")}>{receiptKindLabel(receipt.kind)}</span>
+        <span className={cn("text-[13px] font-medium", held ? "text-steel-700" : "text-muted")}>{receiptKindLabel(receipt.kind)}</span>
         <StatePill state={receipt.state} />
       </div>
       <div className="mt-3">
-        <DisplayMoney cents={receipt.amountCents} className={cn("text-[40px]", held ? "text-steel-900 [&>span]:text-steel-700/60" : "text-ink")} />
+        <DisplayMoney cents={receipt.amountCents} className={cn("text-[40px]", held ? "text-steel-900" : "text-ink")} />
       </div>
-      <div className={cn("mt-1.5 truncate text-[13px]", held ? "text-steel-800" : "text-muted")}>
+      <div className={cn("mt-1.5 truncate text-[13px]", held ? "text-steel-700" : "text-muted")}>
         {direction(receipt) === "in" ? `from ${receipt.payerLabel}` : `to ${receipt.payeeLabel}`}
       </div>
       <dl className="mt-5">

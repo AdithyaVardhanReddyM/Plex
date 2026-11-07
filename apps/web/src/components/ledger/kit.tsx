@@ -1,45 +1,39 @@
 "use client";
 
+import { Lock } from "lucide-react";
 import { Card, CardHeader, Skeleton } from "@/components/ui/primitives";
 import { cn, formatCents } from "@/lib/utils";
 
 /**
  * The Ledger's shared building blocks, so every widget reads as one system:
- * one borderless card recipe, one stat board, display figures, and chips for
- * light and for the dark spotlight. Receipts uses these too.
+ * one borderless card recipe, one stat board, display figures and chips.
+ * Receipts uses these too.
  */
-
-// ── Glass (for the dark spotlight) ───────────────────────────────────────────
-
-/** A glass capsule on a `.spotlight` ground. */
-export const GLASS = "bg-white/[0.08] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]";
 
 // ── Display figures ──────────────────────────────────────────────────────────
 
 /**
  * A big amount in the display face: the currency sign small and raised, the
- * digits huge. `onDark` dims the sign for spotlight grounds.
+ * digits huge.
  */
 export function DisplayMoney({
   cents,
   sign,
-  onDark,
   className,
 }: {
   cents: number;
   sign?: "in" | "out";
-  onDark?: boolean;
   className?: string;
 }) {
   const f = formatCents(Math.abs(cents));
   return (
     <span className={cn("tabular inline-flex items-start font-display leading-none font-extrabold tracking-[-0.045em]", className)}>
       {sign ? (
-        <span className={cn("mr-0.5", sign === "in" ? (onDark ? "text-green-300" : "text-green-700") : onDark ? "text-white/45" : "text-faint")}>
+        <span className={cn("mr-0.5", sign === "in" ? "text-green-700" : "text-faint")}>
           {sign === "in" ? "+" : "−"}
         </span>
       ) : null}
-      <span className={cn("mt-[0.16em] mr-[0.08em] text-[0.46em] font-bold", onDark ? "text-white/45" : "text-faint")}>$</span>
+      <span className="mt-[0.16em] mr-[0.08em] text-[0.46em] font-bold text-faint">$</span>
       {f.replace("$", "")}
     </span>
   );
@@ -108,14 +102,14 @@ export type StripStat = {
   label: string;
   value: React.ReactNode;
   foot?: React.ReactNode;
-  /** Steel is money that's held: it gets the brushed-metal card. Green is money that moved. */
+  /** Steel is money that's held: it gets its own card, toned steel. Green is money that moved. */
   tone?: "steel" | "green";
 };
 
 /**
  * A role's headline numbers: big display figures spaced on one borderless
- * card, and the held amount (the stat toned steel) on a brushed-metal card
- * beside it. No rules between figures.
+ * card, and the held amount (the stat toned steel) on a plain card beside it,
+ * its label and figure in steel. No rules between figures.
  */
 export function StatStrip({ stats, className }: { stats: StripStat[]; className?: string }) {
   const held = stats.find((s) => s.tone === "steel");
@@ -132,13 +126,16 @@ export function StatStrip({ stats, className }: { stats: StripStat[]; className?
         ))}
       </Card>
       {held ? (
-        <div className="metal-card flex min-h-[156px] flex-col justify-between rounded-xl p-6">
-          <div className="text-[13px] font-semibold text-steel-800">{held.label}</div>
+        <Card className="flex min-h-[156px] flex-col justify-between gap-6 p-6 sm:p-7">
+          <div className="flex items-center gap-2 text-[13px] font-medium text-steel-700">
+            <Lock className="size-[18px]" strokeWidth={1.9} />
+            {held.label}
+          </div>
           <div>
             <div className="flex items-end">{held.value}</div>
-            {held.foot ? <div className="mt-2 text-[12.5px] font-medium text-steel-800/80">{held.foot}</div> : null}
+            {held.foot ? <div className="mt-2 text-[12.5px] font-medium text-steel-700">{held.foot}</div> : null}
           </div>
-        </div>
+        </Card>
       ) : null}
     </div>
   );
@@ -193,21 +190,18 @@ export function Legend({ items, className }: { items: { label: string; color: st
 // ── Chip ─────────────────────────────────────────────────────────────────────
 
 /**
- * A capsule button: suggested questions, follow-ups, earlier asks. `glass` is
- * the spotlight version (white on night glass, a mint edge on hover).
+ * A capsule button: suggested questions, follow-ups, earlier asks.
  */
 export function Chip({
   children,
   onClick,
   className,
   title,
-  glass,
 }: {
   children: React.ReactNode;
   onClick: () => void;
   className?: string;
   title?: string;
-  glass?: boolean;
 }) {
   return (
     <button
@@ -216,9 +210,7 @@ export function Chip({
       title={title}
       className={cn(
         "inline-flex h-8 max-w-full flex-none items-center gap-1.5 truncate rounded-full px-3.5 text-[12.5px] font-medium transition-[background-color,box-shadow,color] focus-visible:outline-none [&_svg]:size-3.5 [&_svg]:flex-none [&_svg]:stroke-[1.9]",
-        glass
-          ? cn(GLASS, "text-white/80 hover:bg-white/[0.14] hover:text-white hover:shadow-[inset_0_0_0_1px_rgb(110_243_214/0.35)] focus-visible:shadow-[inset_0_0_0_1px_rgb(110_243_214/0.6)] [&_svg]:text-white/50")
-          : "bg-sunken/80 text-ink-2 hover:bg-sunken hover:text-ink focus-visible:ring-[3px] focus-visible:ring-green-200 [&_svg]:text-faint",
+        "bg-sunken/80 text-ink-2 hover:bg-sunken hover:text-ink focus-visible:ring-[3px] focus-visible:ring-green-200 [&_svg]:text-faint",
         className,
       )}
     >

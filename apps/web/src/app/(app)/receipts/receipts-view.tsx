@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { ArrowDownLeft, ArrowUpRight, Clock, HandCoins, HeartHandshake, Layers, Lock, ReceiptText, Search } from "lucide-react";
+import { ArrowUpRight, Clock, HandCoins, HeartHandshake, Layers, Lock, ReceiptText, Search } from "lucide-react";
 import { AiAgentIcon } from "@/components/ui/icons";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { direction } from "@plex/backend/lib/ledgerSpec";
@@ -13,7 +13,7 @@ import { Card, EmptyState, Input, PageHeader, Segmented, Skeleton } from "@/comp
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ReceiptCard, ReceiptRow, receiptKindLabel, type Receipt } from "@/components/receipt/receipt";
 import { AgentArt, HeldArt, ReceiptStackArt, TaskArt } from "@/components/art/empty-art";
-import { DisplayMoney, GLASS } from "@/components/ledger/kit";
+import { Amount } from "@/components/ui/money";
 import { DayBars } from "@/components/ui/viz";
 import { cn, formatCents } from "@/lib/utils";
 
@@ -121,7 +121,7 @@ export function ReceiptsView() {
     return t;
   }, [receipts]);
 
-  // Paid out per day, the last 14 days, for the spotlight's bars.
+  // Paid out per day, the last 14 days, for the summary's bars.
   const days = useMemo(() => {
     const start = new Date(now);
     start.setHours(0, 0, 0, 0);
@@ -338,7 +338,7 @@ function ListSkeleton() {
 
 type Totals = { out: number; in: number; held: number; heldCount: number; agents: number; outCount: number; inCount: number };
 
-/** Paid out, lit as the screen's spotlight; held money beside it on brushed metal. */
+/** Paid out, the screen's headline figure; held money beside it on its own card. */
 function Summary({
   loading,
   totals,
@@ -353,62 +353,52 @@ function Summary({
   const peak = days.reduce((m, d, i) => (d.cents > days[m]!.cents ? i : m), 0);
   return (
     <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_340px]">
-      <div className="@container spotlight flex min-h-[260px] flex-col rounded-xl p-6 sm:p-7">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
-            <ArrowUpRight className="size-[18px] text-green-300" strokeWidth={1.9} />
+      <Card className="@container flex min-h-[260px] flex-col p-6 sm:p-7">
+        <div className="flex items-center justify-between gap-3 text-[13px]">
+          <div className="flex items-center gap-2 font-medium text-ink-2">
+            <ArrowUpRight className="size-[18px] text-green-700" strokeWidth={1.9} />
             Paid out
           </div>
-          <span className={cn(GLASS, "tabular rounded-full px-2.5 py-1 text-[11.5px] font-medium text-white/60")}>
+          <span className="tabular text-faint">
             {loading ? "All receipts" : `${totals.outCount} payment${totals.outCount === 1 ? "" : "s"}`}
           </span>
         </div>
-        <div className="mt-5 grid flex-1 items-end gap-6 @[640px]:grid-cols-[auto_minmax(0,1fr)] @[640px]:gap-10">
-          {loading ? (
-            <div className="h-14 w-56 rounded-lg bg-white/10" />
-          ) : (
-            <DisplayMoney cents={totals.out} onDark className="text-[56px] text-white @[520px]:text-[72px]" />
-          )}
+        <div className="mt-4 grid flex-1 items-end gap-6 @[640px]:grid-cols-[auto_minmax(0,1fr)] @[640px]:gap-10">
+          <div>
+            {loading ? <Skeleton className="h-14 w-52" /> : <Amount cents={totals.out} size="xl" className="text-[56px]" />}
+            <div className="tabular mt-3 text-[13px] text-muted">
+              <span className="font-medium text-green-700">{loading ? "…" : formatCents(totals.in)} came in</span> ·{" "}
+              {loading ? "…" : `${totals.agents} of ${count}`} moved by agents
+            </div>
+          </div>
           <div className="hidden min-w-0 @[640px]:block">
-            <div className="mb-2 text-right text-[11.5px] text-white/40">Paid out by day, last 14 days</div>
-            <DayBars values={days.map((d) => d.cents)} labels={days.map((d) => d.label)} highlight={peak} height={84} onDark />
+            <div className="mb-2 text-right text-[11.5px] text-faint">Paid out by day, last 14 days</div>
+            <DayBars values={days.map((d) => d.cents)} labels={days.map((d) => d.label)} highlight={peak} height={84} />
           </div>
         </div>
-        <div className="mt-7 flex flex-wrap items-center gap-2 text-[12.5px] font-medium">
-          <span className="tabular flex items-center gap-1.5 rounded-full bg-green-300/15 px-3 py-1.5 text-green-200 shadow-[inset_0_0_0_1px_rgb(110_243_214/0.25)]">
-            <ArrowDownLeft className="size-3.5" strokeWidth={2.2} />
-            {loading ? "…" : formatCents(totals.in)} came in
-          </span>
-          <span className={cn(GLASS, "tabular flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white/75")}>
-            <AiAgentIcon className="size-3.5 text-white/50" strokeWidth={2} />
-            {loading ? "…" : `${totals.agents} of ${count}`} moved by agents
-          </span>
-          <span className="hidden text-[12px] text-white/40 sm:inline">Refunds, splits and invoices count as in.</span>
-        </div>
-      </div>
+        <p className="mt-6 text-[12.5px] text-muted">Refunds, splits and invoices count as in.</p>
+      </Card>
 
-      <div className="metal-card flex min-h-[200px] flex-col justify-between rounded-xl p-6 sm:p-7">
-        <div className="flex items-center gap-2 text-[13px] font-semibold text-steel-800">
-          <Lock className="size-4" strokeWidth={2} />
+      <Card className="flex min-h-[200px] flex-col justify-between gap-8 p-6 sm:p-7">
+        <div className="flex items-center gap-2 text-[13px] font-medium text-steel-700">
+          <Lock className="size-[18px]" strokeWidth={1.9} />
           Held until proof
         </div>
         <div>
           {loading ? (
             <Skeleton className="h-11 w-28" />
           ) : (
-            <span className="tabular font-display text-[48px] leading-none font-extrabold tracking-[-0.045em] text-steel-900">
-              {formatCents(totals.held)}
-            </span>
+            <Amount cents={totals.held} size="xl" className="text-[48px] text-steel-900" />
           )}
-          <div className="mt-2 flex items-center gap-1.5 text-[12.5px] font-medium text-steel-800">
-            <Clock className="size-3.5" strokeWidth={2} />
+          <div className="mt-3 flex items-center gap-1.5 text-[13px] font-medium text-steel-700">
+            <Clock className="size-4" strokeWidth={1.9} />
             {totals.heldCount} waiting on proof
           </div>
-          <p className="mt-3 text-[12px] leading-relaxed text-steel-800/75">
+          <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
             Paid out the moment the work is verified. Back to you if it isn&apos;t.
           </p>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

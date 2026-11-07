@@ -53,7 +53,7 @@ function useNow() {
   return now;
 }
 
-/** Figure sizes on the stat board and on the metal card. */
+/** Figure sizes on the stat board and on the held card. */
 const BIG = "text-[38px] text-ink";
 const HELD = "text-[44px] text-steel-900";
 
@@ -84,13 +84,13 @@ function RoleLedger({ role }: { role: LedgerRole }) {
   const now = useNow();
   const data = useQuery(api.ledger.receipts, { role });
   const [openId, setOpenId] = useState<string | null>(null);
-  const [spotlight, setSpotlight] = useState<{ title: string; spec: WidgetSpec } | null>(null);
+  const [featured, setFeatured] = useState<{ title: string; spec: WidgetSpec } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const receipts = data?.receipts;
   const open = receipts?.find((r) => r._id === openId) ?? null;
   const onOpen = useCallback((r: Receipt) => setOpenId(r._id), []);
-  const clearSpotlight = useCallback(() => setSpotlight(null), []);
+  const clearFeatured = useCallback(() => setFeatured(null), []);
   const clearToast = useCallback(() => setToast(null), []);
 
   const host = useMemo<WidgetHost>(
@@ -102,11 +102,11 @@ function RoleLedger({ role }: { role: LedgerRole }) {
     <>
       <div className="space-y-10">
         <div className="space-y-4">
-          <Analyst host={host} spotlight={spotlight} onClearSpotlight={clearSpotlight} />
+          <Analyst host={host} featured={featured} onClearFeatured={clearFeatured} />
           <Watchdog
             role={role}
             onShow={(a) => {
-              setSpotlight(a);
+              setFeatured(a);
               (document.getElementById("app-scroll") ?? window).scrollTo({ top: 0, behavior: "smooth" });
             }}
           />

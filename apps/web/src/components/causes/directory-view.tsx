@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { ArrowRight, BadgeCheck, Check, ChevronRight, Clock, HeartHandshake, Lock, Plus } from "lucide-react";
+import { ArrowRight, BadgeCheck, ChevronRight, Clock, HeartHandshake, Lock, Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { api } from "@/lib/convex";
 import { Avatar, Card, CardHeader, EmptyState, PageHeader, SectionHeading, Skeleton } from "@/components/ui/primitives";
@@ -11,7 +11,7 @@ import { Amount } from "@/components/ui/money";
 import { StatePill } from "@/components/receipt/receipt";
 import { HeldArt } from "@/components/art/empty-art";
 import { cn, formatCents, relativeTime } from "@/lib/utils";
-import { CauseCover, DarkMoney, GLASS, PlaceChip, RaisedBar } from "./parts";
+import { CauseCover, PlaceChip, RaisedBar } from "./parts";
 
 type CauseCard = FunctionReturnType<typeof api.causes.list>[number];
 type Giving = NonNullable<FunctionReturnType<typeof api.causes.myGiving>>;
@@ -193,36 +193,28 @@ function YourGiving({ giving }: { giving: Giving }) {
   return (
     <div className="mb-10 space-y-4">
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_360px]">
-        {/* Spotlight: what you've given, lit */}
-        <div className="@container spotlight flex min-h-[300px] flex-col rounded-xl p-6 sm:p-7">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
-              <HeartHandshake className="size-4 text-green-300" strokeWidth={1.9} />
+        <Card className="flex min-h-[300px] flex-col p-6 sm:p-7">
+          <div className="flex items-center justify-between gap-3 text-[13px]">
+            <div className="flex items-center gap-2 font-medium text-ink-2">
+              <HeartHandshake className="size-[18px] text-green-700" strokeWidth={1.9} />
               You&apos;ve given
             </div>
-            <span className={cn(GLASS, "text-[11.5px] text-white/60")}>All time</span>
+            <span className="text-faint">All time</span>
           </div>
-          <DarkMoney cents={giving.totalCents} className="mt-4 text-[56px] leading-none @[480px]:text-[68px]" />
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className={cn(GLASS, "tabular")}>
-              {gifts} {gifts === 1 ? "gift" : "gifts"}
-            </span>
-            <span className={cn(GLASS, "tabular")}>
-              {giving.causes} {giving.causes === 1 ? "cause" : "causes"}
-            </span>
-            <span className="tabular flex items-center gap-1 rounded-full bg-green-300/15 px-2.5 py-1 text-[12px] font-medium text-green-200 shadow-[inset_0_0_0_1px_rgb(110_243_214/0.25)]">
-              <Check className="size-3" strokeWidth={2.6} />
+          <div className="mt-4">
+            <Amount cents={giving.totalCents} size="xl" className="text-[56px]" />
+          </div>
+          <div className="tabular mt-3 text-[13px] text-muted">
+            {gifts} {gifts === 1 ? "gift" : "gifts"} · {giving.causes} {giving.causes === 1 ? "cause" : "causes"} ·{" "}
+            <span className="font-medium text-green-700">
               {reels} Proof {reels === 1 ? "Reel" : "Reels"} ready
             </span>
           </div>
 
           <div className="mt-auto pt-8">
-            <div className="flex h-2.5 w-full gap-1 overflow-hidden rounded-full bg-white/10" aria-hidden>
+            <div className="flex h-2.5 w-full gap-1 overflow-hidden rounded-full bg-sunken" aria-hidden>
               {releasedCents ? (
-                <div
-                  className="h-full rounded-full shadow-[0_0_18px_rgb(62_224_216/0.55)]"
-                  style={{ width: `${releasedPct}%`, backgroundImage: "var(--meter-brand)" }}
-                />
+                <div className="h-full rounded-full" style={{ width: `${releasedPct}%`, backgroundImage: "var(--meter-brand)" }} />
               ) : null}
               {giving.heldCents ? (
                 <div className="h-full flex-1 rounded-full" style={{ backgroundImage: "var(--meter-steel)" }} />
@@ -230,42 +222,35 @@ function YourGiving({ giving }: { giving: Giving }) {
             </div>
             <div className="mt-4 grid grid-cols-2 gap-x-8">
               <div>
-                <div className="text-[12px] font-medium text-green-300">Reached the work</div>
-                <div className="tabular mt-1 font-display text-[22px] leading-none font-bold tracking-[-0.03em] text-white">
-                  {formatCents(releasedCents)}
-                </div>
+                <div className="text-[12px] font-medium text-green-700">Reached the work</div>
+                <Amount cents={releasedCents} size="lg" className="mt-1" />
               </div>
               <div>
-                <div className="text-[12px] font-medium text-steel-200">Held until proof</div>
-                <div className="tabular mt-1 font-display text-[22px] leading-none font-bold tracking-[-0.03em] text-white">
-                  {formatCents(giving.heldCents)}
-                </div>
+                <div className="text-[12px] font-medium text-steel-700">Held until proof</div>
+                <Amount cents={giving.heldCents} size="lg" className="mt-1 text-steel-900" />
               </div>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Held: a brushed-metal card */}
-        <div className="metal-card flex min-h-[220px] flex-col justify-between rounded-xl p-6 sm:p-7">
-          <div className="flex items-center gap-2 text-[13px] font-semibold text-steel-800">
-            <Lock className="size-4" strokeWidth={2} />
+        <Card className="flex flex-col justify-between gap-8 p-6 sm:p-7">
+          <div className="flex items-center gap-2 text-[13px] font-medium text-steel-700">
+            <Lock className="size-[18px]" strokeWidth={1.9} />
             Held until proof passes
           </div>
           <div>
-            <span className="tabular font-display text-[48px] leading-none font-extrabold tracking-[-0.045em] text-steel-900">
-              {formatCents(giving.heldCents)}
-            </span>
-            <div className="mt-2 flex items-center gap-1.5 text-[12.5px] font-medium text-steel-800">
-              <Clock className="size-3.5" strokeWidth={2} />
+            <Amount cents={giving.heldCents} size="xl" className="text-[48px] text-steel-900" />
+            <div className="mt-3 flex items-center gap-1.5 text-[13px] font-medium text-steel-700">
+              <Clock className="size-4" strokeWidth={1.9} />
               {heldRows.length
                 ? `${heldRows.length} ${heldRows.length === 1 ? "shift" : "shifts"} waiting on proof`
                 : "Nothing waiting on proof"}
             </div>
-            <p className="mt-3 text-[12px] leading-relaxed text-steel-800/75">
+            <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
               PayPal holds it. The workers are paid when their photos pass, and it comes back to you if they don&apos;t.
             </p>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* The gifts */}

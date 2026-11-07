@@ -101,16 +101,16 @@ export function ThanksView({ slug, checkoutId, token }: { slug: string; checkout
 
   return (
     <div className="mx-auto max-w-xl animate-rise">
-      <div className="spotlight rounded-xl p-6 sm:p-7">
-        <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
-          <Check className="size-4 text-green-300" strokeWidth={2.4} />
+      <Card className="p-6 sm:p-7">
+        <div className="flex items-center gap-2 text-[13px] font-medium text-ink-2">
+          <Check className="size-[18px] text-green-700" strokeWidth={2.2} />
           Donation confirmed by PayPal
         </div>
-        <h1 className="mt-4 font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.04em] text-white sm:text-[48px]">
+        <h1 className="mt-4 font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.04em] text-ink sm:text-[48px]">
           Thank you{firstName ? `, ${firstName}` : ""}.
         </h1>
-        <p className="mt-3 text-[15px] leading-relaxed text-white/70">{headline}</p>
-      </div>
+        <p className="mt-3 text-[15px] leading-relaxed text-muted">{headline}</p>
+      </Card>
 
       <Card className="mt-4 p-6">
         <div className="font-display text-[16px] font-bold tracking-[-0.02em] text-ink">What happens to your money</div>

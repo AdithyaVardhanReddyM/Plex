@@ -166,23 +166,23 @@ export function DonatePanel({
                     className={cn(
                       "grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-[12px] px-3.5 py-3 text-left transition-[background-color,box-shadow,color]",
                       "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-green-200",
-                      on ? "bg-ink text-white shadow-raised" : "bg-sunken/70 hover:bg-sunken",
+                      on ? "bg-surface shadow-[inset_0_0_0_1.5px_var(--color-ink)]" : "bg-sunken/70 hover:bg-sunken",
                     )}
                   >
                     <span className="min-w-0">
-                      <span className={cn("block truncate text-[13.5px] font-medium leading-snug", on ? "text-white" : "text-ink")}>
+                      <span className="block truncate text-[13.5px] font-medium leading-snug text-ink">
                         {t.title}
                       </span>
-                      <span className={cn("mt-0.5 flex items-center gap-1.5 text-[12px] leading-snug", on ? "text-white/60" : "text-muted")}>
+                      <span className="mt-0.5 flex items-center gap-1.5 text-[12px] leading-snug text-muted">
                         <CalendarDays className="size-3 flex-none" strokeWidth={2} />
                         <span className="truncate">{shortWindow(t.windowStart, t.windowEnd)}</span>
                       </span>
                     </span>
                     <span className="text-right">
-                      <span className={cn("tabular block text-[13.5px] font-semibold", on ? "text-green-300" : "text-ink")}>
+                      <span className="tabular block text-[13.5px] font-semibold text-ink">
                         {formatCents(t.perSpotCents)}
                       </span>
-                      <span className={cn("tabular block text-[11.5px]", on ? "text-white/50" : "text-faint")}>
+                      <span className="tabular block text-[11.5px] text-faint">
                         {formatCents(t.costCents - t.fundedCents)} left
                       </span>
                     </span>
