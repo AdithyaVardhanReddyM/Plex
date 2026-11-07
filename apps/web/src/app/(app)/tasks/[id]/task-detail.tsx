@@ -275,30 +275,28 @@ function Lifecycle({ data }: { data: TaskPage }) {
   const headline = STAGE[status];
 
   return (
-    <section className="spotlight rounded-xl px-6 pt-6 pb-7 sm:px-7">
+    <Card className="px-6 pt-6 pb-7 sm:px-7">
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
-            <Route className="size-4 text-green-300" strokeWidth={1.9} />
+          <div className="flex items-center gap-2 text-[13px] font-medium text-ink-2">
+            <Route className="size-[18px] text-green-700" strokeWidth={1.9} />
             Where it stands
           </div>
-          <div className="mt-3 font-display text-[34px] leading-[1.05] font-extrabold tracking-[-0.04em] text-balance text-white sm:text-[42px]">
+          <div className="mt-3 font-display text-[34px] leading-[1.05] font-extrabold tracking-[-0.04em] text-balance text-ink sm:text-[42px]">
             {headline}
           </div>
           {current ? (
-            <p className="mt-2 text-[13px] text-white/55">
+            <p className="mt-2 text-[13px] text-muted">
               {current.state === "current" ? "Up next: " : ""}
               {current.label} · {current.sub}
             </p>
           ) : (
-            <p className="mt-2 text-[13px] text-white/55">Every step is done. Both sides have the receipt.</p>
+            <p className="mt-2 text-[13px] text-muted">Every step is done. Both sides have the receipt.</p>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-[12px] font-medium">
-          <span className={cn(GLASS, "tabular text-white/70")}>
-            {doneCount} of {resolved.length} steps
-          </span>
-          {!ended && !paid ? <span className={cn(GLASS, "text-white/70")}>{timeLeft(task)}</span> : null}
+        <div className="tabular pt-0.5 text-[13px] text-faint">
+          {doneCount} of {resolved.length} steps
+          {!ended && !paid ? <> · {timeLeft(task)}</> : null}
         </div>
       </div>
 
@@ -315,13 +313,13 @@ function Lifecycle({ data }: { data: TaskPage }) {
                   {/* vertical connector (phones) */}
                   <span
                     aria-hidden
-                    className={cn("absolute top-8 bottom-1 left-[11px] w-0.5 rounded-full md:hidden", !lit && "bg-white/12")}
+                    className={cn("absolute top-8 bottom-1 left-[11px] w-0.5 rounded-full md:hidden", !lit && "bg-sunken")}
                     style={fill ? { backgroundImage: fill } : undefined}
                   />
                   {/* horizontal connector */}
                   <span
                     aria-hidden
-                    className={cn("absolute top-[11px] right-3 left-9 hidden h-0.5 rounded-full md:block", !lit && "bg-white/12")}
+                    className={cn("absolute top-[11px] right-3 left-9 hidden h-0.5 rounded-full md:block", !lit && "bg-sunken")}
                     style={fill ? { backgroundImage: fill } : undefined}
                   />
                 </>
@@ -332,19 +330,19 @@ function Lifecycle({ data }: { data: TaskPage }) {
                   className={cn(
                     "text-[13.5px] leading-snug font-semibold",
                     s.state === "todo"
-                      ? "text-white/35"
+                      ? "text-faint"
                       : s.state === "warn"
-                        ? "text-refunded-bg"
+                        ? "text-refunded"
                         : s.state === "stop"
-                          ? "text-disputed-bg"
+                          ? "text-disputed"
                           : s.state === "current"
-                            ? "text-green-200"
-                            : "text-white",
+                            ? "text-green-800"
+                            : "text-ink",
                   )}
                 >
                   {s.label}
                 </div>
-                <div className={cn("mt-0.5 truncate text-[12px] leading-snug", s.state === "todo" ? "text-white/30" : "text-white/55")}>
+                <div className={cn("mt-0.5 truncate text-[12px] leading-snug", s.state === "todo" ? "text-faint" : "text-muted")}>
                   {s.sub}
                 </div>
               </div>
@@ -352,13 +350,11 @@ function Lifecycle({ data }: { data: TaskPage }) {
           );
         })}
       </ol>
-    </section>
+    </Card>
   );
 }
 
-const GLASS = "rounded-full bg-white/[0.08] px-2.5 py-1 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]";
-
-/** The task's state in a few words: the spotlight's headline. */
+/** The task's state in a few words: the headline of "Where it stands". */
 const STAGE: Record<TaskPage["task"]["status"], string> = {
   draft: "Not funded yet",
   open: "Open for takers",
@@ -373,30 +369,30 @@ const STAGE: Record<TaskPage["task"]["status"], string> = {
   refunded: "Refunded",
 };
 
-/** A step's state as a bare glyph on the night ground: no circle behind it. */
+/** A step's state as a bare glyph: no circle behind it. */
 function StepIcon({ state, icon }: { state: StepState; icon: React.ReactNode }) {
   const base = "relative z-[1] flex size-6 flex-none items-center justify-center [&_svg]:size-5 [&_svg]:stroke-[2]";
   switch (state) {
     case "done":
       return (
-        <span className={cn(base, "text-green-300")}>
+        <span className={cn(base, "text-green-700")}>
           <Check className="!stroke-[2.6]" />
         </span>
       );
     case "held":
       return (
-        <span className={cn(base, "text-steel-200")}>
+        <span className={cn(base, "text-steel-700")}>
           <Lock />
         </span>
       );
     case "current":
-      return <span className={cn(base, "text-white")}>{icon}</span>;
+      return <span className={cn(base, "text-ink")}>{icon}</span>;
     case "warn":
-      return <span className={cn(base, "text-refunded-bg")}>{icon}</span>;
+      return <span className={cn(base, "text-refunded")}>{icon}</span>;
     case "stop":
-      return <span className={cn(base, "text-disputed-bg")}>{icon}</span>;
+      return <span className={cn(base, "text-disputed")}>{icon}</span>;
     default:
-      return <span className={cn(base, "text-white/30")}>{icon}</span>;
+      return <span className={cn(base, "text-faint")}>{icon}</span>;
   }
 }
 

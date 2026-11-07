@@ -5,7 +5,6 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
-  Check,
   ChevronDown,
   KeyRound,
   Loader2,
@@ -31,6 +30,7 @@ import {
   Segmented,
   Skeleton,
 } from "@/components/ui/primitives";
+import { Amount } from "@/components/ui/money";
 import { AgentArt } from "@/components/art/empty-art";
 import { CodeBlock, CopyButton } from "@/components/developers/code-block";
 import { errorMessage } from "@/components/tasks/task-ui";
@@ -58,7 +58,7 @@ export function DevelopersView() {
         }
       />
       <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <McpSpotlight base={apiBase()} />
+        <McpCard base={apiBase()} />
         <AutoPay />
       </div>
       <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -74,11 +74,9 @@ export function DevelopersView() {
   );
 }
 
-// ── Claude, lit ──────────────────────────────────────────────────────────────
+// ── Claude ───────────────────────────────────────────────────────────────────
 
-const GLASS = "rounded-full bg-white/[0.08] px-2.5 py-1 text-white/75 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]";
-
-function McpSpotlight({ base }: { base: string }) {
+function McpCard({ base }: { base: string }) {
   const config = JSON.stringify(
     {
       mcpServers: {
@@ -94,47 +92,43 @@ function McpSpotlight({ base }: { base: string }) {
     2,
   );
   return (
-    <section className="@container spotlight flex min-w-0 flex-col rounded-xl p-6 sm:p-7">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
-          <AiAgentIcon className="size-4 text-green-300" strokeWidth={1.9} />
+    <Card className="@container flex min-w-0 flex-col p-6 sm:p-7">
+      <div className="flex items-center justify-between gap-3 text-[13px]">
+        <div className="flex items-center gap-2 font-medium text-ink-2">
+          <AiAgentIcon className="size-[18px] text-green-700" strokeWidth={1.9} />
           Plex + PayPal for Claude
         </div>
-        <span className={cn(GLASS, "text-[11.5px] font-medium text-white/60")}>Two MCP servers</span>
+        <span className="text-faint">Two MCP servers</span>
       </div>
-      <h2 className="mt-4 max-w-xl font-display text-[34px] leading-[1.04] font-extrabold tracking-[-0.045em] text-balance text-white @[520px]:text-[44px]">
+      <h2 className="mt-4 max-w-xl font-display text-[34px] leading-[1.04] font-extrabold tracking-[-0.045em] text-balance text-ink @[520px]:text-[44px]">
         Give Claude a key, not your wallet.
       </h2>
-      <p className="mt-3 max-w-xl text-[13.5px] leading-relaxed text-white/60">
+      <p className="mt-3 max-w-xl text-[13.5px] leading-relaxed text-muted">
         With Plex, Claude posts tasks, funds them, accepts bids and approves proof inside the key&apos;s pot. With PayPal&apos;s own server it
         looks up the orders, disputes and invoices behind every receipt.
       </p>
-      <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] font-medium">
-        <span className={GLASS}>Posts and funds tasks</span>
-        <span className={GLASS}>Accepts bids</span>
-        <span className="flex items-center gap-1 rounded-full bg-green-300/15 px-2.5 py-1 text-green-200 shadow-[inset_0_0_0_1px_rgb(110_243_214/0.25)]">
-          <Check className="size-3" strokeWidth={2.6} />
-          Inside the pot&apos;s rules
-        </span>
+      <div className="mt-3 text-[13px] text-muted">
+        Posts and funds tasks · Accepts bids ·{" "}
+        <span className="font-medium text-green-700">Inside the pot&apos;s rules</span>
       </div>
       <CodeBlock
         code={config}
         lang="json"
         title="claude_desktop_config.json"
-        className="mt-6 bg-night/70"
+        className="mt-6"
         bodyClassName="max-h-[200px] text-[12px]"
       />
-      <p className="mt-4 text-[12px] leading-snug text-white/45">
+      <p className="mt-4 text-[12px] leading-snug text-muted">
         The PayPal token comes from your sandbox app&apos;s client id and secret.{" "}
-        <code className="font-mono text-[11.5px] text-white/75">scripts/refresh-paypal-token.sh</code> writes a fresh one.
+        <code className="font-mono text-[11.5px] text-ink-2">scripts/refresh-paypal-token.sh</code> writes a fresh one.
       </p>
-    </section>
+    </Card>
   );
 }
 
 // ── Auto-pay ─────────────────────────────────────────────────────────────────
 
-/** Auto-pay: save a PayPal wallet once with PayPal Vault, so tasks are held without a popup. A brushed-metal card: PayPal holds it. */
+/** Auto-pay: save a PayPal wallet once with PayPal Vault, so tasks are held without a popup. Held money, so the card is in steel. */
 function AutoPay() {
   const a = useQuery(api.autopay.mine, {});
   const start = useAction(api.autopay.start);
@@ -182,32 +176,16 @@ function AutoPay() {
   const dailyValue = daily ?? (a ? String(a.dailyLimitCents / 100) : "");
 
   return (
-    <section className="metal-card flex min-w-0 flex-col rounded-xl p-6 sm:p-7">
+    <Card className="flex min-w-0 flex-col p-6 sm:p-7">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2 text-[13px] font-semibold text-steel-800">
-            <Wallet className="size-4" strokeWidth={2} />
+          <div className="flex items-center gap-2 text-[13px] font-medium text-steel-700">
+            <Wallet className="size-[18px]" strokeWidth={1.9} />
             Auto-pay
           </div>
-          <div className="mt-0.5 text-[12px] text-steel-800/70">Saved with PayPal Vault</div>
+          <div className="mt-0.5 text-[12px] text-faint">Saved with PayPal Vault</div>
         </div>
-        <div className="flex items-center gap-2.5">
-          {a === undefined || a === null ? null : (
-            <span
-              className={cn(
-                "rounded-full px-2.5 py-1 text-[11.5px] font-semibold",
-                active ? "bg-green-100/90 text-green-800" : "bg-white/55 text-steel-800",
-              )}
-            >
-              {active ? "On" : "Off"}
-            </span>
-          )}
-          {/* the card's chip */}
-          <span className="h-7 w-9 flex-none rounded-[7px] bg-[linear-gradient(135deg,#f6f9fc,#b8c8dc_45%,#eef3f8)] shadow-[inset_0_0_0_1px_rgb(24_38_59/0.18)]" aria-hidden>
-            <span className="mx-auto mt-[9px] block h-px w-5 bg-steel-700/30" />
-            <span className="mx-auto mt-[5px] block h-px w-5 bg-steel-700/30" />
-          </span>
-        </div>
+        {a === undefined || a === null ? null : <Badge tone={active ? "green" : "neutral"}>{active ? "On" : "Off"}</Badge>}
       </div>
 
       {a === undefined ? (
@@ -216,28 +194,29 @@ function AutoPay() {
           <Skeleton className="h-4 w-48" />
         </div>
       ) : a === null ? (
-        <p className="mt-auto pt-10 text-[13px] text-steel-800">Sign in to turn on auto-pay.</p>
+        <p className="mt-auto pt-10 text-[13px] text-muted">Sign in to turn on auto-pay.</p>
       ) : active ? (
         <div className="mt-auto pt-8">
           <div className="flex items-end justify-between gap-3">
-            <span className="tabular font-display text-[48px] leading-none font-extrabold tracking-[-0.045em] text-steel-900">
-              {formatCents(a.usedTodayCents)}
-            </span>
-            <span className="tabular pb-1 text-[12px] font-medium text-steel-800/80">of {formatCents(a.dailyLimitCents)} today</span>
+            <Amount cents={a.usedTodayCents} size="xl" className="text-[48px] text-steel-900" />
+            <span className="tabular pb-1 text-[12px] font-medium text-muted">of {formatCents(a.dailyLimitCents)} today</span>
           </div>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/55" role="meter" aria-label="Held today" aria-valuenow={a.dailyLimitCents ? Math.round((a.usedTodayCents / a.dailyLimitCents) * 100) : 0}>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-sunken" role="meter" aria-label="Held today" aria-valuenow={a.dailyLimitCents ? Math.round((a.usedTodayCents / a.dailyLimitCents) * 100) : 0}>
             <div
-              className="h-full rounded-full bg-steel-800 transition-[width] duration-700"
-              style={{ width: `${a.dailyLimitCents ? Math.min(100, (a.usedTodayCents / a.dailyLimitCents) * 100) : 0}%` }}
+              className="h-full rounded-full transition-[width] duration-700"
+              style={{
+                width: `${a.dailyLimitCents ? Math.min(100, (a.usedTodayCents / a.dailyLimitCents) * 100) : 0}%`,
+                background: "var(--meter-steel)",
+              }}
             />
           </div>
-          <div className="mt-3 flex min-w-0 items-center gap-1.5 text-[12.5px] font-medium text-steel-800">
+          <div className="mt-3 flex min-w-0 items-center gap-1.5 text-[12.5px] font-medium text-steel-700">
             <ShieldCheck className="size-4 flex-none" strokeWidth={1.9} />
             <span className="truncate">{a.payerEmail ?? "PayPal wallet"}</span>
-            <span className="flex-none text-steel-800/60">· {a.lastUsedAt ? `used ${relativeTime(a.lastUsedAt)}` : "not used yet"}</span>
+            <span className="flex-none font-normal text-muted">· {a.lastUsedAt ? `used ${relativeTime(a.lastUsedAt)}` : "not used yet"}</span>
           </div>
 
-          <div className="mt-5 rounded-[14px] bg-white/55 p-4 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.6)] backdrop-blur-sm">
+          <div className="mt-6">
             <div className="grid grid-cols-2 gap-3">
               <MoneyField id="ap-per" label="Up to, per task" value={perValue} onChange={setPer} />
               <MoneyField id="ap-daily" label="Up to, per day" value={dailyValue} onChange={setDaily} />
@@ -262,19 +241,17 @@ function AutoPay() {
               </Button>
             </div>
           </div>
-          <p className="mt-3 text-[12px] leading-relaxed text-steel-800/75">Over a limit, or over a pot rule, you approve at PayPal as before.</p>
+          <p className="mt-3 text-[12px] leading-relaxed text-muted">Over a limit, or over a pot rule, you approve at PayPal as before.</p>
         </div>
       ) : (
         <>
-          <p className="mt-6 max-w-[300px] text-[13px] leading-relaxed text-steel-800/85">
+          <p className="mt-6 max-w-[300px] text-[13px] leading-relaxed text-muted">
             Save your PayPal once. Tasks you or your agents post are then held without a checkout popup, and still charged only when the
             proof passes.
           </p>
           <div className="mt-auto pt-8">
-            <span className="tabular font-display text-[48px] leading-none font-extrabold tracking-[-0.045em] text-steel-900">
-              {formatCents(a.limitCents)}
-            </span>
-            <div className="tabular mt-2 text-[12.5px] font-medium text-steel-800">
+            <Amount cents={a.limitCents} size="xl" className="text-[48px] text-steel-900" />
+            <div className="tabular mt-3 text-[13px] font-medium text-steel-700">
               per task without a popup · up to {formatCents(a.dailyLimitCents)} a day
             </div>
             <Button
@@ -291,12 +268,12 @@ function AutoPay() {
             >
               {busy ? <Loader2 className="animate-spin" /> : <Wallet />} {busy === "finish" ? "Saving your PayPal…" : "Turn on with PayPal"}
             </Button>
-            <p className="mt-2.5 text-center text-[12px] text-steel-800/70">One approval at PayPal, no charge.</p>
+            <p className="mt-2.5 text-center text-[12px] text-muted">One approval at PayPal, no charge.</p>
           </div>
         </>
       )}
-      {error ? <p className="mt-3 rounded-[10px] bg-white/70 px-3 py-2 text-[12.5px] text-disputed">{error}</p> : null}
-    </section>
+      {error ? <p className="mt-3 rounded-[10px] bg-disputed-bg px-3 py-2 text-[12.5px] text-disputed">{error}</p> : null}
+    </Card>
   );
 }
 

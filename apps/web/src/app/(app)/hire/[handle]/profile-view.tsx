@@ -96,42 +96,37 @@ function BackLink() {
 
 // ── Hero ─────────────────────────────────────────────────────────────────────
 
-const GLASS =
-  "inline-flex h-[24px] items-center gap-1 rounded-full bg-white/[0.08] px-2.5 text-[12px] font-medium whitespace-nowrap text-white/75 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)] [&_svg]:size-3.5 [&_svg]:stroke-[2]";
-
-/** The profile, lit: the face, the name in display type, the trust ring and the record as big figures. */
+/** The profile: the face, the name in display type, the trust ring and the record as big figures. */
 function Hero({ p, first, hireHref }: { p: Profile; first: string; hireHref: string }) {
   const isAgent = p.kind === "agent";
   const free = !p.inProgress;
 
   return (
-    <section className="@container spotlight rounded-xl p-6 sm:p-8">
+    <Card className="@container p-6 sm:p-8">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
         <WorkerAvatar w={p} size={104} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             {isAgent ? (
-              <AgentMarker house={p.agent?.house} onDark />
+              <AgentMarker house={p.agent?.house} className="h-[22px] px-2 text-[11.5px]" />
             ) : (
-              <span className={GLASS}>
+              <Badge>
                 <UserRound /> Person
-              </span>
+              </Badge>
             )}
             {free ? (
-              <span className="inline-flex h-[24px] items-center rounded-full bg-green-300/15 px-2.5 text-[12px] font-medium text-green-200 shadow-[inset_0_0_0_1px_rgb(110_243_214/0.25)]">
-                Free now
-              </span>
+              <Badge tone="green">Free now</Badge>
             ) : (
-              <span className={cn(GLASS, "tabular")}>
+              <Badge tone="outline" className="tabular">
                 {p.inProgress} task{p.inProgress > 1 ? "s" : ""} in progress
-              </span>
+              </Badge>
             )}
           </div>
-          <h1 className="mt-3 font-display text-[40px] leading-[1.02] font-extrabold tracking-[-0.045em] text-balance text-white @[640px]:text-[52px]">
+          <h1 className="mt-3 font-display text-[40px] leading-[1.02] font-extrabold tracking-[-0.045em] text-balance text-ink @[640px]:text-[52px]">
             {p.name}
           </h1>
-          <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-pretty text-white/70">{p.agent?.tagline ?? p.bio}</p>
-          <div className="mt-3.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] text-white/55">
+          <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-pretty text-ink-2">{p.agent?.tagline ?? p.bio}</p>
+          <div className="mt-3.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] text-muted">
             {isAgent ? (
               <>
                 <Meta icon={<AiAgentIcon />}>{modelLabel(p.agent?.model)}</Meta>
@@ -153,10 +148,10 @@ function Hero({ p, first, hireHref }: { p: Profile; first: string; hireHref: str
           </Link>
         </div>
         <div className="flex flex-none items-center gap-4 sm:flex-col sm:gap-2.5 sm:pl-2">
-          <TrustRing score={p.trust.score} size={112} stroke={7} onDark />
+          <TrustRing score={p.trust.score} size={112} stroke={7} />
           <div className="text-[12.5px] sm:text-center">
-            <div className="font-medium text-white/80">Trust score</div>
-            <div className="text-white/45">of 100, from the record</div>
+            <div className="font-medium text-ink-2">Trust score</div>
+            <div className="text-faint">of 100, from the record</div>
           </div>
         </div>
       </div>
@@ -166,7 +161,7 @@ function Hero({ p, first, hireHref }: { p: Profile; first: string; hireHref: str
           {p.rating !== undefined ? (
             <>
               <Big>{p.rating.toFixed(2)}</Big>
-              <Stars value={p.rating} onDark />
+              <Stars value={p.rating} />
             </>
           ) : (
             <Big muted>New</Big>
@@ -177,9 +172,9 @@ function Hero({ p, first, hireHref }: { p: Profile; first: string; hireHref: str
             <>
               <Big>
                 {Math.round(p.proofPassRate * 100)}
-                <span className="text-[0.55em] text-white/55">%</span>
+                <span className="text-[0.55em] font-medium text-muted">%</span>
               </Big>
-              <span className="h-1.5 w-14 overflow-hidden rounded-full bg-white/10" role="meter" aria-label="Proof pass rate" aria-valuenow={Math.round(p.proofPassRate * 100)}>
+              <span className="h-1.5 w-14 overflow-hidden rounded-full bg-sunken" role="meter" aria-label="Proof pass rate" aria-valuenow={Math.round(p.proofPassRate * 100)}>
                 <span className="block h-full rounded-full" style={{ width: `${p.proofPassRate * 100}%`, backgroundImage: "var(--meter-brand)" }} />
               </span>
             </>
@@ -197,13 +192,13 @@ function Hero({ p, first, hireHref }: { p: Profile; first: string; hireHref: str
           {isAgent ? <Big>{shortTurnaround(p.agent?.turnaround)}</Big> : <Big muted={!p.disputes}>{p.disputes}</Big>}
         </Figure>
       </dl>
-    </section>
+    </Card>
   );
 }
 
 function Meta({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <span className="inline-flex min-w-0 items-center gap-1.5 [&_svg]:size-4 [&_svg]:flex-none [&_svg]:stroke-[1.9] [&_svg]:text-green-300/80">
+    <span className="inline-flex min-w-0 items-center gap-1.5 [&_svg]:size-4 [&_svg]:flex-none [&_svg]:stroke-[1.9] [&_svg]:text-faint">
       {icon}
       <span className="truncate">{children}</span>
     </span>
@@ -213,9 +208,9 @@ function Meta({ icon, children }: { icon: React.ReactNode; children: React.React
 function Figure({ label, foot, children }: { label: string; foot?: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[12px] font-medium text-white/50">{label}</dt>
+      <dt className="text-[12px] font-medium text-muted">{label}</dt>
       <dd className="mt-2 flex h-9 items-center gap-3">{children}</dd>
-      {foot ? <dd className="mt-1.5 line-clamp-2 text-[12px] leading-snug text-white/40 sm:truncate">{foot}</dd> : null}
+      {foot ? <dd className="mt-1.5 line-clamp-2 text-[12px] leading-snug text-faint sm:truncate">{foot}</dd> : null}
     </div>
   );
 }
@@ -225,7 +220,7 @@ function Big({ children, muted }: { children: React.ReactNode; muted?: boolean }
     <span
       className={cn(
         "tabular font-display text-[34px] leading-none font-extrabold tracking-[-0.04em]",
-        muted ? "text-white/35" : "text-white",
+        muted ? "text-faint" : "text-ink",
       )}
     >
       {children}
@@ -233,7 +228,7 @@ function Big({ children, muted }: { children: React.ReactNode; muted?: boolean }
   );
 }
 
-function Stars({ value, size = "sm", onDark }: { value: number; size?: "sm" | "xs"; onDark?: boolean }) {
+function Stars({ value, size = "sm" }: { value: number; size?: "sm" | "xs" }) {
   const full = Math.round(value);
   return (
     <span className="inline-flex items-center gap-0.5" role="img" aria-label={`${value} of 5 stars`}>
@@ -242,7 +237,7 @@ function Stars({ value, size = "sm", onDark }: { value: number; size?: "sm" | "x
           key={i}
           className={cn(
             size === "sm" ? "size-3.5" : "size-3",
-            i < full ? "fill-current text-refunded" : onDark ? "text-white/20" : "text-line-strong",
+            i < full ? "fill-current text-refunded" : "text-line-strong",
           )}
           strokeWidth={1.9}
         />
@@ -397,24 +392,24 @@ function ProfileSkeleton() {
   return (
     <div>
       <Skeleton className="mb-5 h-4 w-14" />
-      <div className="spotlight rounded-xl p-6 sm:p-8">
+      <Card className="p-6 sm:p-8">
         <div className="flex gap-6">
-          <div className="size-[104px] flex-none rounded-full bg-white/10" />
+          <Skeleton className="size-[104px] flex-none rounded-full" />
           <div className="flex-1 space-y-3 pt-1">
-            <div className="h-6 w-28 rounded-full bg-white/10" />
-            <div className="h-10 w-64 rounded-lg bg-white/10" />
-            <div className="h-4 w-[60%] rounded bg-white/10" />
+            <Skeleton className="h-6 w-28 rounded-full" />
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-4 w-[60%]" />
           </div>
         </div>
         <div className="mt-10 grid grid-cols-2 gap-x-8 gap-y-7 sm:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="space-y-2.5">
-              <div className="h-3 w-16 rounded bg-white/10" />
-              <div className="h-8 w-20 rounded-lg bg-white/10" />
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-8 w-20" />
             </div>
           ))}
         </div>
-      </div>
+      </Card>
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Skeleton className="h-96 w-full rounded-lg" />
         <Skeleton className="h-80 w-full rounded-lg" />

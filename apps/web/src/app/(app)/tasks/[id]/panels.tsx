@@ -1154,81 +1154,61 @@ export function MoneyCard({ data }: { data: TaskPage }) {
     ] as const
   ).filter(([, v]) => v);
 
-  // Held is a brushed-metal card; paid is a mint face; otherwise a plain card.
-  const face = held
-    ? "metal-card"
-    : released
-      ? "bg-[linear-gradient(150deg,var(--color-green-50),var(--color-green-100)_70%,var(--color-green-200))] shadow-card"
-      : "bg-surface shadow-card";
+  // One plain card in every state: the label and figure take the state's color.
   const ink = held ? "text-steel-900" : "text-ink";
-  const soft = held ? "text-steel-800/75" : released ? "text-ink-2/75" : "text-muted";
 
   return (
-    <div className={cn("relative overflow-hidden rounded-xl p-6", face)}>
-      {released ? (
-        <span className="pointer-events-none absolute -right-10 -bottom-12 size-40 rounded-full border-[20px] border-white/40" aria-hidden />
-      ) : null}
-      <div className="relative flex items-start justify-between gap-3">
-        <div
-          className={cn(
-            "flex items-center gap-2 text-[13px] font-semibold",
-            held ? "text-steel-800" : released ? "text-green-800" : refunded ? "text-refunded" : "text-muted",
-          )}
-        >
-          {released ? (
-            <Check className="size-4" strokeWidth={2.2} />
-          ) : refunded ? (
-            <RotateCcw className="size-4" strokeWidth={2} />
-          ) : (
-            <Lock className="size-4" strokeWidth={2} />
-          )}
-          {headline}
-        </div>
-        {held ? (
-          <span className="h-7 w-9 rounded-[7px] bg-[linear-gradient(135deg,var(--color-steel-50),var(--color-steel-200)_45%,var(--color-steel-50))] shadow-[inset_0_0_0_1px_rgb(24_38_59/0.18)]" aria-hidden />
-        ) : null}
+    <Card className="p-6">
+      <div
+        className={cn(
+          "flex items-center gap-2 text-[13px] font-medium",
+          held ? "text-steel-700" : released ? "text-green-700" : refunded ? "text-refunded" : "text-muted",
+        )}
+      >
+        {released ? (
+          <Check className="size-[18px]" strokeWidth={1.9} />
+        ) : refunded ? (
+          <RotateCcw className="size-[18px]" strokeWidth={1.9} />
+        ) : (
+          <Lock className="size-[18px]" strokeWidth={1.9} />
+        )}
+        {headline}
       </div>
-      <div className="relative mt-8">
-        <span
-          className={cn(
-            "tabular font-display text-[48px] leading-none font-extrabold tracking-[-0.045em]",
-            ink,
-            refunded && "text-muted line-through decoration-2",
-          )}
-        >
-          {formatCents(task.fundingCents)}
-        </span>
-        <p className={cn("mt-2.5 text-[12.5px] leading-relaxed", soft)}>{note}</p>
+      <div className="mt-6">
+        <Amount
+          cents={task.fundingCents}
+          size="xl"
+          className={cn("text-[48px]", ink, refunded && "text-muted line-through decoration-2")}
+        />
+        <p className="mt-3 text-[12.5px] leading-relaxed text-muted">{note}</p>
       </div>
-      <ol className="relative mt-5 grid grid-cols-3 gap-2">
+      <ol className="mt-5 grid grid-cols-3 gap-2">
         {STEPS.map((s, i) => {
           const done = !refunded && order >= i;
           return (
             <li key={s.key} className="min-w-0">
               <div
-                className={cn("h-1.5 rounded-full transition-colors duration-500", !done && (held || released ? "bg-white/55" : "bg-sunken"))}
-                style={done ? { background: held ? "var(--color-steel-800)" : "var(--color-ink)" } : undefined}
+                className={cn("h-1.5 rounded-full transition-colors duration-500", !done && "bg-sunken")}
+                style={done ? { background: held ? "var(--meter-steel)" : "var(--meter-brand)" } : undefined}
               />
-              <div className={cn("mt-2 text-[12.5px] font-semibold", done ? ink : held ? "text-steel-800/60" : "text-faint")}>{s.label}</div>
-              <div className={cn("truncate text-[11.5px]", held ? "text-steel-800/60" : "text-faint")}>{s.sub}</div>
+              <div className={cn("mt-2 text-[12.5px] font-semibold", done ? ink : "text-faint")}>{s.label}</div>
+              <div className="truncate text-[11.5px] text-faint">{s.sub}</div>
             </li>
           );
         })}
       </ol>
       {ids.length ? (
-        <dl className={cn("relative mt-5 grid gap-1 rounded-[12px] px-3.5 py-3", held || released ? "bg-white/45" : "bg-canvas/70")}>
+        <dl className="mt-5 grid gap-1 rounded-[12px] bg-canvas px-3.5 py-3">
           {ids.map(([k, v]) => (
             <div key={k} className="grid grid-cols-[110px_minmax(0,1fr)] items-baseline gap-2 text-[11.5px]">
-              <dt className={held ? "text-steel-800/70" : "text-faint"}>PayPal {k.toLowerCase()}</dt>
-              <dd className={cn("truncate font-mono", held ? "text-steel-900" : "text-ink-2")}>{v}</dd>
+              <dt className="text-faint">PayPal {k.toLowerCase()}</dt>
+              <dd className="truncate font-mono text-ink-2">{v}</dd>
             </div>
           ))}
-          {f.via === "autopay" ? (
-            <div className={cn("mt-0.5 text-[11.5px]", held ? "text-steel-800/70" : "text-faint")}>Held by auto-pay (PayPal Vault), no popup</div>
-          ) : null}
+          {f.via === "autopay" ? <div className="mt-0.5 text-[11.5px] text-faint">Held by auto-pay (PayPal Vault), no popup</div> : null}
         </dl>
       ) : null}
-    </div>
+    </Card>
   );
 }
 

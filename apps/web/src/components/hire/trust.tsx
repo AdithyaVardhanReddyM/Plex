@@ -8,20 +8,17 @@ const TRIM = { textBoxTrim: "trim-both", textBoxEdge: "cap alphabetic" } as Reac
 /**
  * The trust score (0-100) as a ring with the number on its center. Computed in
  * code from facts on Plex, never by a model. Below 70 the arc turns steel.
- * `onDark` draws it for the spotlight: a glass track and a white figure.
  * `score` undefined draws an empty track with "New" (no record yet).
  */
 export function TrustRing({
   score,
   size = 44,
   stroke,
-  onDark,
   className,
 }: {
   score?: number;
   size?: number;
   stroke?: number;
-  onDark?: boolean;
   className?: string;
 }) {
   const id = useId().replace(/:/g, "");
@@ -49,7 +46,7 @@ export function TrustRing({
           cy={size / 2}
           r={r}
           fill="none"
-          stroke={onDark ? "rgb(255 255 255 / 0.1)" : "var(--color-sunken)"}
+          stroke="var(--color-sunken)"
           strokeWidth={sw}
         />
         {score !== undefined ? (
@@ -72,7 +69,7 @@ export function TrustRing({
           className={cn(
             "tabular tracking-[-0.02em]",
             size >= 56 ? "font-display font-extrabold" : "font-semibold",
-            score === undefined ? (onDark ? "text-white/45" : "text-faint") : onDark ? "text-white" : "text-ink",
+            score === undefined ? "text-faint" : "text-ink",
           )}
           style={{ ...TRIM, fontSize: score === undefined ? Math.round(size * 0.24) : Math.round(size * (size >= 56 ? 0.32 : 0.3)) }}
         >

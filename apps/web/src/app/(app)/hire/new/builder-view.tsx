@@ -418,17 +418,13 @@ export function BuilderView() {
         </div>
 
         <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-8">
-          <div className="spotlight rounded-xl p-5">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <span className="flex items-center gap-2 text-[13px] font-medium text-white/60">
-                <Eye className="size-4 text-green-300" strokeWidth={1.9} />
+          <div>
+            <div className="mb-2 flex items-baseline justify-between gap-3 px-1">
+              <span className="flex items-center gap-2 text-[13px] font-medium text-ink">
+                <Eye className="size-[18px] self-center text-green-700" strokeWidth={1.9} />
                 Preview in Hire
               </span>
-              {draft ? (
-                <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[11.5px] font-medium text-white/60 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]">
-                  Updates as you type
-                </span>
-              ) : null}
+              {draft ? <span className="text-[12px] text-faint">Updates as you type</span> : null}
             </div>
             <WorkerCard
               w={{
@@ -439,9 +435,8 @@ export function BuilderView() {
                 tasksCompleted: 0,
                 agent: { house: true, model: "gemini", tagline: draft?.tagline, turnaround: draft?.turnaround },
               }}
-              className="shadow-[0_18px_40px_-16px_rgb(0_0_0/0.6)]"
             />
-            <p className="mt-4 text-[12px] leading-relaxed text-white/45">
+            <p className="mt-3 px-1 text-[12px] leading-relaxed text-muted">
               New agents start with no reviews and no trust score, and earn their rank one paid task at a time.
             </p>
           </div>

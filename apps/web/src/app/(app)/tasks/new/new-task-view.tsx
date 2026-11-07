@@ -42,7 +42,7 @@ import { Amount } from "@/components/ui/money";
 import { PersonaSwitch, useAs } from "@/components/tasks/persona";
 import { KIND_ICON, PolicyLine, SpecIcon, TaskCard, errorMessage, type CardTask } from "@/components/tasks/task-ui";
 import { useAutoPay, useFund } from "@/components/tasks/use-fund";
-import { cn, formatCents } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const HOUR = 3_600_000;
 
@@ -350,19 +350,14 @@ export function NewTaskView() {
                 </div>
                 <TaskCard preview task={previewTask(form, payoutCents)} />
               </div>
-              {/* What PayPal will hold: a brushed-metal card */}
-              <div className="metal-card flex min-h-[200px] flex-col justify-between rounded-xl p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2 text-[13px] font-semibold text-steel-800">
-                    <Lock className="size-4" strokeWidth={2} /> You fund now
-                  </div>
-                  <span className="h-7 w-9 rounded-[7px] bg-[linear-gradient(135deg,var(--color-steel-50),var(--color-steel-200)_45%,var(--color-steel-50))] shadow-[inset_0_0_0_1px_rgb(24_38_59/0.18)]" aria-hidden />
+              {/* What PayPal will hold */}
+              <Card className="flex min-h-[200px] flex-col justify-between gap-6 p-6">
+                <div className="flex items-center gap-2 text-[13px] font-medium text-steel-700">
+                  <Lock className="size-[18px]" strokeWidth={1.9} /> You fund now
                 </div>
-                <div className="mt-6">
-                  <span className="tabular font-display text-[48px] leading-none font-extrabold tracking-[-0.045em] text-steel-900">
-                    {formatCents(payoutCents)}
-                  </span>
-                  <p className="mt-2.5 text-[12.5px] leading-relaxed text-steel-800/75">
+                <div>
+                  <Amount cents={payoutCents} size="xl" className="text-[48px] text-steel-900" />
+                  <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
                     {autoPay.on ? (
                       <>
                         Auto-pay holds it from your saved PayPal{autoPay.payerEmail ? <> ({autoPay.payerEmail})</> : null}, no popup. PayPal keeps it until the proof passes.
@@ -372,7 +367,7 @@ export function NewTaskView() {
                     )}
                   </p>
                 </div>
-              </div>
+              </Card>
               <Card className="p-5">
                 <ol className="space-y-3.5">
                   {[
@@ -441,29 +436,29 @@ function HowItWorks() {
     { icon: <BadgeCheck />, title: "Pay", body: "You approve, PayPal captures and pays out. Both sides get the receipt." },
   ];
   return (
-    <div className="spotlight rounded-xl p-6 sm:p-7">
-      <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
-        <ShieldCheck className="size-4 text-green-300" strokeWidth={1.9} />
+    <Card className="p-6 sm:p-7">
+      <div className="flex items-center gap-2 text-[13px] font-medium text-ink-2">
+        <ShieldCheck className="size-[18px] text-green-700" strokeWidth={1.9} />
         How a task works
       </div>
-      <div className="mt-3 font-display text-[30px] leading-[1.08] font-extrabold tracking-[-0.04em] text-balance text-white">
+      <div className="mt-3 font-display text-[30px] leading-[1.08] font-extrabold tracking-[-0.04em] text-balance text-ink">
         The money moves only when the proof passes.
       </div>
       <ol className="mt-7 grid gap-5">
         {steps.map((s, i) => (
           <li key={s.title} className="grid grid-cols-[28px_minmax(0,1fr)] gap-3">
-            <span className="tabular font-display text-[22px] leading-none font-extrabold tracking-[-0.04em] text-white/30">{i + 1}</span>
+            <span className="tabular font-display text-[22px] leading-none font-extrabold tracking-[-0.04em] text-faint">{i + 1}</span>
             <span className="min-w-0">
-              <span className="flex items-center gap-2 text-[14px] font-semibold text-white [&_svg]:size-4 [&_svg]:stroke-[1.9] [&_svg]:text-green-300">
+              <span className="flex items-center gap-2 text-[14px] font-semibold text-ink [&_svg]:size-4 [&_svg]:stroke-[1.9] [&_svg]:text-green-700">
                 {s.icon}
                 {s.title}
               </span>
-              <span className="mt-1 block text-[12.5px] leading-snug text-white/55">{s.body}</span>
+              <span className="mt-1 block text-[12.5px] leading-snug text-muted">{s.body}</span>
             </span>
           </li>
         ))}
       </ol>
-    </div>
+    </Card>
   );
 }
 

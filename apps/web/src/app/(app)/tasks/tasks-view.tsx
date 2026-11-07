@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useMemo, useState } from "react";
-import { ArrowRight, Clock, CircleCheck, Hourglass, Inbox, LayoutGrid, ListChecks, Lock, Plus, UserRound } from "lucide-react";
+import { ArrowRight, Clock, Inbox, LayoutGrid, ListChecks, Lock, Plus, UserRound } from "lucide-react";
 import { AiAgentIcon } from "@/components/ui/icons";
 import { CATEGORY_LABEL } from "@plex/backend/lib/taskRules";
 import { api } from "@/lib/convex";
@@ -62,23 +62,10 @@ export function TasksView() {
 
 // ── Hero ─────────────────────────────────────────────────────────────────────
 
-const GLASS = "rounded-full bg-white/[0.08] px-2.5 py-1 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]";
-
-/** A big amount for dark grounds: the sign small and dim, the digits in the display face. */
-function BigMoney({ cents, className }: { cents: number; className?: string }) {
-  const f = formatCents(cents);
-  return (
-    <span className={cn("tabular inline-flex items-start font-display font-extrabold tracking-[-0.045em]", className)}>
-      <span className="mt-[0.18em] mr-1 text-[0.42em] font-bold text-white/45">$</span>
-      {f.replace("$", "")}
-    </span>
-  );
-}
-
 /**
- * The board, lit: the money waiting for takers as the one big figure, what's
- * moving and what's been paid as glass chips, the open money split by kind of
- * work below. Beside it, the brushed-metal card for what PayPal holds.
+ * The board at a glance: the money waiting for takers as the one big figure,
+ * what's moving and what's been paid as a plain line, the open money split by
+ * kind of work below. Beside it, a plain card for what PayPal holds.
  */
 function BoardStats() {
   const open = useQuery(api.tasks.board, { status: "open" });
@@ -102,55 +89,45 @@ function BoardStats() {
   }, [open]);
 
   return (
-    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="@container spotlight flex min-h-[300px] flex-col rounded-xl p-6 sm:p-7">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
-            <ListChecks className="size-4 text-green-300" strokeWidth={1.9} />
+    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_340px]">
+      <Card className="flex min-h-[300px] flex-col p-6 sm:p-7">
+        <div className="flex items-center justify-between gap-3 text-[13px]">
+          <div className="flex items-center gap-2 font-medium text-ink-2">
+            <ListChecks className="size-[18px] text-green-700" strokeWidth={1.9} />
             Open on the board
           </div>
-          <span className={cn(GLASS, "tabular text-[11.5px] font-medium text-white/60")}>
+          <span className="tabular text-faint">
             {loading ? "…" : `${open!.length} task${open!.length === 1 ? "" : "s"}`}
           </span>
         </div>
         <div className="mt-4">
-          {loading ? (
-            <div className="h-14 w-48 rounded-lg bg-white/10" />
-          ) : (
-            <BigMoney cents={openCents} className="text-[56px] leading-none text-white @[480px]:text-[68px]" />
-          )}
+          {loading ? <Skeleton className="h-14 w-48" /> : <Amount cents={openCents} size="xl" className="text-[56px]" />}
         </div>
-        <p className="mt-2 text-[13px] text-white/50">Waiting for a taker, and paid only on proof.</p>
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] font-medium">
-          <span className={cn(GLASS, "tabular flex items-center gap-1.5 text-white/75")}>
-            <AiAgentIcon className="size-3 text-white/50" strokeWidth={2.2} />
-            {loading ? "…" : `${agentsOpen} open to AI agents`}
-          </span>
-          <span className={cn(GLASS, "tabular flex items-center gap-1.5 text-white/75")}>
-            <Hourglass className="size-3 text-white/50" strokeWidth={2.2} />
-            {loading ? "…" : `${inProof} in progress`}
-          </span>
-          <span className="tabular flex items-center gap-1 rounded-full bg-green-300/15 px-2.5 py-1 text-green-200 shadow-[inset_0_0_0_1px_rgb(110_243_214/0.25)]">
-            <CircleCheck className="size-3" strokeWidth={2.4} />
-            {loading ? "…" : `${formatCents(paidCents)} paid on proof · ${paid.length} task${paid.length === 1 ? "" : "s"}`}
-          </span>
+        <div className="tabular mt-3 text-[13px] text-muted">
+          {loading ? (
+            "…"
+          ) : (
+            <>
+              {agentsOpen} open to AI agents · {inProof} in progress ·{" "}
+              <span className="font-medium text-green-700">
+                {formatCents(paidCents)} paid on proof
+              </span>
+            </>
+          )}
         </div>
 
         {/* The open money by kind of work: one bar, a segment per kind */}
         <div className="mt-auto pt-8">
           {loading ? (
-            <div className="h-2 w-full rounded-full bg-white/10" />
+            <Skeleton className="h-2 w-full rounded-full" />
           ) : byKind.length ? (
             <>
               <div className="flex h-2 gap-1">
                 {byKind.map(([k, cents], i) => (
                   <span
                     key={k}
-                    className="h-full min-w-2 rounded-full"
-                    style={{
-                      flexGrow: cents,
-                      background: i === 0 ? "var(--meter-brand)" : `rgb(255 255 255 / ${Math.max(0.14, 0.42 - i * 0.1)})`,
-                    }}
+                    className={cn("h-full min-w-2 rounded-full", i === 0 ? "" : i === 1 ? "bg-green-200" : "bg-sunken")}
+                    style={{ flexGrow: cents, background: i === 0 ? "var(--meter-brand)" : undefined }}
                   />
                 ))}
               </div>
@@ -159,46 +136,40 @@ function BoardStats() {
                   const Icon = KIND_ICON[k];
                   return (
                     <span key={k} className="flex items-center gap-1.5 text-[12px]">
-                      <Icon className={cn("size-3.5", i === 0 ? "text-green-300" : "text-white/40")} strokeWidth={1.9} />
-                      <span className="text-white/55">{CATEGORY_LABEL[k]}</span>
-                      <span className="tabular font-semibold text-white/90">{formatCents(cents)}</span>
+                      <Icon className={cn("size-3.5", i === 0 ? "text-green-700" : "text-faint")} strokeWidth={1.9} />
+                      <span className="text-muted">{CATEGORY_LABEL[k]}</span>
+                      <span className="tabular font-semibold text-ink">{formatCents(cents)}</span>
                     </span>
                   );
                 })}
               </div>
             </>
           ) : (
-            <p className="text-[12.5px] text-white/45">Nothing open right now. Post a task and it shows up here.</p>
+            <p className="text-[12.5px] text-muted">Nothing open right now. Post a task and it shows up here.</p>
           )}
         </div>
-      </div>
+      </Card>
 
-      {/* Held: a brushed-metal card, like one in a wallet */}
-      <div className="metal-card flex min-h-[220px] flex-col justify-between rounded-xl p-6 sm:p-7">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2 text-[13px] font-semibold text-steel-800">
-            <Lock className="size-4" strokeWidth={2} />
-            Held by PayPal
-          </div>
-          <span className="h-7 w-9 rounded-[7px] bg-[linear-gradient(135deg,var(--color-steel-50),var(--color-steel-200)_45%,var(--color-steel-50))] shadow-[inset_0_0_0_1px_rgb(24_38_59/0.18)]" aria-hidden />
+      <Card className="flex flex-col justify-between gap-8 p-6 sm:p-7">
+        <div className="flex items-center gap-2 text-[13px] font-medium text-steel-700">
+          <Lock className="size-[18px]" strokeWidth={1.9} />
+          Held by PayPal
         </div>
         <div>
           {loading ? (
-            <Skeleton className="h-12 w-28 bg-white/40" />
+            <Skeleton className="h-11 w-28" />
           ) : (
-            <span className="tabular font-display text-[48px] leading-none font-extrabold tracking-[-0.045em] text-steel-900">
-              {formatCents(heldCents)}
-            </span>
+            <Amount cents={heldCents} size="xl" className="text-[48px] text-steel-900" />
           )}
-          <div className="mt-2 flex items-center gap-1.5 text-[12.5px] font-medium text-steel-800">
-            <Clock className="size-3.5" strokeWidth={2} />
+          <div className="tabular mt-3 flex items-center gap-1.5 text-[13px] font-medium text-steel-700">
+            <Clock className="size-4" strokeWidth={1.9} />
             {loading ? "…" : `Across ${held.length} task${held.length === 1 ? "" : "s"}`}
           </div>
-          <p className="mt-3 text-[12px] leading-relaxed text-steel-800/75">
+          <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
             Released only when the proof passes. Back to the poster if it doesn&apos;t.
           </p>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

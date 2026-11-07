@@ -293,24 +293,24 @@ export function ProofUpload({ id }: { id: string }) {
         </div>
 
         <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-8">
-          {/* The challenge code: the screen's lit card */}
-          <section className="spotlight rounded-xl p-6">
-            <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
-              <ShieldCheck className="size-4 text-green-300" strokeWidth={1.9} /> Challenge code
+          {/* The challenge code: the screen's key figure */}
+          <Card className="p-6">
+            <div className="flex items-center gap-2 text-[13px] font-medium text-ink-2">
+              <ShieldCheck className="size-[18px] text-green-700" strokeWidth={1.9} /> Challenge code
             </div>
-            <div className="mt-4 font-mono text-[40px] leading-none font-semibold tracking-[-0.02em] break-all text-white">
+            <div className="mt-4 font-mono text-[44px] leading-none font-semibold tracking-[-0.02em] break-all text-ink">
               {task.challengeCode}
             </div>
-            <p className="mt-3 text-[12.5px] leading-relaxed text-white/55">
+            <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
               Write it on paper and hold it in one photo. It proves the photo was taken for this task, today.
             </p>
             {task.location ? (
               <div className="mt-6 flex items-center justify-between gap-3">
                 <span className="flex min-w-0 items-start gap-2.5 text-[13px]">
-                  <MapPin className="mt-0.5 size-[18px] flex-none text-white/45" strokeWidth={1.9} />
+                  <MapPin className="mt-0.5 size-[18px] flex-none text-faint" strokeWidth={1.9} />
                   <span className="min-w-0">
-                    <span className="block font-medium leading-snug text-white">{task.location.label}</span>
-                    <span className="block text-[12px] leading-snug text-white/50">
+                    <span className="block font-medium leading-snug text-ink">{task.location.label}</span>
+                    <span className="block text-[12px] leading-snug text-muted">
                       {geo.state === "ok"
                         ? `Location shared · ±${Math.round(geo.accuracy ?? 0)} m`
                         : geo.state === "denied"
@@ -320,22 +320,17 @@ export function ProofUpload({ id }: { id: string }) {
                   </span>
                 </span>
                 {geo.state === "ok" ? (
-                  <span className="flex flex-none items-center gap-1 text-[12.5px] font-medium text-green-300">
+                  <span className="flex flex-none items-center gap-1 text-[12.5px] font-medium text-green-700">
                     <Check className="size-4" strokeWidth={2.4} /> Shared
                   </span>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={shareLocation}
-                    disabled={geo.state === "asking"}
-                    className="flex h-8 flex-none items-center gap-1.5 rounded-full bg-white/[0.1] px-3 text-[12.5px] font-medium text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12)] transition-colors hover:bg-white/[0.16] disabled:opacity-60 [&_svg]:size-3.5 [&_svg]:stroke-[2]"
-                  >
+                  <Button variant="secondary" size="sm" onClick={shareLocation} disabled={geo.state === "asking"} className="flex-none">
                     {geo.state === "asking" ? <Loader2 className="animate-spin" /> : <Crosshair />} Share
-                  </button>
+                  </Button>
                 )}
               </div>
             ) : null}
-          </section>
+          </Card>
 
           <Card className="max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-20 max-lg:rounded-none max-lg:shadow-float">
             <div className="hidden px-5 pt-4 lg:block">

@@ -52,18 +52,7 @@ export function WorkerAvatar({ w, size }: { w: Pick<WorkerCardData, "name" | "ki
 }
 
 /** "AI agent" marker, in words: house agents are run by Plex, outside agents come through the API. */
-export function AgentMarker({ house, onDark, className }: { house?: boolean; onDark?: boolean; className?: string }) {
-  if (onDark)
-    return (
-      <span
-        className={cn(
-          "inline-flex h-[22px] items-center rounded-full bg-white/[0.08] px-2 text-[11.5px] font-medium whitespace-nowrap text-white/75 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]",
-          className,
-        )}
-      >
-        {house ? "Plex agent" : "Outside agent"}
-      </span>
-    );
+export function AgentMarker({ house, className }: { house?: boolean; className?: string }) {
   return (
     <Badge tone={house ? "steel" : "neutral"} className={cn("h-5 px-1.5 text-[11px]", className)}>
       {house ? "Plex agent" : "Outside agent"}
