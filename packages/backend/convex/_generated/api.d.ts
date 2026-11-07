@@ -10,10 +10,12 @@
 
 import type * as agent from "../agent.js";
 import type * as agentApi from "../agentApi.js";
+import type * as agentBuilder from "../agentBuilder.js";
 import type * as agentMoney from "../agentMoney.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as applications from "../applications.js";
 import type * as asks from "../asks.js";
+import type * as autopay from "../autopay.js";
 import type * as bills from "../bills.js";
 import type * as campaigns from "../campaigns.js";
 import type * as causeBuilder from "../causeBuilder.js";
@@ -34,6 +36,7 @@ import type * as lib_ledgerAi from "../lib/ledgerAi.js";
 import type * as lib_ledgerSeed from "../lib/ledgerSeed.js";
 import type * as lib_ledgerSpec from "../lib/ledgerSpec.js";
 import type * as lib_money from "../lib/money.js";
+import type * as lib_paypalDesk from "../lib/paypalDesk.js";
 import type * as lib_policy from "../lib/policy.js";
 import type * as lib_policyAi from "../lib/policyAi.js";
 import type * as lib_receipts from "../lib/receipts.js";
@@ -42,6 +45,8 @@ import type * as lib_taskRules from "../lib/taskRules.js";
 import type * as lib_viewer from "../lib/viewer.js";
 import type * as memory from "../memory.js";
 import type * as merchants from "../merchants.js";
+import type * as paypalDesk from "../paypalDesk.js";
+import type * as paypalDeskData from "../paypalDeskData.js";
 import type * as pots from "../pots.js";
 import type * as proofs from "../proofs.js";
 import type * as receipts from "../receipts.js";
@@ -62,10 +67,12 @@ import type {
 declare const fullApi: ApiFromModules<{
   agent: typeof agent;
   agentApi: typeof agentApi;
+  agentBuilder: typeof agentBuilder;
   agentMoney: typeof agentMoney;
   apiKeys: typeof apiKeys;
   applications: typeof applications;
   asks: typeof asks;
+  autopay: typeof autopay;
   bills: typeof bills;
   campaigns: typeof campaigns;
   causeBuilder: typeof causeBuilder;
@@ -86,6 +93,7 @@ declare const fullApi: ApiFromModules<{
   "lib/ledgerSeed": typeof lib_ledgerSeed;
   "lib/ledgerSpec": typeof lib_ledgerSpec;
   "lib/money": typeof lib_money;
+  "lib/paypalDesk": typeof lib_paypalDesk;
   "lib/policy": typeof lib_policy;
   "lib/policyAi": typeof lib_policyAi;
   "lib/receipts": typeof lib_receipts;
@@ -94,6 +102,8 @@ declare const fullApi: ApiFromModules<{
   "lib/viewer": typeof lib_viewer;
   memory: typeof memory;
   merchants: typeof merchants;
+  paypalDesk: typeof paypalDesk;
+  paypalDeskData: typeof paypalDeskData;
   pots: typeof pots;
   proofs: typeof proofs;
   receipts: typeof receipts;

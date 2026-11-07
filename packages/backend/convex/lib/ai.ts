@@ -33,6 +33,9 @@ function deadline(ms: number): AbortSignal {
   return controller.signal;
 }
 
+/** Retries with back-off (about 2s, 4s, 8s, 16s): rides out Vertex's 429 "resource exhausted". */
+export const RETRIES = 4;
+
 // Same names as apps/agent (GOOGLE_CLOUD_*), or the AI SDK's (GOOGLE_VERTEX_*).
 const vertexProject = () => process.env.GOOGLE_VERTEX_PROJECT ?? process.env.GOOGLE_CLOUD_PROJECT;
 const vertexLocation = () => process.env.GOOGLE_VERTEX_LOCATION ?? process.env.GOOGLE_CLOUD_LOCATION ?? "global";
@@ -204,7 +207,7 @@ export async function generateStructured<T>(input: StructuredInput<T>): Promise<
       system: input.system,
       messages: [{ role: "user", content } as ModelMessage],
       output: Output.object({ schema: input.schema }),
-      maxRetries: 1,
+      maxRetries: RETRIES,
       abortSignal: deadline(90_000),
     });
     return { object: result.output as T, model: modelId };
@@ -241,7 +244,7 @@ export async function generateMarkdown(
       system: input.system,
       prompt: input.prompt,
       maxOutputTokens: 8192,
-      maxRetries: 1,
+      maxRetries: RETRIES,
       abortSignal: deadline(120_000),
       ...(input.search ? { tools: { google_search: provider.tools.googleSearch({}) } as never } : {}),
     });
@@ -272,7 +275,7 @@ export async function generateImage(input: ImageInput): Promise<{ data: Uint8Arr
     const result = await generateText({
       model: provider(modelId),
       prompt: input.prompt,
-      maxRetries: 1,
+      maxRetries: RETRIES,
       abortSignal: deadline(120_000),
       providerOptions: { google: { responseModalities: ["TEXT", "IMAGE"] }, vertex: { responseModalities: ["TEXT", "IMAGE"] } },
     });

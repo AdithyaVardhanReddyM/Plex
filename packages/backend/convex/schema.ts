@@ -300,6 +300,11 @@ export default defineSchema({
         specialties: v.array(v.string()), // keywords it bids on
         floorCents: v.number(), // private: the least it will take, enforced in code
         turnaround: v.string(), // "about 2 minutes"
+        // Added by the agent builder: agents people create with Plex's builder agent
+        custom: v.optional(v.boolean()),
+        instructions: v.optional(v.string()), // the creator's method and style; below Plex's rules, never shown publicly
+        tools: v.optional(v.array(v.union(v.literal("web_search"), v.literal("image")))),
+        createdFor: v.optional(v.id("tasks")), // the task nobody could do, that it was made for
       }),
     ),
   })
@@ -326,6 +331,24 @@ export default defineSchema({
   })
     .index("by_owner", ["ownerId"])
     .index("by_keyHash", ["keyHash"]),
+
+  // Auto-pay: a PayPal wallet saved once with PayPal Vault, so tasks (and the
+  // agents posting them) can hold funds without a checkout popup. Its own table
+  // so the payment token never rides along with a user doc to a browser.
+  autopay: defineTable({
+    userId: v.id("users"),
+    status: v.union(v.literal("pending"), v.literal("active"), v.literal("off")),
+    setupTokenId: v.optional(v.string()),
+    vaultId: v.optional(v.string()), // PayPal payment token
+    customerId: v.optional(v.string()),
+    payerEmail: v.optional(v.string()),
+    limitCents: v.number(), // the most one task may hold without asking
+    dailyLimitCents: v.number(),
+    usedDay: v.string(), // "2026-11-07" (UTC), resets usedCents
+    usedCents: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
 
   // ── Policy engine: pots, rules, approvals ──────────────────────────────────
 
@@ -463,6 +486,7 @@ export default defineSchema({
       orderId: v.optional(v.string()),
       authorizationId: v.optional(v.string()),
       captureId: v.optional(v.string()),
+      via: v.optional(v.union(v.literal("checkout"), v.literal("autopay"))), // autopay: a saved wallet, no popup
     }),
     assigneeId: v.optional(v.id("users")),
     causeId: v.optional(v.id("causes")),
@@ -480,6 +504,27 @@ export default defineSchema({
     invitedId: v.optional(v.id("users")),
     criteria: v.optional(v.array(acceptanceCriterion)), // checked by code on digital work
     autoHire: v.optional(v.boolean()), // hands-free: hire the best bid, pay when every check passes
+    // The PayPal desk agent (PayPal Agent Toolkit) read PayPal's own records for this task
+    paypalCheck: v.optional(
+      v.object({
+        at: v.number(),
+        model: v.string(),
+        match: v.boolean(), // code compared PayPal's numbers with the receipts
+        summary: v.string(), // the agent's words
+        facts: v.array(v.object({ label: v.string(), value: v.string(), ok: v.optional(v.boolean()) })),
+        tools: v.array(v.string()), // toolkit calls the agent made, in order
+        dispute: v.optional(
+          v.object({
+            id: v.string(),
+            status: v.string(),
+            reason: v.string(),
+            amount: v.string(),
+            action: v.union(v.literal("contest"), v.literal("accept")), // decided by code from the proof
+            why: v.string(),
+          }),
+        ),
+      }),
+    ),
   })
     .index("by_status", ["status"])
     .index("by_poster", ["posterId"])

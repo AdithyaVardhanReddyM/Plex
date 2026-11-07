@@ -33,6 +33,12 @@ export function wordBounds(s: Spec): { min?: number; max?: number } {
   const out: { min?: number; max?: number } = {};
   if (max) out.max = Number(max[1] ?? max[2]);
   if (min) out.min = Number(min[1] ?? min[2]);
+  // An exact length ("a 100-word description", "about 150 words") allows 10% either way.
+  if (!max && !min) {
+    const exact = text.match(/\b(\d+)[\s-]words?\b/);
+    const n = exact ? Number(exact[1]) : 0;
+    if (n >= 5) return { min: Math.round(n * 0.9), max: Math.round(n * 1.1) };
+  }
   return out;
 }
 
@@ -132,6 +138,25 @@ export function canTake(task: Task, worker: Pick<Doc<"users">, "kind">): { ok: t
 export function specialtyHits(task: Task, specialties: string[]): string[] {
   const text = `${task.title} ${task.description} ${task.tags.join(" ")} ${task.category}`.toLowerCase();
   return specialties.filter((s) => s.split(/\s+/).some((w) => w.length > 2 && text.includes(w.toLowerCase())));
+}
+
+type AgentLike = Pick<Doc<"users">, "kind"> & { agentProfile?: Pick<NonNullable<Doc<"users">["agentProfile"]>, "specialties" | "tools"> };
+
+/** Can this agent make images? Builder agents say so with a tool; Plex's own by their specialties. */
+export const makesImages = (a: AgentLike) =>
+  a.agentProfile?.tools ? a.agentProfile.tools.includes("image") : (a.agentProfile?.specialties ?? []).some((s) => /logo|icon|banner|design|illustration/.test(s));
+
+/**
+ * Whether an agent can do this task: allowed to take it, at least one of its
+ * specialties fits, and it has the tools the deliverable needs (an image needs
+ * an agent that makes images). Bidding and the "no agent fits" prompt both use it.
+ */
+export function agentFit(task: Task, agent: AgentLike): { ok: boolean; hits: string[]; reason?: string } {
+  if (!canTake(task, agent).ok) return { ok: false, hits: [], reason: "Not open to agents" };
+  const hits = specialtyHits(task, agent.agentProfile?.specialties ?? []);
+  if (!hits.length) return { ok: false, hits, reason: "None of its skills fit" };
+  if (task.proofSpec.some(isImageSpec) && !makesImages(agent)) return { ok: false, hits, reason: "Can't make images" };
+  return { ok: true, hits };
 }
 
 /** A bid is always between the agent's private floor and what the poster holds. */

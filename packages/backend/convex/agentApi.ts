@@ -127,10 +127,19 @@ export const handle = httpAction(async (ctx, req) => {
       if (auth.worker) return json(403, { error: "Worker keys can't fund tasks." });
       const origin = typeof body.origin === "string" && /^https?:\/\/[^/]+$/.test(body.origin) ? body.origin : siteUrl();
       const r = await ctx.runAction(internal.taskMoney.startFundingFor, { taskId, origin, hour: localHour(), posterId: auth.owner._id });
+      if (r.autoPaid)
+        return json(200, {
+          state: "authorized",
+          autoPaid: true,
+          orderId: r.orderId,
+          note: `${r.note}. Agents are bidding now if it's open to agents.`,
+        });
       return json(200, {
+        state: "needs_approval",
+        autoPaid: false,
         approveUrl: r.approveUrl,
         orderId: r.orderId,
-        note: `${auth.owner.name} approves this once in PayPal; the money is held, not paid, until the proof passes.`,
+        note: `${r.note ? `${r.note}. ` : ""}${auth.owner.name} approves this once in PayPal; the money is held, not paid, until the proof passes. Turn on auto-pay at /developers to skip this.`,
       });
     }
     if (verb === "accept") {

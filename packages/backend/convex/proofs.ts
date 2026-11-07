@@ -280,8 +280,8 @@ const visionSchema = z.object({
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export const check = internalAction({
-  args: { proofId: v.id("proofs") },
-  handler: async (ctx, { proofId }) => {
+  args: { proofId: v.id("proofs"), tries: v.optional(v.number()) },
+  handler: async (ctx, { proofId, tries }) => {
     const c = await ctx.runQuery(internal.proofs.checkContext, { proofId });
     if (!c) return;
     const { proof, task, reused, mediaTypes } = c;
@@ -293,7 +293,7 @@ export const check = internalAction({
     };
 
     if (isDigitalTask(task)) {
-      await checkDigital(ctx, proofId, proof, task, mediaTypes, put, results);
+      await checkDigital(ctx, proofId, proof, task, mediaTypes, put, results, tries ?? 0);
       return;
     }
 
@@ -466,6 +466,7 @@ async function checkDigital(
   mediaTypes: Record<string, string>,
   put: (check: string, status: CheckStatus, detail: string) => Promise<void>,
   results: Progress[],
+  tries: number,
 ) {
   // 1. Every item is there. Text files are read so the proofers can see them.
   const parts: string[] = [];
@@ -540,10 +541,11 @@ async function checkDigital(
     }
   }
 
-  // 4. Blind proofers, in parallel. None sees another's card.
+  // 4. Blind proofers, in parallel (a moment apart, to stay under Gemini's rate limit). None sees another's card.
   const deliverable = parts.join("\n\n").slice(0, 12_000);
   const cards: Scorecard[] = await Promise.all(
     PROOFERS.map(async (p, n) => {
+      await sleep(n * 1500);
       const r = await generateStructured({
         name: `proofer-${n}`,
         schema: scorecardSchema,
@@ -573,6 +575,12 @@ async function checkDigital(
   const fails = results.filter((r) => r.status === "fail" && !r.check.startsWith("Proofer") && r.check !== "Consensus").length;
   const result = fails ? "fail" : vote.result;
   const heuristic = cards.some((c) => c.model === HEURISTIC);
+  // Gemini is set up but was busy (rate limit): ask the proofers again rather than let placeholders decide.
+  if (heuristic && aiConfigured() && tries < 3) {
+    await put("Consensus", "unsure", "Gemini was busy, so the proofers will look again in a minute");
+    await ctx.scheduler.runAfter(60_000 * (tries + 1), internal.proofs.check, { proofId, tries: tries + 1 });
+    return;
+  }
   const firstFail = results.find((r) => r.status === "fail" && !r.check.startsWith("Proofer") && r.check !== "Consensus");
   await ctx.runMutation(internal.proofs.finalize, {
     proofId,
@@ -580,7 +588,7 @@ async function checkDigital(
     confidence: fails ? 0.85 : vote.confidence,
     summary: fails
       ? `${fails} required check${fails > 1 ? "s" : ""} failed (${firstFail?.check}: ${firstFail?.detail}), so the proofers' scores don't count.`
-      : `${vote.line}. ${(cards.find((c) => c.verdict === vote.result)?.note ?? "").replace(/([^.!?])$/, "$1.")}${heuristic ? " Scored by heuristic proofers (no Gemini key), so a person decides." : ""}`.trim(),
+      : `${vote.line}. ${(cards.find((c) => c.verdict === vote.result)?.note ?? "").replace(/([^.!?])$/, "$1.")}${heuristic ? (aiConfigured() ? " Gemini stayed busy, so heuristic proofers scored it and a person decides." : " Scored by heuristic proofers (no Gemini key), so a person decides.") : ""}`.trim(),
     checks: results.map((r) => ({
       check: r.check,
       passed: r.status === "pass",
@@ -637,12 +645,31 @@ export const reject = mutation({
     const why = reason.trim() || "Didn't match the proof spec";
     await ctx.db.patch(proofId, { decision: "rejected", rejectReason: why.slice(0, 400) });
     await ctx.db.patch(task._id, { status: "rejected" });
+    // A Plex house agent doesn't argue: it redoes the work with the poster's reason (up to 3 attempts).
+    const worker = await ctx.db.get(proof.workerId);
+    const attempts = (
+      await ctx.db
+        .query("proofs")
+        .withIndex("by_task", (q) => q.eq("taskId", task._id))
+        .collect()
+    ).length;
+    const redo = worker?.kind === "agent" && worker.agentProfile?.house && attempts < 3;
+    if (redo) await ctx.scheduler.runAfter(1000, internal.houseAgents.work, { taskId: task._id, agentId: worker._id });
     const rid = await fundingReceiptId(ctx, task);
     if (rid) {
       const r = await ctx.db.get(rid);
       if (r)
         await ctx.db.patch(rid, {
-          timeline: [...r.timeline, { at: Date.now(), label: `Proof rejected: ${clip(why, 60)}. Still held while the worker can contest`, state: r.state }],
+          timeline: [
+            ...r.timeline,
+            {
+              at: Date.now(),
+              label: redo
+                ? `Proof rejected: ${clip(why, 60)}. Still held while ${worker!.name} redoes it`
+                : `Proof rejected: ${clip(why, 60)}. Still held while the worker can contest`,
+              state: r.state,
+            },
+          ],
         });
     }
   },
