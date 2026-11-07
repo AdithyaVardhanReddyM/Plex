@@ -1,6 +1,6 @@
 import { generateObject } from "ai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
+import { geminiModel } from "./ai";
 import { describeRule, type PolicyRule } from "./policy";
 
 /**
@@ -8,7 +8,7 @@ import { describeRule, type PolicyRule } from "./policy";
  * `policyRule`s exactly once, when they write them. It never decides whether
  * money may move: `evaluate()` in `policy.ts` does that, in code.
  *
- * Gemini (structured output) when `GOOGLE_GENERATIVE_AI_API_KEY` is set;
+ * Gemini (structured output) on Vertex AI or AI Studio when configured;
  * otherwise a deterministic parser that covers the phrasings the demo uses.
  * Either way the user confirms the proposal before it is saved.
  */
@@ -23,10 +23,10 @@ export interface ParsedPolicy {
 export const GEMINI_MODEL = "gemini-3.5-flash";
 
 export async function parsePolicy(text: string): Promise<ParsedPolicy> {
-  const key = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  if (!key) return parsePolicyHeuristic(text);
+  const model = geminiModel(GEMINI_MODEL);
+  if (!model) return parsePolicyHeuristic(text);
   try {
-    return await parsePolicyWithGemini(text, key);
+    return await parsePolicyWithGemini(text, model);
   } catch (err) {
     console.warn("Gemini policy parse failed, using the heuristic parser", err);
     return parsePolicyHeuristic(text);
@@ -59,10 +59,9 @@ const geminiSchema = z.object({
   unparsed: z.array(z.string()).describe("Sentences that are not spending limits, quoted verbatim"),
 });
 
-async function parsePolicyWithGemini(text: string, apiKey: string): Promise<ParsedPolicy> {
-  const google = createGoogleGenerativeAI({ apiKey });
+async function parsePolicyWithGemini(text: string, model: NonNullable<ReturnType<typeof geminiModel>>): Promise<ParsedPolicy> {
   const { object } = await generateObject({
-    model: google(GEMINI_MODEL),
+    model,
     schema: geminiSchema,
     temperature: 0,
     system: [
