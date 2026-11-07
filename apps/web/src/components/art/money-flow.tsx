@@ -96,7 +96,7 @@ export function MoneyFlow({
               </div>
             ) : null}
             <div className="relative flex-none">
-              <IconTile tone={s.tone} size="lg" className={cn("size-11", s.tone === "ink" && "shadow-raised")}>
+              <IconTile tone={s.tone === "ink" ? "mint" : s.tone} size="lg">
                 {s.icon}
               </IconTile>
             </div>

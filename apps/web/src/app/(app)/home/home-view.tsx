@@ -6,7 +6,6 @@ import { useMemo, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
-  Check,
   Clock,
   ListChecks,
   Lock,
@@ -100,17 +99,6 @@ export function HomeView() {
 
 // ── This week ────────────────────────────────────────────────────────────────
 
-/** A big amount for dark grounds: the sign small and dim, the digits in the display face. */
-function BigMoney({ cents, className }: { cents: number; className?: string }) {
-  const f = formatCents(cents);
-  return (
-    <span className={cn("tabular inline-flex items-start font-display font-extrabold tracking-[-0.045em]", className)}>
-      <span className="mt-[0.18em] mr-1 text-[0.42em] font-bold text-white/45">$</span>
-      {f.replace("$", "")}
-    </span>
-  );
-}
-
 function WeekCard({
   week,
   movedCents,
@@ -137,80 +125,55 @@ function WeekCard({
       return { cents, label: new Date(from).toLocaleDateString("en-US", { weekday: "short" }) };
     });
   }, [week, now]);
-  const peak = days.reduce((m, d, i) => (d.cents > days[m]!.cents ? i : m), 0);
+  const peak = days.reduce((m, d, i) => (d.cents > days[m]!.cents ? i : m), days.length - 1);
   const agents = new Set(week.map((r) => r.agentLabel).filter(Boolean)).size;
 
   return (
-    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_360px]">
-      {/* Spotlight: the week, lit */}
-      <div className="@container spotlight flex min-h-[340px] flex-col rounded-xl p-6 sm:p-7">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
-            <AiAgentIcon className="size-4 text-green-300" strokeWidth={1.9} />
+    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_340px]">
+      <Card className="flex min-h-[300px] flex-col p-6 sm:p-7">
+        <div className="flex items-center justify-between gap-3 text-[13px]">
+          <div className="flex items-center gap-2 font-medium text-ink-2">
+            <AiAgentIcon className="size-[18px] text-green-700" />
             Moved by your agents
           </div>
-          <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[11.5px] font-medium text-white/60 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]">
-            Last 7 days
-          </span>
+          <span className="text-faint">Last 7 days</span>
         </div>
         <div className="mt-4">
-          {loading ? (
-            <div className="h-14 w-56 rounded-lg bg-white/10" />
-          ) : (
-            <BigMoney cents={movedCents} className="text-[56px] leading-none text-white @[480px]:text-[68px]" />
-          )}
+          {loading ? <Skeleton className="h-14 w-52" /> : <Amount cents={movedCents} size="xl" className="text-[56px]" />}
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] font-medium">
-          <span className="tabular rounded-full bg-white/[0.08] px-2.5 py-1 text-white/75 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]">
-            {week.length} receipts
-          </span>
-          <span className="tabular rounded-full bg-white/[0.08] px-2.5 py-1 text-white/75 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]">
-            {agents} agent{agents === 1 ? "" : "s"}
-          </span>
-          <span className="flex items-center gap-1 rounded-full bg-green-300/15 px-2.5 py-1 text-green-200 shadow-[inset_0_0_0_1px_rgb(110_243_214/0.25)]">
-            <Check className="size-3" strokeWidth={2.6} />0 outside your rules
-          </span>
+        <div className="tabular mt-3 text-[13px] text-muted">
+          {week.length} receipts · {agents} agent{agents === 1 ? "" : "s"} ·{" "}
+          <span className="font-medium text-green-700">0 outside your rules</span>
         </div>
         <DayBars
           values={days.map((d) => d.cents)}
           labels={days.map((d) => d.label)}
           highlight={peak}
-          height={104}
-          onDark
+          height={96}
           className="mt-auto pt-8"
         />
-      </div>
+      </Card>
 
-      {/* Held: a brushed-metal card, like one in a wallet */}
-      <div className="metal-card flex min-h-[220px] flex-col justify-between rounded-xl p-6 sm:p-7">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2 text-[13px] font-semibold text-steel-800">
-            <Lock className="size-4" strokeWidth={2} />
-            Held by PayPal
-          </div>
-          {/* the card's chip */}
-          <span className="h-7 w-9 rounded-[7px] bg-[linear-gradient(135deg,#f6f9fc,#b8c8dc_45%,#eef3f8)] shadow-[inset_0_0_0_1px_rgb(24_38_59/0.18)]">
-            <span className="mx-auto mt-[9px] block h-px w-5 bg-steel-700/30" />
-            <span className="mx-auto mt-[5px] block h-px w-5 bg-steel-700/30" />
-          </span>
+      <Card className="flex flex-col justify-between gap-8 p-6 sm:p-7">
+        <div className="flex items-center gap-2 text-[13px] font-medium text-steel-700">
+          <Lock className="size-[18px]" strokeWidth={1.9} />
+          Held by PayPal
         </div>
         <div>
           {loading ? (
-            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-11 w-28" />
           ) : (
-            <span className="tabular font-display text-[48px] leading-none font-extrabold tracking-[-0.045em] text-steel-900">
-              {formatCents(heldCents)}
-            </span>
+            <Amount cents={heldCents} size="xl" className="text-[48px] text-steel-900" />
           )}
-          <div className="mt-2 flex items-center gap-1.5 text-[12.5px] font-medium text-steel-800">
-            <Clock className="size-3.5" strokeWidth={2} />
+          <div className="mt-3 flex items-center gap-1.5 text-[13px] font-medium text-steel-700">
+            <Clock className="size-4" strokeWidth={1.9} />
             {heldCount} waiting on proof
           </div>
-          <p className="mt-3 text-[12px] leading-relaxed text-steel-800/75">
+          <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
             Paid out the moment the work is verified. Back to you if it isn&apos;t.
           </p>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
