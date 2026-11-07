@@ -1,6 +1,7 @@
 "use client";
 
-import { SignInButton, UserButton } from "@clerk/nextjs";
+import Link from "next/link";
+import { UserButton } from "@clerk/nextjs";
 import { useConvexAuth, useMutation } from "convex/react";
 import { useEffect } from "react";
 import { LogIn } from "lucide-react";
@@ -34,14 +35,12 @@ function ClerkAccount() {
       </div>
     );
   return (
-    <SignInButton mode="modal">
-      <button
-        type="button"
-        className="flex h-9 w-full items-center gap-2.5 rounded-sm px-2.5 text-[13px] font-medium text-muted transition-colors hover:bg-sunken hover:text-ink"
-      >
-        <LogIn className="size-4" strokeWidth={1.9} />
-        Sign in
-      </button>
-    </SignInButton>
+    <Link
+      href="/sign-in"
+      className="flex h-9 w-full items-center gap-2.5 rounded-sm px-2.5 text-[13px] font-medium text-muted transition-colors hover:bg-sunken hover:text-ink"
+    >
+      <LogIn className="size-4" strokeWidth={1.9} />
+      Sign in
+    </Link>
   );
 }

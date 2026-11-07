@@ -40,7 +40,7 @@ Requires Node 20.19+ and pnpm 10. Convex runs as a local anonymous deployment, s
 
 ```bash
 pnpm install
-pnpm dev          # Convex (local, :3210) + Next.js on http://localhost:3000
+pnpm dev          # Convex (the deployment in packages/backend/.env.local) + Next.js on http://localhost:3000
 ```
 
 In a second terminal, give Convex your PayPal sandbox app's credentials (from *Apps & Credentials* in the developer dashboard), then seed the demo world:

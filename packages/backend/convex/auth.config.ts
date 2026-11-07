@@ -6,7 +6,7 @@
  * the variable is unset, even with a fallback, so the domain is a constant.)
  * Without a Clerk session everyone is a guest exploring the demo world.
  */
-const CLERK_ISSUER = "https://ideal-aphid-5927.clerk.accounts.dev";
+const CLERK_ISSUER = "https://lenient-civet-2954.clerk.accounts.dev";
 
 export default {
   providers: [{ domain: CLERK_ISSUER, applicationID: "convex" }],

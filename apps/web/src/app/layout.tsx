@@ -20,7 +20,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       {/* Client-side Clerk only: no `dynamic`, so pages still prerender (cacheComponents). */}
-      <body className="min-h-full">{clerkEnabled ? <ClerkProvider>{app}</ClerkProvider> : app}</body>
+      <body className="min-h-full">{clerkEnabled ? (
+          <ClerkProvider signInUrl="/sign-in" signUpUrl="/sign-up" afterSignOutUrl="/home">
+            {app}
+          </ClerkProvider>
+        ) : (
+          app
+        )}</body>
     </html>
   );
 }

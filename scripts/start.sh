@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Start Plex with one command: Convex (local) and the web app on :3000.
+# Start Plex with one command: Convex (the deployment in packages/backend/.env.local,
+# cloud or local) and the web app on :3000.
 #
 #   pnpm start              everything
 #   pnpm start --no-web     Convex only
@@ -26,8 +27,13 @@ die() { printf '%s✖ %s%s\n' "$red" "$*" "$reset"; exit 1; }
 command -v pnpm >/dev/null || die "pnpm is missing (npm i -g pnpm)."
 [ -d node_modules ] || { say "Installing packages"; pnpm install --silent || die "pnpm install failed."; }
 
+# Which Convex: the URL `convex dev` wrote to packages/backend/.env.local.
+CONVEX_URL=$(grep -s '^CONVEX_URL=' packages/backend/.env.local | cut -d= -f2- | tr -d '"'"'"' ')
+CONVEX_URL=${CONVEX_URL:-http://127.0.0.1:3210}
+LOCAL_PORT=$(echo "$CONVEX_URL" | sed -nE 's#^https?://(127\.0\.0\.1|localhost):([0-9]+).*#\2#p')
+
 # Free the ports from an earlier run that didn't shut down.
-for port in 3210 $([ "$WEB" = 1 ] && echo 3000); do
+for port in $LOCAL_PORT $([ "$WEB" = 1 ] && echo 3000); do
   pids=$(lsof -ti tcp:"$port" -sTCP:LISTEN 2>/dev/null || true)
   if [ -n "$pids" ]; then
     printf '%s  Port %s is in use (pid %s): stopping it.%s\n' "$dim" "$port" "$(echo $pids | tr '\n' ' ')" "$reset"
@@ -49,7 +55,7 @@ stop_all() {
   echo
   say "Stopping Plex"
   for pid in "${PIDS[@]}"; do disown "$pid" 2>/dev/null; pkill -P "$pid" 2>/dev/null; kill "$pid" 2>/dev/null; done
-  for port in 3210 3000; do
+  for port in $LOCAL_PORT 3000; do
     pids=$(lsof -ti tcp:"$port" -sTCP:LISTEN 2>/dev/null || true)
     [ -n "$pids" ] && kill $pids 2>/dev/null
   done
@@ -68,13 +74,13 @@ wait_for() { # url seconds label
 }
 
 convex_query() { # path → JSON value, or empty on error
-  curl -s -m 5 http://127.0.0.1:3210/api/query -H 'content-type: application/json' \
+  curl -s -m 5 "$CONVEX_URL/api/query" -H 'content-type: application/json' \
     -d "{\"path\":\"$1\",\"args\":{},\"format\":\"json\"}"
 }
 
-say "Starting Convex (local, http://127.0.0.1:3210)"
+say "Starting Convex ($CONVEX_URL)"
 start convex 36 pnpm --filter @plex/backend dev
-wait_for http://127.0.0.1:3210/version 90 "Convex"
+wait_for "$CONVEX_URL/version" 90 "Convex"
 # The functions must be pushed before the app can call them.
 for _ in $(seq 1 90); do
   convex_query users:viewer | grep -q '"status":"success"' && break
@@ -91,6 +97,6 @@ if [ "$WEB" = 1 ]; then
   start web 34 pnpm --filter @plex/web dev
 fi
 
-printf '\n%s✔ Plex is up.%s Convex :3210%s\n' "$green" "$reset" "$([ "$WEB" = 1 ] && echo ' · web http://localhost:3000')"
+printf '\n%s✔ Plex is up.%s Convex %s%s\n' "$green" "$reset" "$CONVEX_URL" "$([ "$WEB" = 1 ] && echo ' · web http://localhost:3000')"
 printf '%s  Ctrl-C stops everything.%s\n\n' "$dim" "$reset"
 wait
