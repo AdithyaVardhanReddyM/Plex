@@ -18,8 +18,13 @@
   /* The app's content sheet, a step lighter than the canvas the sidebar sits on */
   --color-panel: #fbfcfc;
   --color-sunken: #eff2f1;
-  --color-line: #e2e7e5;
-  --color-line-strong: #cfd7d4;
+  --color-line: #e9edeb;
+  --color-line-strong: #d5dcd9;
+
+  /* Night: the ink frame around the app and its spotlight cards */
+  --color-night: #08100e;
+  --color-night-2: #0f1a17;
+  --color-night-3: #172521;
 
   /* Ink */
   --color-ink: #0c1512;
@@ -63,12 +68,12 @@
   --radius-xs: 6px;
   --radius-sm: 8px;
   --radius-md: 12px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
-  --radius-2xl: 24px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --radius-2xl: 28px;
 
-  --shadow-card: 0 1px 2px rgb(12 21 18 / 0.04), 0 1px 1px rgb(12 21 18 / 0.02);
-  --shadow-hover: 0 1px 2px rgb(12 21 18 / 0.05), 0 6px 16px -6px rgb(12 21 18 / 0.1);
+  --shadow-card: 0 0 0 1px rgb(12 21 18 / 0.035), 0 1px 2px rgb(12 21 18 / 0.04), 0 10px 28px -14px rgb(12 21 18 / 0.13);
+  --shadow-hover: 0 0 0 1px rgb(12 21 18 / 0.05), 0 2px 4px rgb(12 21 18 / 0.05), 0 18px 40px -16px rgb(12 21 18 / 0.2);
   --shadow-inset-top: inset 0 1px 0 rgb(255 255 255 / 0.55);
   --shadow-raised: 0 1px 2px rgb(12 21 18 / 0.05), 0 8px 24px -8px rgb(12 21 18 / 0.12);
   --shadow-float: 0 2px 4px rgb(12 21 18 / 0.04), 0 24px 48px -16px rgb(24 38 59 / 0.22);
@@ -137,6 +142,43 @@ body {
   font-feature-settings: "tnum";
 }
 
+/*
+ * Spotlight: the one dark, lit card on a screen. Night ink with mint and aqua
+ * light pooling from the corners and a fine grain of dots.
+ */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: white;
+  background:
+    radial-gradient(70% 90% at 0% 0%, rgb(110 243 214 / 0.22) 0%, transparent 60%),
+    radial-gradient(60% 80% at 100% 100%, rgb(13 206 218 / 0.2) 0%, transparent 62%),
+    radial-gradient(40% 60% at 85% 0%, rgb(115 147 189 / 0.22) 0%, transparent 70%),
+    linear-gradient(160deg, var(--color-night-3) 0%, var(--color-night) 70%);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.06) inset, 0 24px 48px -24px rgb(8 16 14 / 0.55);
+}
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1.2px);
+  background-size: 16px 16px;
+  mask-image: linear-gradient(180deg, black, transparent 85%);
+}
+
+/* A held-money card: brushed steel with a sheen, like a card in a wallet */
+.metal-card {
+  position: relative;
+  overflow: hidden;
+  color: var(--color-steel-900);
+  background:
+    linear-gradient(115deg, transparent 30%, rgb(255 255 255 / 0.55) 46%, transparent 60%),
+    linear-gradient(140deg, #f3f6fa 0%, #c9d6e6 38%, #8ea6c6 70%, #dbe4ef 100%);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.5) inset, 0 18px 36px -18px rgb(24 38 59 / 0.45);
+}
+
 .font-display {
   font-family: var(--font-display);
   font-feature-settings: "tnum" 0;
@@ -148,9 +190,9 @@ body {
  */
 .aurora {
   background:
-    radial-gradient(60% 120% at 12% 0%, rgb(110 243 214 / 0.16) 0%, transparent 60%),
-    radial-gradient(50% 110% at 55% 0%, rgb(13 206 218 / 0.09) 0%, transparent 62%),
-    radial-gradient(45% 100% at 92% 0%, rgb(115 147 189 / 0.12) 0%, transparent 60%);
+    radial-gradient(55% 120% at 8% 0%, rgb(110 243 214 / 0.26) 0%, transparent 60%),
+    radial-gradient(45% 110% at 52% 0%, rgb(13 206 218 / 0.12) 0%, transparent 62%),
+    radial-gradient(45% 100% at 96% 0%, rgb(115 147 189 / 0.2) 0%, transparent 60%);
 }
 
 /* Fine dots for illustration grounds */

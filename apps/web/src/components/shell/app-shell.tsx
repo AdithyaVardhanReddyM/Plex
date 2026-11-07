@@ -49,7 +49,7 @@ function NavItems({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
     <nav className="flex flex-col gap-4">
       {NAV_GROUPS.map((group) => (
         <div key={group.label}>
-          <div className="px-2.5 pb-1.5 text-[11.5px] font-medium text-faint">{group.label}</div>
+          <div className="px-2.5 pb-1.5 text-[11.5px] font-medium text-white/30">{group.label}</div>
           <div className="flex flex-col gap-px">
             {group.items.map(({ href, label, icon: Icon }) => {
               const active = pathname === href || pathname.startsWith(href + "/");
@@ -60,19 +60,19 @@ function NavItems({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                   href={href}
                   onClick={onNavigate}
                   className={cn(
-                    "group relative flex h-8 items-center gap-2.5 rounded-[9px] px-2.5 text-[13.5px] transition-colors",
-                    active ? "font-medium text-ink" : "text-ink-2 hover:bg-sunken hover:text-ink",
+                    "group relative flex h-9 items-center gap-2.5 rounded-[10px] px-2.5 text-[13.5px] transition-colors",
+                    active ? "font-medium text-white" : "text-white/60 hover:bg-white/[0.05] hover:text-white",
                   )}
                 >
                   {active ? (
                     <motion.span
                       layoutId="nav-active"
-                      className="absolute inset-0 rounded-[9px] bg-surface shadow-[0_1px_2px_rgb(12_21_18/0.06),0_0_0_1px_var(--color-line)]"
+                      className="absolute inset-0 rounded-[10px] bg-[linear-gradient(90deg,rgb(110_243_214/0.16),rgb(255_255_255/0.06))] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]"
                       transition={{ type: "spring", stiffness: 520, damping: 42 }}
                     />
                   ) : null}
                   <Icon
-                    className={cn("relative size-4 flex-none", active ? "text-ink" : "text-faint group-hover:text-ink-2")}
+                    className={cn("relative size-4 flex-none", active ? "text-green-300" : "text-white/40 group-hover:text-white/70")}
                     strokeWidth={1.9}
                   />
                   <span className="relative flex-1 truncate">{label}</span>
@@ -80,8 +80,7 @@ function NavItems({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                     <span
                       className={cn(
                         "tabular relative rounded-full px-1.5 text-[11px] leading-[18px] font-medium",
-                        href === "/pots" ? "bg-steel-100 text-steel-700" : "bg-sunken text-muted",
-                        active && href !== "/pots" && "bg-canvas",
+                        href === "/pots" ? "bg-green-400 text-ink" : "bg-white/10 text-white/70",
                       )}
                     >
                       {count}
@@ -104,13 +103,13 @@ function SearchButton({ className }: { className?: string }) {
       type="button"
       onClick={open}
       className={cn(
-        "flex h-9 w-full items-center gap-2 rounded-[10px] border border-line bg-surface px-2.5 text-[13px] text-faint shadow-card transition-colors hover:border-line-strong hover:text-muted",
+        "flex h-9 w-full items-center gap-2 rounded-[10px] bg-white/[0.06] px-2.5 text-[13px] text-white/45 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.07)] transition-colors hover:bg-white/[0.09] hover:text-white/70",
         className,
       )}
     >
       <Search className="size-4" strokeWidth={1.9} />
       <span className="flex-1 text-left">Search or jump to…</span>
-      <Kbd className="hidden lg:inline-flex">⌘K</Kbd>
+      <Kbd className="hidden border-white/10 bg-white/[0.06] text-white/50 shadow-none lg:inline-flex">⌘K</Kbd>
     </button>
   );
 }
@@ -127,14 +126,14 @@ function AgentsCard() {
   return (
     <div
       className={cn(
-        "rounded-[12px] border bg-surface p-3 shadow-card transition-colors",
-        paused ? "border-refunded/25" : "border-line",
+        "relative overflow-hidden rounded-[14px] p-3.5 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)] transition-colors",
+        paused ? "bg-refunded/15" : "bg-[radial-gradient(120%_120%_at_0%_0%,rgb(110_243_214/0.16),transparent_60%),rgb(255_255_255/0.04)]",
       )}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-[13px] font-semibold text-ink">Agent spending</div>
-          <div className={cn("mt-0.5 flex items-center gap-1.5 text-[11.5px]", paused ? "text-refunded" : "text-muted")}>
+          <div className="text-[13px] font-semibold text-white">Agent spending</div>
+          <div className={cn("mt-0.5 flex items-center gap-1.5 text-[11.5px]", paused ? "text-amber-300" : "text-white/50")}>
             <StatusDot tone={paused ? "amber" : "green"} live={!paused && viewer !== undefined} />
             {paused ? "Paused, nothing can spend" : "Live, inside your rules"}
           </div>
@@ -145,14 +144,13 @@ function AgentsCard() {
           label={paused ? "Resume agent spending" : "Pause agent spending"}
         />
       </div>
-      <div className="mt-3 border-t border-line pt-2.5">
-        <div className="tabular mb-1.5 flex items-baseline justify-between text-[11.5px] text-muted">
+      <div className="mt-4">
+        <div className="tabular flex items-baseline justify-between text-[11.5px] text-white/45">
           <span>This month</span>
-          <span>
-            <span className="font-medium text-ink-2">{formatCents(spent)}</span> of {formatCents(budget)}
-          </span>
+          <span>of {formatCents(budget)}</span>
         </div>
-        <Meter value={budget ? spent / budget : 0} size="sm" label="Spent this month across pots" />
+        <div className="font-display tabular mt-0.5 text-[20px] font-bold tracking-[-0.03em] text-white">{formatCents(spent)}</div>
+        <Meter value={budget ? spent / budget : 0} size="sm" label="Spent this month across pots" className="mt-2 bg-white/10" />
       </div>
     </div>
   );
@@ -187,7 +185,7 @@ function Crumbs() {
       <Link
         href={item.href}
         className={cn(
-          "flex items-center gap-2 rounded-[8px] px-1.5 py-1 font-medium transition-colors hover:bg-sunken",
+          "flex items-center gap-2 rounded-full px-2 py-1 font-medium transition-colors hover:bg-surface/80",
           sub ? "text-muted" : "text-ink",
         )}
       >
@@ -226,12 +224,12 @@ function ApprovalsBell() {
 function TopBar() {
   const { open } = useCommandMenu();
   return (
-    <header className="sticky top-0 z-20 hidden h-14 items-center justify-between gap-4 border-b border-line/80 bg-panel/85 px-5 backdrop-blur-md lg:flex lg:rounded-t-xl">
+    <header className="sticky top-0 z-20 hidden h-14 items-center justify-between gap-4 bg-canvas/70 px-6 backdrop-blur-xl lg:flex lg:rounded-t-[22px]">
       <Suspense fallback={<div />}>
         <Crumbs />
       </Suspense>
       <div className="flex flex-none items-center gap-1.5">
-        <span className="mr-1.5 hidden items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1 text-[11.5px] font-medium text-muted xl:flex">
+        <span className="mr-1.5 hidden items-center gap-1.5 rounded-full bg-surface/80 px-2.5 py-1 text-[11.5px] font-medium text-muted shadow-card xl:flex">
           <StatusDot tone="steel" />
           PayPal sandbox
         </span>
@@ -258,22 +256,22 @@ function TopBar() {
 function MobileBar({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const { open: openSearch } = useCommandMenu();
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-canvas/90 px-4 backdrop-blur lg:hidden">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between bg-night px-4 text-white lg:hidden">
       <Link href="/home" aria-label="Plex home">
-        <Wordmark size={17} />
+        <Wordmark size={17} className="text-white" />
       </Link>
       <div className="flex items-center gap-1">
         <button
           type="button"
           onClick={openSearch}
           aria-label="Search"
-          className="flex size-9 items-center justify-center rounded-full text-ink-2 hover:bg-sunken"
+          className="flex size-9 items-center justify-center rounded-full text-white/80 hover:bg-white/10"
         >
           <Search className="size-[18px]" strokeWidth={1.9} />
         </button>
         <button
           type="button"
-          className="flex size-9 items-center justify-center rounded-full text-ink-2 hover:bg-sunken"
+          className="flex size-9 items-center justify-center rounded-full text-white/80 hover:bg-white/10"
           onClick={onToggle}
           aria-label={open ? "Close menu" : "Open menu"}
         >
@@ -296,15 +294,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
     <CommandMenuProvider>
-      <div className="min-h-screen bg-canvas lg:flex lg:h-screen lg:overflow-hidden">
-        {/* Sidebar */}
-        <aside className="hidden w-[252px] flex-none flex-col px-3 pt-4 pb-3 lg:flex">
-          <div className="mb-4 flex h-8 items-center justify-between px-2">
+      <div className="min-h-screen bg-night lg:flex lg:h-screen lg:overflow-hidden">
+        {/* Sidebar: the ink frame */}
+        <aside className="relative hidden w-[256px] flex-none flex-col px-3 pt-5 pb-3 lg:flex">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(90%_70%_at_0%_0%,rgb(110_243_214/0.13),transparent_70%)]"
+            aria-hidden
+          />
+          <div className="relative mb-5 flex h-8 items-center justify-between px-2">
             <Link href="/home" aria-label="Plex home">
-              <Wordmark size={17} />
+              <Wordmark size={18} className="text-white" />
             </Link>
+            <span className="rounded-full bg-white/[0.07] px-2 py-0.5 text-[10.5px] font-medium text-white/50 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06)]">
+              Sandbox
+            </span>
           </div>
-          <SearchButton className="mb-5" />
+          <SearchButton className="relative mb-6" />
           <SidebarBody />
         </aside>
 
@@ -312,7 +317,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <AnimatePresence>
           {open ? (
             <motion.div
-              className="fixed inset-x-0 top-14 bottom-0 z-20 flex flex-col bg-canvas px-3 pt-3 pb-4 lg:hidden"
+              className="fixed inset-x-0 top-14 bottom-0 z-20 flex flex-col bg-night px-3 pt-3 pb-4 lg:hidden"
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
@@ -328,13 +333,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="min-w-0 flex-1 lg:py-2 lg:pr-2">
           <div
             id="app-scroll"
-            className="scroll-quiet relative bg-panel lg:h-full lg:overflow-y-auto lg:rounded-xl lg:border lg:border-line lg:shadow-card"
+            className="scroll-quiet relative min-h-screen bg-canvas lg:h-full lg:min-h-0 lg:overflow-y-auto lg:rounded-[22px]"
           >
             <TopBar />
             <Suspense fallback={null}>
               <ScrollReset />
             </Suspense>
-            <div className="aurora pointer-events-none absolute inset-x-0 top-0 h-[340px] lg:rounded-t-xl" aria-hidden />
+            <div className="aurora pointer-events-none absolute inset-x-0 top-0 h-[420px] lg:rounded-t-[22px]" aria-hidden />
             <main className="relative mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-10 lg:pt-9 lg:pb-14">
               {children}
             </main>

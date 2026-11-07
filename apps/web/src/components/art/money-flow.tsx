@@ -75,15 +75,15 @@ export function MoneyFlow({
   ];
 
   return (
-    <Card className={cn("relative overflow-hidden", className)}>
+    <Card className={cn("relative flex flex-col overflow-hidden", className)}>
       <div className="dot-ground pointer-events-none absolute inset-0 [mask-image:linear-gradient(180deg,transparent,black_55%,transparent)] opacity-60" aria-hidden />
-      <div className="relative flex flex-col gap-1 px-5 pt-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="relative flex flex-col gap-1 px-6 pt-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="text-[14.5px] font-semibold tracking-[-0.012em] text-ink">How every dollar moved this week</div>
-          <div className="text-[13px] text-muted">The model never decides. Code checks your rules, PayPal holds the money, proof releases it.</div>
+          <div className="font-display text-[16px] font-bold tracking-[-0.02em] text-ink">How every dollar moved this week</div>
+          <div className="mt-0.5 text-[13px] text-faint">The model never decides. Code checks your rules, PayPal holds the money, proof releases it.</div>
         </div>
       </div>
-      <ol className="relative grid gap-3 p-5 pt-5 md:grid-cols-5 md:gap-0">
+      <ol className="relative my-auto grid gap-3 px-5 pt-7 pb-7 md:grid-cols-5 md:gap-0">
         {stages.map((s, i) => (
           <li key={s.label} className="relative flex md:flex-col md:items-center md:px-2 md:text-center">
             {/* Connector to the next stage */}

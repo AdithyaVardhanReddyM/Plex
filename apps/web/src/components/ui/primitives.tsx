@@ -9,7 +9,7 @@ import { cn, initials } from "@/lib/utils";
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("rounded-lg border border-line bg-surface shadow-card", className)}
+      className={cn("rounded-lg bg-surface shadow-card", className)}
       {...props}
     />
   );
@@ -37,16 +37,16 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        "flex items-start justify-between gap-4 px-5 pt-4",
-        divider && "border-b border-line pb-3.5",
+        "flex items-start justify-between gap-4 px-6 pt-5",
+        divider && "pb-3",
         className,
       )}
     >
       <div className="flex min-w-0 items-start gap-3">
         {icon ? <IconTile size="sm" className="mt-px">{icon}</IconTile> : null}
         <div className="min-w-0">
-          <div className="text-[14.5px] font-semibold leading-6 tracking-[-0.012em] text-ink">{title}</div>
-          {description ? <div className="text-[13px] leading-snug text-muted">{description}</div> : null}
+          <div className="font-display text-[16px] leading-6 font-bold tracking-[-0.02em] text-ink">{title}</div>
+          {description ? <div className="mt-0.5 text-[13px] leading-snug text-faint">{description}</div> : null}
         </div>
       </div>
       {action ? <div className="flex min-h-6 flex-none items-center gap-2">{action}</div> : null}
@@ -471,22 +471,22 @@ export function PageHeader({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-5 pb-7 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex flex-col gap-5 pb-8 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex min-w-0 items-start gap-4">
         {icon ? (
-          <IconTile tone="white" size="lg" className="mt-1 hidden sm:flex">
+          <IconTile tone="ink" size="lg" className="mt-1.5 hidden size-12 rounded-[14px] sm:flex [&_svg]:size-5">
             {icon}
           </IconTile>
         ) : null}
         <div className="min-w-0">
           {eyebrow ? (
-            <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-medium text-green-700">{eyebrow}</div>
+            <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-surface/70 px-2.5 py-1 text-[12px] font-medium text-green-800 shadow-card backdrop-blur">{eyebrow}</div>
           ) : null}
-          <h1 className="font-display text-[28px] leading-[1.15] font-bold tracking-[-0.03em] text-ink sm:text-[30px]">
+          <h1 className="font-display text-[32px] leading-[1.05] font-extrabold tracking-[-0.04em] text-ink sm:text-[42px]">
             {title}
           </h1>
           {description ? (
-            <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-muted">{description}</p>
+            <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-muted">{description}</p>
           ) : null}
         </div>
       </div>

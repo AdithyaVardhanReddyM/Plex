@@ -72,6 +72,7 @@ export function DayBars({
   labels,
   height = 64,
   highlight,
+  onDark,
   className,
 }: {
   values: number[];
@@ -79,6 +80,8 @@ export function DayBars({
   height?: number;
   /** Index to light up; defaults to the last. */
   highlight?: number;
+  /** On a spotlight (night) card. */
+  onDark?: boolean;
   className?: string;
 }) {
   const max = Math.max(1, ...values);
@@ -89,16 +92,24 @@ export function DayBars({
         <div key={i} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
           <div className="flex w-full items-end" style={{ height }}>
             <div
-              className={cn("w-full rounded-[5px] transition-[height] duration-700 ease-out", i === lit ? "" : "bg-green-200/70")}
+              className={cn(
+                "w-full rounded-[6px] transition-[height] duration-700 ease-out",
+                i === lit ? (onDark ? "shadow-[0_0_24px_rgb(62_224_216/0.55)]" : "") : onDark ? "bg-white/[0.09]" : "bg-green-200/70",
+              )}
               style={{
                 height: `${Math.max(v > 0 ? 8 : 3, (v / max) * 100)}%`,
-                backgroundImage: i === lit ? "linear-gradient(180deg, var(--color-green-400), var(--color-green-500))" : undefined,
+                backgroundImage: i === lit ? "linear-gradient(180deg, var(--color-green-300), var(--color-green-500))" : undefined,
                 opacity: v > 0 || i === lit ? 1 : 0.6,
               }}
             />
           </div>
           {labels ? (
-            <span className={cn("text-[10.5px] leading-none", i === lit ? "font-medium text-ink-2" : "text-faint")}>
+            <span
+              className={cn(
+                "text-[10.5px] leading-none",
+                i === lit ? (onDark ? "font-medium text-white" : "font-medium text-ink-2") : onDark ? "text-white/35" : "text-faint",
+              )}
+            >
               {labels[i]}
             </span>
           ) : null}

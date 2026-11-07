@@ -8,7 +8,7 @@ import { ChevronsUpDown, LogIn, LogOut, UserRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/convex";
 import { CLERK_ENABLED } from "@/components/providers";
-import { Avatar, Skeleton } from "@/components/ui/primitives";
+import { Avatar } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
 
 /**
@@ -37,12 +37,12 @@ export function UserRow() {
   if (viewer === undefined)
     return (
       <div className="flex items-center gap-2.5 px-2 py-2">
-        <Skeleton className="size-8 rounded-full" />
-        <Skeleton className="h-3.5 w-24" />
+        <span className="size-8 rounded-full bg-white/10" />
+        <span className="h-3.5 w-24 rounded bg-white/10" />
       </div>
     );
   if (viewer === null)
-    return <div className="px-2.5 py-2 text-[12.5px] text-muted">Setting up your account…</div>;
+    return <div className="px-2.5 py-2 text-[12.5px] text-white/50">Setting up your account…</div>;
 
   return (
     <div ref={ref} className="relative">
@@ -64,18 +64,18 @@ export function UserRow() {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         className={cn(
-          "flex w-full items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-colors hover:bg-sunken",
-          open && "bg-sunken",
+          "flex w-full items-center gap-2.5 rounded-[12px] px-2 py-2 text-left transition-colors hover:bg-white/[0.06]",
+          open && "bg-white/[0.06]",
         )}
       >
         <Avatar name={viewer.name} color={viewer.avatarColor} src={viewer.avatarUrl} size={30} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-medium text-ink">{viewer.name}</span>
-          <span className="block truncate text-[11.5px] text-muted">
+          <span className="block truncate text-[13px] font-medium text-white">{viewer.name}</span>
+          <span className="block truncate text-[11.5px] text-white/45">
             {viewer.isGuest ? "Guest · demo sandbox" : `@${viewer.handle}`}
           </span>
         </span>
-        <ChevronsUpDown className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
+        <ChevronsUpDown className="size-3.5 flex-none text-white/35" strokeWidth={1.9} />
       </button>
     </div>
   );
