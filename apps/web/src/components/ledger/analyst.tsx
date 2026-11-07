@@ -394,8 +394,8 @@ export function Watchdog({ role, onShow }: { role: LedgerRole; onShow: (a: { tit
                 {a.severity === "warning" ? <TriangleAlert /> : <Eye />}
               </IconTile>
               <div className="min-w-0">
-                <div className="truncate text-[13.5px] leading-snug font-medium text-ink">{a.title}</div>
-                <p className="mt-0.5 truncate text-[12.5px] leading-snug text-muted" title={a.detail}>
+                <div className="line-clamp-2 text-[13.5px] leading-snug font-medium text-ink sm:truncate">{a.title}</div>
+                <p className="mt-0.5 line-clamp-2 text-[12.5px] leading-snug text-muted sm:truncate" title={a.detail}>
                   {a.detail}
                 </p>
               </div>

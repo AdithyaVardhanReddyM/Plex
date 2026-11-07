@@ -192,7 +192,7 @@ function StatCell({ label, foot, className, children }: { label: string; foot?: 
     <div className={cn("min-w-0 px-5 py-4 sm:px-6", className)}>
       <dt className="text-[12px] text-muted">{label}</dt>
       <dd className="mt-2 flex h-6 items-center gap-2.5">{children}</dd>
-      {foot ? <dd className="mt-1.5 truncate text-[12px] text-faint">{foot}</dd> : null}
+      {foot ? <dd className="mt-1.5 line-clamp-2 text-[12px] leading-snug text-faint sm:truncate">{foot}</dd> : null}
     </div>
   );
 }

@@ -269,6 +269,7 @@ function PotStrip({ pots }: { pots: Pot[] | undefined }) {
                 value={p.monthlyBudgetCents ? p.spentMonthCents / p.monthlyBudgetCents : 0}
                 size={34}
                 stroke={3.5}
+                className="hidden sm:inline-flex"
                 tone={p.color === "blue" || p.color === "steel" ? "steel" : "brand"}
               />
             </div>

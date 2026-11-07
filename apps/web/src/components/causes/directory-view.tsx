@@ -157,7 +157,7 @@ function MiniStat({ label, value }: { label: string; value: number }) {
   return (
     <div className="min-w-0 border-l border-line pl-3">
       <div className="tabular font-display text-[20px] leading-none font-bold tracking-[-0.02em] text-ink">{value}</div>
-      <div className="mt-1.5 truncate text-[12px] text-muted">{label}</div>
+      <div className="mt-1.5 line-clamp-2 text-[12px] leading-snug text-muted sm:truncate">{label}</div>
     </div>
   );
 }

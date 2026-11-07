@@ -98,7 +98,13 @@ export function CodeBlock({
         </div>
       ) : null}
       <div className="relative">
-        <pre className={cn("overflow-x-auto px-3.5 py-3 font-mono text-[12.5px] leading-[1.65] text-muted", bodyClassName)}>
+        <pre
+          className={cn(
+            "overflow-x-auto px-3.5 py-3 font-mono text-[12.5px] leading-[1.65] text-muted",
+            copy && !title && !lang && "pr-12",
+            bodyClassName,
+          )}
+        >
           <code>{highlight(code)}</code>
         </pre>
         {copy && !title && !lang ? <CopyButton value={code} label="" className="absolute top-1.5 right-1.5 bg-canvas px-1.5" /> : null}

@@ -180,7 +180,8 @@ function PotTile({
         </div>
         {waiting ? (
           <Badge tone="steel" className="tabular flex-none">
-            {waiting} waiting
+            {waiting}
+            <span className="hidden sm:inline">waiting</span>
           </Badge>
         ) : selected ? (
           <span className="flex size-5 flex-none items-center justify-center rounded-full bg-ink text-white">
@@ -318,7 +319,7 @@ function RulesCard({
 
       {/* Enforced as */}
       <div className="flex items-center justify-between gap-3 px-5 pt-5">
-        <div className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+        <div className="flex items-center gap-2 text-[13px] font-semibold whitespace-nowrap text-ink">
           {proposal ? "Plex read this as" : "Enforced as"}
           <span className="tabular rounded-full bg-sunken px-1.5 text-[11px] leading-[18px] font-medium text-muted">
             {showing.rules.length}
@@ -517,9 +518,9 @@ function TryIt({ pot, draft, paused, trial }: { pot: Pot; draft: Proposal | null
                 <div className="mt-3 text-[12.5px] text-muted">{outcome.sub}</div>
                 <div className="mt-0.5 text-[14px] font-medium leading-snug text-ink">{result.ruleText}</div>
               </div>
-              <dl className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.8fr)] divide-x divide-line border-t border-line bg-surface/80">
+              <dl className="grid grid-cols-2 gap-px border-t border-line bg-line sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
                 {facts.map(([k, v]) => (
-                  <div key={k} className="min-w-0 px-3 py-2.5">
+                  <div key={k} className="min-w-0 bg-surface px-3 py-2.5">
                     <dt className="text-[11px] text-faint">{k}</dt>
                     <dd className="mt-0.5 truncate text-[12.5px] font-medium text-ink-2">{v}</dd>
                   </div>

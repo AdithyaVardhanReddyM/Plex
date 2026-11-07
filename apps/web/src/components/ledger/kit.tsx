@@ -73,7 +73,7 @@ export function StatStrip({ stats, className }: { stats: StripStat[]; className?
             <span className="truncate">{s.label}</span>
           </div>
           <div className="mt-2 flex min-h-7 items-end">{s.value}</div>
-          {s.foot ? <div className="mt-1 truncate text-[12.5px] text-muted">{s.foot}</div> : null}
+          {s.foot ? <div className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-muted sm:truncate">{s.foot}</div> : null}
         </div>
       ))}
     </Card>

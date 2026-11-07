@@ -110,7 +110,7 @@ function SearchButton({ className }: { className?: string }) {
     >
       <Search className="size-4" strokeWidth={1.9} />
       <span className="flex-1 text-left">Search or jump to…</span>
-      <Kbd>⌘K</Kbd>
+      <Kbd className="hidden lg:inline-flex">⌘K</Kbd>
     </button>
   );
 }

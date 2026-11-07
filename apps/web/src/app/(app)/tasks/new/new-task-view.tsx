@@ -313,7 +313,7 @@ export function NewTaskView() {
                       Written by {model === "heuristic" ? "the heuristic writer (no Gemini key yet)" : model}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5">
+                    <span className="hidden items-center gap-1.5 sm:inline-flex">
                       <Kbd>⌘</Kbd>
                       <Kbd>Enter</Kbd>
                       <span className="ml-1">to write it</span>

@@ -365,12 +365,12 @@ export function Stat({
 }) {
   return (
     <div className={cn("min-w-0", className)}>
-      <div className="flex items-center gap-1.5 text-[12.5px] font-medium text-muted [&_svg]:size-3.5 [&_svg]:stroke-[1.9] [&_svg]:text-faint">
+      <div className="flex items-start gap-1.5 text-[12.5px] leading-snug font-medium text-muted [&_svg]:mt-px [&_svg]:size-3.5 [&_svg]:flex-none [&_svg]:stroke-[1.9] [&_svg]:text-faint">
         {icon}
-        <span className="truncate">{label}</span>
+        <span className="line-clamp-2 sm:truncate">{label}</span>
       </div>
       <div className="mt-1.5">{value}</div>
-      {foot ? <div className="mt-1 truncate text-[12.5px] text-muted">{foot}</div> : null}
+      {foot ? <div className="mt-1 line-clamp-2 text-[12.5px] leading-snug text-muted sm:truncate">{foot}</div> : null}
     </div>
   );
 }
