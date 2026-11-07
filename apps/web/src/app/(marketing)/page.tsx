@@ -54,9 +54,14 @@ export default function Landing() {
             <a href="#how" className="rounded-sm px-3 py-1.5 hover:text-ink">How it works</a>
             <a href="#paypal" className="rounded-sm px-3 py-1.5 hover:text-ink">Built on PayPal</a>
           </nav>
-          <Link href="/home" className={buttonVariants({ variant: "primary", size: "sm" })}>
-            Continue as guest
-          </Link>
+          <div className="flex items-center gap-1.5">
+            <Link href="/sign-in" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+              Sign in
+            </Link>
+            <Link href="/sign-up" className={buttonVariants({ variant: "primary", size: "sm" })}>
+              Get started
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -73,14 +78,14 @@ export default function Landing() {
               every dollar they move comes with a receipt: who it went to, why, which rule allowed it, and the proof.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link href="/home" className={buttonVariants({ variant: "primary", size: "lg" })}>
-                Continue as guest <ArrowRight />
+              <Link href="/sign-up" className={buttonVariants({ variant: "primary", size: "lg" })}>
+                Get started <ArrowRight />
               </Link>
-              <a href="#how" className={buttonVariants({ variant: "secondary", size: "lg" })}>
-                How it works
-              </a>
+              <Link href="/sign-in" className={buttonVariants({ variant: "secondary", size: "lg" })}>
+                Sign in
+              </Link>
             </div>
-            <p className="mt-4 text-[13px] text-faint">No account needed. You explore the PayPal sandbox as Adi.</p>
+            <p className="mt-4 text-[13px] text-faint">PayPal sandbox only. No real money moves.</p>
           </div>
           <HeroWithReplay />
         </section>
@@ -143,13 +148,13 @@ export default function Landing() {
         <section className="mx-auto w-full max-w-[1180px] px-4 pb-20 sm:px-6">
           <div className="grid-ground flex flex-col items-start gap-6 rounded-xl border border-line bg-surface px-6 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-10">
             <div>
-              <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-ink">Try Plex as Adi.</h2>
+              <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-ink">Put an agent to work.</h2>
               <p className="mt-2 max-w-lg text-[15px] leading-relaxed text-muted">
                 Approve a purchase, rewrite a limit, post a task, fund a cleanup shift. Sandbox money, real receipts.
               </p>
             </div>
-            <Link href="/home" className={buttonVariants({ variant: "primary", size: "lg" })}>
-              Continue as guest <ArrowRight />
+            <Link href="/sign-up" className={buttonVariants({ variant: "primary", size: "lg" })}>
+              Get started <ArrowRight />
             </Link>
           </div>
         </section>

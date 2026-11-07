@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { Wordmark } from "@/components/shell/wordmark";
 import { ParticleField } from "./particle-field";
 
@@ -31,29 +30,6 @@ export const clerkAppearance = {
   },
 };
 
-/** Under the Clerk card: the seeded demo world, no account needed. */
-function GuestEntry() {
-  return (
-    <div className="px-8 pt-5 pb-6">
-      <div className="mb-5 flex items-center gap-3 text-xs text-faint">
-        <span className="h-px flex-1 bg-line" />
-        or
-        <span className="h-px flex-1 bg-line" />
-      </div>
-      <Link
-        href="/home"
-        className="flex h-10 w-full items-center justify-center gap-2 rounded-sm border border-line bg-surface text-sm font-medium text-ink shadow-card transition-colors hover:border-line-strong hover:bg-canvas"
-      >
-        Continue as guest
-        <ArrowRight className="size-4" strokeWidth={1.9} />
-      </Link>
-      <p className="mt-3 text-center text-xs text-balance text-muted">
-        Explore the demo world as Adi. Sandbox money only.
-      </p>
-    </div>
-  );
-}
-
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <main className="flex min-h-dvh flex-1 items-center justify-center bg-canvas p-4 sm:p-6 lg:p-8">
@@ -74,7 +50,6 @@ export function AuthShell({ children }: { children: ReactNode }) {
           </Link>
           <div className="w-full max-w-[400px]">
             {children}
-            <GuestEntry />
           </div>
         </section>
       </div>
