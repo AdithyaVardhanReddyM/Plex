@@ -131,6 +131,20 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * Inside the app the page itself never scrolls (the content sheet does), so
+ * stop the rubber-band and paint the ground ink: an overscroll can't reveal a
+ * light strip under the dark frame.
+ */
+html:has(#app-scroll),
+html:has(#app-scroll) body {
+  background: var(--color-night);
+  overscroll-behavior: none;
+}
+#app-scroll {
+  overscroll-behavior-y: contain;
+}
+
 ::selection {
   background: var(--color-green-200);
   color: var(--color-ink);
