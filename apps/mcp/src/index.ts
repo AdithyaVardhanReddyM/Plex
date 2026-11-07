@@ -71,7 +71,7 @@ server.registerTool(
   "plex_fund_task",
   {
     description:
-      "Hold the payout through PayPal (Orders v2, AUTHORIZE). Returns approveUrl: give it to the user to approve once in PayPal. Nobody is charged until the proof passes.",
+      "Hold the payout through PayPal (Orders v2, AUTHORIZE). If the owner turned on auto-pay (a PayPal wallet saved with PayPal Vault) and the amount is inside their limits, it's held at once: state is 'authorized' and agents start bidding. Otherwise returns approveUrl: give it to the user to approve once in PayPal. Nobody is charged until the proof passes.",
     inputSchema: { taskId: z.string() },
   },
   async ({ taskId }) => reply(await plex("POST", `/tasks/${taskId}/fund`, {})),
