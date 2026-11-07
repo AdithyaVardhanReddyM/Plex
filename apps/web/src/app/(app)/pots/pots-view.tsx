@@ -648,24 +648,21 @@ const OUTCOME = {
     label: "Allowed",
     sub: "The agent can pay, and the Receipt cites",
     icon: CircleCheck,
-    text: "text-green-300",
+    text: "text-green-700",
   },
   needs_approval: {
     label: "Needs your OK",
     sub: "The agent stops and asks you, because of",
     icon: CircleAlert,
-    text: "text-steel-200",
+    text: "text-steel-700",
   },
   deny: {
     label: "Blocked",
     sub: "No money moves, because of",
     icon: CircleX,
-    text: "text-[color-mix(in_oklab,var(--color-disputed)_45%,white)]",
+    text: "text-disputed",
   },
 };
-
-const GLASS =
-  "rounded-full bg-white/[0.08] px-2.5 py-1 text-[11.5px] font-medium text-white/60 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]";
 
 /** The try-it state lives with the page, so the rules list can light up the rule that decided. */
 function useTrial(pot: Pot | undefined, draft: Proposal | null) {
@@ -735,30 +732,27 @@ function TryIt({ pot, draft, paused, trial }: { pot: Pot; draft: Proposal | null
           ) : !outcome || !result ? (
             <Skeleton className="h-[264px] w-full rounded-xl" />
           ) : (
-            <div className="spotlight flex min-h-[264px] flex-col rounded-xl p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className={cn("flex items-center gap-2", outcome.text)}>
-                  <outcome.icon className="size-5" strokeWidth={2} />
-                  <span className="font-display text-[22px] leading-none font-bold tracking-[-0.025em]">{outcome.label}</span>
+            <div className="flex min-h-[264px] flex-col rounded-xl bg-sunken/60 p-5">
+              <div className="flex items-center justify-between gap-3 text-[13px]">
+                <div className={cn("flex items-center gap-2 font-medium", outcome.text)}>
+                  <outcome.icon className="size-[18px]" strokeWidth={1.9} />
+                  {outcome.label}
                 </div>
-                <span className={GLASS}>evaluate()</span>
+                <code className="font-mono text-[12px] text-faint">evaluate()</code>
               </div>
-              <span className="tabular mt-4 inline-flex items-start font-display text-[44px] leading-none font-extrabold tracking-[-0.045em] text-white">
-                <span className="mt-[0.18em] mr-1 text-[0.42em] font-bold text-white/45">$</span>
-                {formatCents(sample.amountCents).replace("$", "")}
-              </span>
-              <div className="mt-4 text-[12.5px] text-white/55">{outcome.sub}</div>
-              <div className="mt-0.5 text-[14.5px] font-medium leading-snug text-white">{result.ruleText}</div>
+              <Amount cents={sample.amountCents} size="xl" className="mt-4 text-[48px]" />
+              <div className="mt-4 text-[12.5px] text-muted">{outcome.sub}</div>
+              <div className="mt-0.5 text-[14.5px] font-medium leading-snug text-ink">{result.ruleText}</div>
               <dl className="mt-auto grid grid-cols-2 gap-x-6 gap-y-3 pt-5">
                 {facts.map(([k, v]) => (
                   <div key={k} className="min-w-0">
-                    <dt className="text-[11.5px] text-white/45">{k}</dt>
-                    <dd className="mt-0.5 truncate text-[13.5px] font-medium text-white/90">{v}</dd>
+                    <dt className="text-[11.5px] text-faint">{k}</dt>
+                    <dd className="mt-0.5 truncate text-[13.5px] font-medium text-ink-2">{v}</dd>
                   </div>
                 ))}
               </dl>
               {paused ? (
-                <div className="mt-4 text-[12.5px] font-medium text-refunded-bg">Spending is paused, so every check is blocked.</div>
+                <div className="mt-4 text-[12.5px] font-medium text-disputed">Spending is paused, so every check is blocked.</div>
               ) : null}
             </div>
           )}
