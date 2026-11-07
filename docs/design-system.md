@@ -7,15 +7,16 @@ The app is judged on design. It must look bold and crafted, never like a stock d
 1. Icons stand alone: no tile, circle, square or chip behind an icon. `IconTile` now renders a bare icon; never hand-build an icon container. Icons are 18–20px in rows and cards, bigger in heroes.
 2. No header strips inside cards (a tinted band with a bottom border), and as few separator lines as possible: no `divide-y` lists, no `border-t`/`border-b` rules between sections of a card, no divided stat strips. Group with space, type size and surface instead. A list is rows with generous padding and a hover fill.
 3. No dots: no status dots in pills, no pulsing lights, no dotted pills, no dot grids. Say status in words and color.
-4. Never use Lucide's `Bot` icon (use `Cpu`, or the agent's own avatar).
+4. Never use Lucide's `Bot` icon. Agents use Plex's own `AiAgentIcon` (`@/components/ui/icons`).
 5. People get DiceBear faces (`Avatar` does it for round avatars); agents, brands and orgs use `Avatar square` with initials.
+6. No effect cards: no dark glowing "spotlight" cards, no brushed-metal cards, no glass chips. A screen's key figure sits on a plain white `Card` in big display type (see Home's `WeekCard`). Held money is a plain card with steel text.
+7. No top bar above pages; pages open straight onto their title.
 
 ## Signature surfaces
 
-- `.spotlight` (globals.css): a dark night card with mint/aqua light. One per screen, for the screen's key number or object (Home: the week). White text, `font-display` figures 48–68px, glass chips (`bg-white/[0.08] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]`).
-- `.metal-card`: brushed steel with a sheen, for money that's held by PayPal. Steel-900 text, big display figure.
-- Tinted card faces: `bg-[linear-gradient(150deg,var(--color-green-50),var(--color-green-100)_70%,var(--color-green-200))]` (or the steel equivalent) for objects like pots and causes: big figure, ink progress bar on `bg-white/60`.
-- Plain cards: `Card` (no border, layered shadow, 18px radius). Titles in `font-display` 16px bold via `CardHeader`.
+- The ink sidebar frame around a rounded light sheet with a pale aurora at the top.
+- Plain white borderless cards (`Card`) with big `font-display` figures for the key number.
+- Tinted card faces (mint or steel gradients) only for objects people own, like pots.
 
 ## The frame
 
