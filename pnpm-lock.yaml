@@ -8,10 +8,6 @@ importers:
 
   .: {}
 
-  apps/agent: {}
-
-  apps/mac: {}
-
   apps/mcp:
     dependencies:
       '@modelcontextprotocol/sdk':

@@ -1,9 +1,0 @@
-{
-  "name": "@plex/agent",
-  "private": true,
-  "version": "0.0.0",
-  "description": "Plex for Mac brain (Python, uv). Not built by turbo.",
-  "scripts": {
-    "dev": "uv run uvicorn server:app --port 8790 --reload"
-  }
-}

@@ -104,7 +104,7 @@ function Widgets({ specs, host, from, askId }: { specs: WidgetSpec[]; host: Widg
 
 // ── Ask the Ledger ───────────────────────────────────────────────────────────
 
-const VIA_LABEL = { web: null, mac: "From Plex for Mac", mcp: "From an agent over MCP" } as const;
+const VIA_LABEL = { web: null, mcp: "From an agent over MCP" } as const;
 
 export function Analyst({ host, spotlight, onClearSpotlight }: {
   host: WidgetHost;
@@ -118,7 +118,7 @@ export function Analyst({ host, spotlight, onClearSpotlight }: {
   const [activeId, setActiveId] = useState<Id<"ledgerAsks"> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // A new ask (from here, the Mac app or MCP) takes over the canvas.
+  // A new ask (from here or over MCP) takes over the canvas.
   const latest = asks?.[0];
   const lastSeen = useRef<string | null>(null);
   useEffect(() => {

@@ -233,7 +233,7 @@ export function runHeuristic(input: AnalystInput): Omit<AnalystResult, "engineNo
   }
 
   // Agents
-  if (has(q, "agent", "claude", "mac", "mcp", "bot", "automat") || agent) {
+  if (has(q, "agent", "claude", "mcp", "bot", "automat") || agent) {
     const f: WidgetFilter = { direction: "out", ...when, ...(agent ? { agents: [agent] } : {}) };
     const rows = pick(f).filter((r) => r.agentLabel);
     const byAgent = aggregate(rows, "agent", "sum").buckets;

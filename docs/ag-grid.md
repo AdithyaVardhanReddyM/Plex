@@ -12,7 +12,7 @@ The Ledger has a role switch: **Personal** (pots, spending, splits), **Task post
 
 `receipts-grid.tsx` is the centerpiece. What it does with AG Grid:
 
-- **Custom cell renderers for every column.** A party cell with an avatar and the payment kind, the user's "why" in quotes, the rule with a shield icon, the agent as a chip ("Plex for Mac", "Claude (MCP)"), the receipt state as a colored pill, and a signed, tabular amount. No column is a plain string.
+- **Custom cell renderers for every column.** A party cell with an avatar and the payment kind, the user's "why" in quotes, the rule with a shield icon, the agent as a chip ("Claude (MCP)"), the receipt state as a colored pill, and a signed, tabular amount. No column is a plain string.
 - **Quick filter** wired to the search box, plus an **external filter** for the state tabs (Held, Moved, Refunded, Disputed), each tab showing its live count.
 - **A pinned bottom row** with the count and the net total of whatever is filtered.
 - **Row click opens the full Receipt** in a side panel, with single-row selection kept in sync.
@@ -42,7 +42,7 @@ Built from AG Grid and AG Charts:
 - **Plex Analyst** (`lib/ledgerAi.ts`). "Ask the Ledger" sends the question to an agent that answers in a sentence and returns one or two **widget specs** from a closed vocabulary (`lib/ledgerSpec.ts`): a grid with columns, filter and sort, a chart with a type, grouping and measure, or a stat. The client renders the specs live with AG Grid and AG Charts over the viewer's own receipts. The agent never writes UI or queries, and the same pure functions run on the server, so the numbers in its answer match the widget. Pin a widget and it stays on that role's dashboard. Gemini (through the Vercel AI SDK) does the parsing with structured output; without a key a deterministic intent parser handles the demo questions, and the answer says so.
 - **Watchdog** (`ledger.ts`). Watches the receipt stream that PayPal webhooks keep current and raises alerts a person would want: a refund spike, proofs failing in one neighborhood, a purchase far above the usual, a shift that's short of funding. Each alert is computed, not guessed, and carries the widget that shows it ("Show me").
 - **Action tools.** Release, refund and send-a-reminder buttons on the Ledger are scoped by role and always confirm first. Today they record a hand-off; the live capture, payout and refund run from the task page.
-- **Voice bridge.** `ledger.ask` accepts `via: "mac" | "mcp"`, so a question asked from another client (the Plex for Mac notch, an MCP agent) appears live on an open Ledger.
+- **Agent bridge.** `ledger.ask` accepts `via: "mcp"`, so a question an agent asks over MCP appears live on an open Ledger.
 
 ## Mapping to AG Studio
 

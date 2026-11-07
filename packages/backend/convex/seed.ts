@@ -4,7 +4,6 @@ import type { Id, TableNames } from "./_generated/dataModel";
 import { advanceReceipt, writeReceipt } from "./lib/receipts";
 import { seedLedgerHistory } from "./lib/ledgerSeed";
 import { seedHireWorld } from "./lib/hireSeed";
-import { nextRunAt, type RoutineTrigger } from "./lib/schedule";
 
 /**
  * The demo world (docs/Plex-Project-Plan.md §9). All brands, people and the
@@ -16,7 +15,6 @@ const TABLES: TableNames[] = [
   "users", "agents", "pots", "approvals", "receipts", "tasks", "applications",
   "proofs", "causes", "donations", "campaigns", "campaignEntries", "splits", "webhookEvents",
   "ledgerAsks", "ledgerWidgets", "ledgerActions",
-  "routines", "routineRuns", "asks", "memories", "bills", "subscriptions", "agentActivity", "insights",
   "reviews",
 ];
 
@@ -133,7 +131,6 @@ export const run = internalMutation({
     });
 
     // ── Agents ──────────────────────────────────────────────────────────────
-    await ctx.db.insert("agents", { ownerId: adi, name: "Plex for Mac", kind: "mac" });
     await ctx.db.insert("agents", {
       ownerId: adi,
       name: "Claude (MCP)",
@@ -229,8 +226,8 @@ export const run = internalMutation({
     ];
     const cafeTask = await ctx.db.insert("tasks", {
       posterId: adi,
-      postedVia: "mac",
-      agentLabel: "Plex for Mac",
+      postedVia: "mcp",
+      agentLabel: "Claude (MCP)",
       title: "Check for a quiet corner at Kettle Corner on 5th St",
       brief: "Find someone to check whether the café on 5th has a quiet corner, and photograph the menu.",
       description:
@@ -350,8 +347,8 @@ export const run = internalMutation({
 
     await ctx.db.insert("tasks", {
       posterId: adi,
-      postedVia: "mac",
-      agentLabel: "Plex for Mac",
+      postedVia: "mcp",
+      agentLabel: "Claude (MCP)",
       title: "Pick up a repaired bike wheel from Spoke & Ember Cycles",
       brief: "Someone grab my wheel from the bike shop before 6.",
       description:
@@ -710,7 +707,7 @@ export const run = internalMutation({
     }
 
     // ── Adi's ledger: three weeks of receipts ───────────────────────────────
-    const mac = "Plex for Mac";
+    const agent = "Claude (MCP)";
     type R = Parameters<typeof writeReceipt>[1];
     const r = (x: Omit<R, "ownerId" | "currency"> & { currency?: string }) =>
       writeReceipt(ctx, { currency: "USD", ownerId: adi, ...x } as R);
@@ -720,7 +717,7 @@ export const run = internalMutation({
     for (const [d, cents] of coffees) {
       await r({
         kind: "purchase", amountCents: cents, payerId: adi, payerLabel: "Adi Reddy", payeeLabel: "Kettle Corner",
-        agentLabel: mac, why: "My usual oat flat white, ready at 8:30", category: "Food", potId: food,
+        agentLabel: agent, why: "My usual oat flat white, ready at 8:30", category: "Food", potId: food,
         rule: { source: "policy", text: "Food: up to $40 a day" }, state: "paid", occurredAt: ago(d, 15),
         paypal: { orderId: `SEED-KC-${d}`, captureId: `SEED-KC-CAP-${d}` },
       });
@@ -734,14 +731,14 @@ export const run = internalMutation({
     ] as const) {
       await r({
         kind: "purchase", amountCents: cents, payerId: adi, payerLabel: "Adi Reddy", payeeLabel: payee,
-        agentLabel: mac, why, category: "Food", potId: food,
+        agentLabel: agent, why, category: "Food", potId: food,
         rule: { source: "policy", text: "Food: up to $40 a day" }, state: "paid", occurredAt: ago(d, 19),
       });
     }
     // The negotiated desk lamp (the demo's opening scene)
     await r({
       kind: "purchase", amountCents: 3_400, payerId: adi, payerLabel: "Adi Reddy", payeeLabel: "Lumen & Oak",
-      agentLabel: mac, why: "Buy a warm-white desk lamp under $40", category: "Shopping", potId: shopping,
+      agentLabel: agent, why: "Buy a warm-white desk lamp under $40", category: "Shopping", potId: shopping,
       rule: { source: "policy", text: "Shopping: up to $120 per purchase, ask over $50" },
       evidence: {
         savedCents: 600,
@@ -757,7 +754,7 @@ export const run = internalMutation({
     });
     await r({
       kind: "donation", amountCents: 60, payerId: adi, payerLabel: "Adi Reddy", payeeId: lakeside,
-      payeeLabel: "Lakeside Commons", agentLabel: mac, why: "10% of what the agent saved on the desk lamp",
+      payeeLabel: "Lakeside Commons", agentLabel: agent, why: "10% of what the agent saved on the desk lamp",
       category: "Giving", potId: giving, causeId: cause,
       rule: { source: "policy", text: "Giving: send 10% of savings to Lakeside Commons" },
       state: "paid", occurredAt: ago(2, 13),
@@ -765,13 +762,13 @@ export const run = internalMutation({
     // Subscriptions and bills
     await r({
       kind: "subscription", amountCents: 499, payerId: adi, payerLabel: "Adi Reddy", payeeLabel: "Cloudbox Storage",
-      agentLabel: mac, why: "Storage plan renewal (was $2.99, now $4.99)", category: "Shopping", potId: shopping,
+      agentLabel: agent, why: "Storage plan renewal (was $2.99, now $4.99)", category: "Shopping", potId: shopping,
       rule: { source: "approval", text: "You approved the new price on Oct 30" }, state: "paid", occurredAt: ago(6, 9),
     });
     // Task money
     await r({
       kind: "task_funding", amountCents: 1_800, payerId: adi, payerLabel: "Adi Reddy", payeeLabel: "Plex (held)",
-      agentLabel: mac, why: "Find someone to check whether the café on 5th has a quiet corner, and photograph the menu.",
+      agentLabel: agent, why: "Find someone to check whether the café on 5th has a quiet corner, and photograph the menu.",
       category: "Errands", potId: errands, taskId: cafeTask,
       rule: { source: "policy", text: "Errands: up to $50 per task, pay only on proof" },
       state: "held", occurredAt: ago(0, 2),
@@ -804,7 +801,7 @@ export const run = internalMutation({
     // Splits
     await r({
       kind: "invoice", amountCents: 13_980, payerLabel: "Maya, Jonah and Priya", payeeId: adi, payeeLabel: "Adi Reddy",
-      agentLabel: mac, why: "Split last night's dinner with the people in that chat",
+      agentLabel: agent, why: "Split last night's dinner with the people in that chat",
       category: "Food", rule: { source: "system", text: "Split from a photo of the bill, by what each person ordered" },
       state: "pending", occurredAt: ago(1, 3), paypal: { invoiceId: "SEED-INV-NOPA" },
     });
@@ -841,7 +838,7 @@ export const run = internalMutation({
     await ctx.db.insert("approvals", {
       ownerId: adi,
       potId: shopping,
-      agentLabel: mac,
+      agentLabel: agent,
       description: "Ergonomic desk chair, oak and wool",
       merchant: "Lumen & Oak",
       amountCents: 6_000,
@@ -859,637 +856,8 @@ export const run = internalMutation({
     }
 
     await seedLedgerHistory(ctx);
-    await seedMacWorld(ctx, { adi, now });
     await seedHireWorld(ctx, { adi, now });
 
     return `Seeded the demo world: Adi, ${donors.length} donors, 6 tasks, ${coffees.length + 14} receipts.`;
   },
 });
-
-// ── Plex for Mac: bills, subscriptions, routines, memory, asks, activity ─────
-
-const MAC_TZ = "America/Los_Angeles";
-const MAC = "Plex for Mac";
-
-type StepSeed = [kind: "info" | "tool" | "money" | "ask" | "done" | "error", label: string, detail?: string];
-
-/**
- * Adi's world as Plex for Mac sees it (docs/plex-mac.md §2 "Seed"). Every
- * payee, shop and person is invented. Memories are stored with an empty
- * embedding: the brain embeds them on its first loop (`memory:core` lists
- * them under `needsEmbedding`). Runs on every `seed:run`; `reset` wipes the
- * tables first.
- */
-async function seedMacWorld(ctx: MutationCtx, { adi, now }: { adi: Id<"users">; now: number }) {
-  if (await ctx.db.query("routines").first()) return;
-  const ago = (days: number, hours = 0) => now - days * DAY - hours * HOUR;
-  const inDays = (days: number, hours = 0) => now + days * DAY + hours * HOUR;
-  const MIN = 60_000;
-
-  // ── Two more pots: Bills and Work ─────────────────────────────────────────
-  const bills = await ctx.db.insert("pots", {
-    ownerId: adi,
-    name: "Bills",
-    icon: "receipt",
-    color: "blue",
-    balanceCents: 264_000,
-    spentTodayCents: 0,
-    spentMonthCents: 185_000,
-    monthlyBudgetCents: 300_000,
-    rulesText:
-      "Pay my bills from here, up to $3,000 a month. Ask me before anything over $100. Pay Sam Okafor up to $1,850 for rent without asking.",
-    rules: [
-      { kind: "monthly_limit", amountCents: 300_000 },
-      { kind: "approval_over", amountCents: 10_000 },
-      { kind: "auto_approve", merchant: "Sam Okafor", upToCents: 185_000 },
-    ],
-  });
-  const work = await ctx.db.insert("pots", {
-    ownerId: adi,
-    name: "Work",
-    icon: "briefcase",
-    color: "teal",
-    balanceCents: 214_000,
-    spentTodayCents: 0,
-    spentMonthCents: 54_000,
-    monthlyBudgetCents: 300_000,
-    rulesText: "Pass Lena her 30% when a client pays, up to $3,000 a month. Ask me before anything over $1,000.",
-    rules: [
-      { kind: "monthly_limit", amountCents: 300_000 },
-      { kind: "approval_over", amountCents: 100_000 },
-    ],
-  });
-
-  // ── Savings: where routines sweep what's left ─────────────────────────────
-  await ctx.db.insert("pots", {
-    ownerId: adi,
-    name: "Savings",
-    icon: "piggy-bank",
-    color: "green",
-    balanceCents: 412_000,
-    spentTodayCents: 0,
-    spentMonthCents: 0,
-    monthlyBudgetCents: 0,
-    rulesText: "Money I set aside. Plex can move money in, but never spends from here without asking.",
-    rules: [{ kind: "approval_over", amountCents: 0 }],
-  });
-
-  // ── Tax: what the freelance work sets aside for quarterly estimated tax ────
-  await ctx.db.insert("pots", {
-    ownerId: adi,
-    name: "Tax",
-    icon: "landmark",
-    color: "steel",
-    balanceCents: 234_000,
-    spentTodayCents: 0,
-    spentMonthCents: 0,
-    monthlyBudgetCents: 0,
-    rulesText: "Set aside for quarterly estimated tax. Plex can move money in, never spends from here without asking.",
-    rules: [{ kind: "approval_over", amountCents: 0 }],
-  });
-
-  // ── Receipts the routines left behind ─────────────────────────────────────
-  const paid = async (x: {
-    payee: string;
-    cents: number;
-    why: string;
-    pot: Id<"pots">;
-    potName: string;
-    rule: string;
-    at: number;
-    key: string;
-  }) => {
-    const id = await writeReceipt(ctx, {
-      kind: "payout",
-      amountCents: x.cents,
-      currency: "USD",
-      ownerId: adi,
-      payerId: adi,
-      payerLabel: "Adi Reddy",
-      payeeLabel: x.payee,
-      agentLabel: MAC,
-      why: x.why,
-      rule: { source: "policy", text: `${x.potName}: ${x.rule}` },
-      state: "paid",
-      potId: x.pot,
-      category: x.potName,
-      occurredAt: x.at,
-      paypal: { payoutBatchId: `SEED-BATCH-${x.key}`, payoutItemId: `SEED-ITEM-${x.key}` },
-    });
-    await ctx.db.patch(id, {
-      timeline: [
-        { at: x.at, label: `Allowed by the ${x.potName} pot: ${x.rule}`, state: "pending" },
-        { at: x.at + 4_000, label: "Sent by PayPal Payouts (pending)", state: "released" },
-        { at: x.at + 40_000, label: `Landed in ${x.payee}'s PayPal`, state: "paid" },
-      ],
-    });
-    return id;
-  };
-
-  const rentWhy = "When Maya and Jonah have both paid their share of rent, pay Sam the full $1,850 from Bills.";
-  const rentOct = await paid({
-    payee: "Sam Okafor", cents: 185_000, why: rentWhy, pot: bills, potName: "Bills",
-    rule: "Pay Sam Okafor up to $1,850 without asking", at: ago(35, 1), key: "RENT-OCT",
-  });
-  const rentNov = await paid({
-    payee: "Sam Okafor", cents: 185_000, why: rentWhy, pot: bills, potName: "Bills",
-    rule: "Pay Sam Okafor up to $1,850 without asking", at: ago(5, 9), key: "RENT-NOV",
-  });
-  const utilWhy = "Pay Pacific Power and Northwave from Bills two days before they're due. Ask me if one is 20% over the usual.";
-  const powerOct = await paid({
-    payee: "Pacific Power", cents: 9_410, why: utilWhy, pot: bills, potName: "Bills",
-    rule: "Up to $3,000 a month", at: ago(33, 2), key: "POWER-OCT",
-  });
-  const netOct = await paid({
-    payee: "Northwave Internet", cents: 7_900, why: utilWhy, pot: bills, potName: "Bills",
-    rule: "Up to $3,000 a month", at: ago(30, 6), key: "NET-OCT",
-  });
-  const lenaWhy = "When a client pays one of my illustration invoices, send Lena her 30%.";
-  const lenaOct = await paid({
-    payee: "Lena Varga", cents: 36_000, why: lenaWhy, pot: work, potName: "Work",
-    rule: "Up to $3,000 a month", at: ago(17, 3), key: "LENA-HALCYON",
-  });
-  const lenaNov = await paid({
-    payee: "Lena Varga", cents: 54_000, why: lenaWhy, pot: work, potName: "Work",
-    rule: "Up to $3,000 a month", at: ago(3, 6), key: "LENA-MOSS",
-  });
-
-  // ── Bills ─────────────────────────────────────────────────────────────────
-  const rentDue = nextRunAt({ kind: "schedule", cadence: "monthly", dayOfMonth: 1, time: "09:00" }, MAC_TZ, now)!;
-  await ctx.db.insert("bills", {
-    ownerId: adi, payee: "Sam Okafor", payeeEmail: "sam.okafor@example.com", category: "Rent",
-    amountCents: 185_000, usualCents: 185_000, dueAt: rentDue, status: "upcoming", autopay: false, source: "manual",
-    note: "Paid by the rent routine once Maya and Jonah have sent their shares",
-  });
-  await ctx.db.insert("bills", {
-    ownerId: adi, payee: "Northwave Internet", payeeEmail: "billing@northwave.example.com", category: "Internet",
-    amountCents: 8_420, usualCents: 7_900, dueAt: inDays(3), status: "upcoming", autopay: false, source: "email",
-    note: "Up $5.20: the 12-month promo price ended",
-  });
-  await ctx.db.insert("bills", {
-    ownerId: adi, payee: "Pacific Power", payeeEmail: "billing@pacificpower.example.com", category: "Utilities",
-    amountCents: 21_200, usualCents: 9_600, dueAt: inDays(5), status: "upcoming", autopay: false, source: "email",
-    note: "More than double the usual: heating since the cold snap",
-  });
-  await ctx.db.insert("bills", {
-    ownerId: adi, payee: "Brightline Mobile", payeeEmail: "billing@brightline.example.com", category: "Phone",
-    amountCents: 6_214, usualCents: 6_200, dueAt: inDays(9), status: "upcoming", autopay: false, source: "manual",
-    note: "No emailed bill: the balance is on Brightline's account page",
-  });
-  await ctx.db.insert("bills", {
-    ownerId: adi, payee: "Harbor Mutual", category: "Renter's insurance",
-    amountCents: 1_850, usualCents: 1_850, dueAt: inDays(12), status: "scheduled", autopay: true, source: "email",
-  });
-  await ctx.db.insert("bills", {
-    ownerId: adi, payee: "Ironleaf Fitness", category: "Gym",
-    amountCents: 4_900, usualCents: 4_900, dueAt: ago(2), status: "paid", paidAt: ago(2), autopay: true, source: "email",
-    note: "Charged to your card by autopay, outside Plex",
-  });
-
-  // ── Subscriptions ─────────────────────────────────────────────────────────
-  const sub = (x: Omit<Parameters<typeof ctx.db.insert<"subscriptions">>[1], "ownerId" | "status"> & { status?: "active" | "paused" | "cancelled" }) =>
-    ctx.db.insert("subscriptions", { ownerId: adi, status: "active", ...x });
-  await sub({ merchant: "Reelhouse", plan: "Standard", amountCents: 1_549, cadence: "monthly", nextChargeAt: inDays(11), lastUsedAt: ago(1, 3), category: "Streaming", paypalSubscriptionId: "SEED-SUB-REELHOUSE" });
-  await sub({ merchant: "Tunewell", plan: "Individual", amountCents: 1_099, cadence: "monthly", nextChargeAt: inDays(4), lastUsedAt: ago(0, 2), category: "Music", paypalSubscriptionId: "SEED-SUB-TUNEWELL" });
-  await sub({ merchant: "Cloudnest", plan: "200 GB", amountCents: 499, previousAmountCents: 299, cadence: "monthly", nextChargeAt: inDays(6), lastUsedAt: ago(3), category: "Cloud storage", paypalSubscriptionId: "SEED-SUB-CLOUDNEST" });
-  await sub({ merchant: "Frame Studio", plan: "Pro", amountCents: 1_499, cadence: "monthly", nextChargeAt: inDays(8), lastUsedAt: ago(74), category: "Design", paypalSubscriptionId: "SEED-SUB-FRAME" });
-  await sub({ merchant: "The Daily Tide", plan: "Digital", amountCents: 999, cadence: "monthly", nextChargeAt: inDays(15), lastUsedAt: ago(2), category: "News" });
-  await sub({ merchant: "Greenplate", plan: "2 boxes a month", amountCents: 11_980, cadence: "monthly", nextChargeAt: inDays(13), lastUsedAt: ago(6), category: "Meal kit" });
-  await sub({ merchant: "Tunnelbird", plan: "VPN, yearly", amountCents: 5_999, cadence: "yearly", nextChargeAt: inDays(142), lastUsedAt: ago(20), category: "VPN" });
-
-  // ── Routines and their runs ───────────────────────────────────────────────
-  const activity = (x: Omit<Parameters<typeof ctx.db.insert<"agentActivity">>[1], "ownerId">) =>
-    ctx.db.insert("agentActivity", { ownerId: adi, ...x });
-
-  const finishedTitle = { done: "Ran", failed: "Didn't finish", skipped: "Skipped", cancelled: "Stopped" } as const;
-  const runs = async (
-    routineId: Id<"routines">,
-    name: string,
-    list: Array<{
-      at: number;
-      status: "done" | "failed" | "skipped" | "cancelled";
-      reason: string;
-      steps: StepSeed[];
-      summary: string;
-      receiptIds?: Id<"receipts">[];
-    }>,
-  ) => {
-    const ids: Id<"routineRuns">[] = [];
-    for (const r of list.sort((a, b) => a.at - b.at)) {
-      const steps = r.steps.map(([kind, label, detail], i) => ({ at: r.at + i * 20_000, kind, label, detail }));
-      const endedAt = r.at + Math.max(1, steps.length) * 20_000;
-      const runId = await ctx.db.insert("routineRuns", {
-        routineId, ownerId: adi, status: r.status, reason: r.reason, startedAt: r.at, endedAt,
-        steps, summary: r.summary, receiptIds: r.receiptIds ?? [],
-      });
-      ids.push(runId);
-      if (r.at > now - 8 * DAY)
-        await activity({
-          at: endedAt, kind: "routine", title: `${finishedTitle[r.status]} “${name}”`, detail: r.summary,
-          runId, routineId, receiptId: r.receiptIds?.[0],
-        });
-    }
-    const last = list[list.length - 1]!;
-    await ctx.db.patch(routineId, { lastRunAt: last.at, lastStatus: last.status, lastSummary: last.summary });
-    return ids;
-  };
-
-  const routine = async (x: {
-    name: string; prompt: string; icon: string; trigger: RoutineTrigger;
-    conditions: { text: string; check?: string }[];
-    steps: { kind: "check" | "act" | "money" | "notify" | "ask" | "wait"; title: string; detail?: string; tool?: string }[];
-    guardrails: { potName?: string; maxSpendCents?: number; approval: "always" | "over_limit" | "never_money" };
-    summary: string; runWhere: "mac" | "cloud"; missed: "run_on_wake" | "skip"; createdDaysAgo: number;
-  }) =>
-    ctx.db.insert("routines", {
-      ownerId: adi,
-      name: x.name,
-      prompt: x.prompt,
-      icon: x.icon,
-      spec: {
-        trigger: x.trigger,
-        conditions: x.conditions,
-        steps: x.steps.map((s, i) => ({ id: `s${i + 1}`, ...s })),
-        guardrails: x.guardrails,
-        summary: x.summary,
-      },
-      runWhere: x.runWhere,
-      missed: x.missed,
-      timezone: MAC_TZ,
-      enabled: true,
-      nextRunAt: nextRunAt(x.trigger, MAC_TZ, now),
-      createdAt: ago(x.createdDaysAgo),
-    });
-
-  /** The last `count` scheduled times before now. */
-  const pastSlots = (trigger: RoutineTrigger, count: number, spanDays: number) => {
-    const out: number[] = [];
-    let t = now - spanDays * DAY;
-    for (let i = 0; i < 200; i++) {
-      const n = nextRunAt(trigger, MAC_TZ, t);
-      if (n === undefined || n >= now) break;
-      out.push(n);
-      t = n;
-    }
-    return out.slice(-count);
-  };
-
-  // 1. Rent, when both roommates have paid (email trigger)
-  const rent = await routine({
-    name: "Pay rent when everyone's in",
-    prompt: "When Maya and Jonah have both paid their share of rent, pay Sam the full $1,850 from Bills.",
-    icon: "house",
-    trigger: {
-      kind: "email",
-      query: "from:service@paypal.com subject:(paid invoice rent) newer_than:1d",
-      label: "A roommate pays their rent invoice",
-    },
-    conditions: [
-      { text: "Maya and Jonah have both paid this month's rent invoice", check: "Both rent invoices for this month are PAID in PayPal" },
-      { text: "This month's rent to Sam isn't paid yet", check: "No receipt to Sam Okafor since the 25th of last month" },
-    ],
-    steps: [
-      { kind: "check", title: "Check both rent invoices", detail: "Maya $620 and Jonah $620, in PayPal", tool: "paypal.invoices" },
-      { kind: "check", title: "Make sure rent isn't paid yet", tool: "agentMoney.recent" },
-      { kind: "money", title: "Pay Sam Okafor $1,850 from Bills", detail: "This month's rent", tool: "agentMoney.pay" },
-      { kind: "notify", title: "Send you the receipt" },
-    ],
-    guardrails: { potName: "Bills", maxSpendCents: 185_000, approval: "over_limit" },
-    summary: "When Maya and Jonah have both paid their rent invoices, pays Sam Okafor $1,850 from Bills and sends you the receipt.",
-    runWhere: "cloud",
-    missed: "run_on_wake",
-    createdDaysAgo: 48,
-  });
-  await runs(rent, "Pay rent when everyone's in", [
-    {
-      at: ago(36, 3), status: "done", reason: "Email: Maya Chen paid your invoice",
-      steps: [["info", "Email from PayPal: Maya Chen paid $620.00"], ["tool", "Checked both rent invoices", "Maya: paid · Jonah: sent"], ["done", "Done"]],
-      summary: "Maya paid her share. Waiting on Jonah before paying rent.",
-    },
-    {
-      at: ago(35, 1), status: "done", reason: "Email: Jonah Brooks paid your invoice", receiptIds: [rentOct],
-      steps: [
-        ["info", "Email from PayPal: Jonah Brooks paid $620.00"],
-        ["tool", "Checked both rent invoices", "Maya: paid · Jonah: paid"],
-        ["tool", "No rent receipt to Sam this month"],
-        ["money", "Paid Sam Okafor $1,850.00", "Bills: Pay Sam Okafor up to $1,850 without asking"],
-        ["done", "Done"],
-      ],
-      summary: "Jonah paid too. Paid Sam Okafor $1,850 for October's rent.",
-    },
-    {
-      at: ago(6, 5), status: "done", reason: "Email: Jonah Brooks paid your invoice",
-      steps: [["info", "Email from PayPal: Jonah Brooks paid $620.00"], ["tool", "Checked both rent invoices", "Maya: sent · Jonah: paid"], ["done", "Done"]],
-      summary: "Jonah paid his share. Waiting on Maya before paying rent.",
-    },
-    {
-      at: ago(5, 9), status: "done", reason: "Email: Maya Chen paid your invoice", receiptIds: [rentNov],
-      steps: [
-        ["info", "Email from PayPal: Maya Chen paid $620.00"],
-        ["tool", "Checked both rent invoices", "Maya: paid · Jonah: paid"],
-        ["tool", "No rent receipt to Sam this month"],
-        ["money", "Paid Sam Okafor $1,850.00", "Bills: Pay Sam Okafor up to $1,850 without asking"],
-        ["done", "Done"],
-      ],
-      summary: "Maya paid too. Paid Sam Okafor $1,850 for November's rent.",
-    },
-  ]);
-
-  // 2. Friday money check-in (schedule)
-  const fridayTrigger: RoutineTrigger = { kind: "schedule", cadence: "weekly", days: [5], time: "18:00" };
-  const checkin = await routine({
-    name: "Friday money check-in",
-    prompt: "Every Friday at 6, tell me how each pot did this week and what bills are coming up.",
-    icon: "calendar-check",
-    trigger: fridayTrigger,
-    conditions: [],
-    steps: [
-      { kind: "check", title: "Add up each pot's week", tool: "agentMoney.recent" },
-      { kind: "check", title: "Find bills due in the next 7 days", tool: "agent.snapshot" },
-      { kind: "check", title: "Spot anything unusual", detail: "A pot ahead of pace, a bill above its usual" },
-      { kind: "notify", title: "Send you a short summary" },
-    ],
-    guardrails: { approval: "never_money" },
-    summary: "Every Friday at 6 pm, sums up what each pot spent this week, lists the bills due in the next 7 days and sends you a short note.",
-    runWhere: "cloud",
-    missed: "run_on_wake",
-    createdDaysAgo: 40,
-  });
-  const fridays = pastSlots(fridayTrigger, 3, 22);
-  const fridaySummaries = [
-    "Spent $296 this week, $70 under your average. No bills due next week.",
-    "Spent $388 this week. Food is on pace and Shopping is $60 under. Rent is due on the 1st; Maya and Jonah haven't paid yet.",
-    "Spent $412 this week: Food $164, Bills $101, Shopping $84, Errands $63. Due next week: Northwave $84.20 and Pacific Power $212.",
-  ].slice(-fridays.length);
-  await runs(
-    checkin,
-    "Friday money check-in",
-    fridays.map((at, i) => ({
-      at, status: "done" as const, reason: "Scheduled for 6 pm",
-      steps: [
-        ["info", "Started: Scheduled for 6 pm"],
-        ["tool", "Added up the week's receipts"],
-        ["tool", "Looked up bills due in the next 7 days"],
-        ["info", "Sent you the summary"],
-        ["done", "Done"],
-      ] as StepSeed[],
-      summary: fridaySummaries[i]!,
-    })),
-  );
-
-  // 3. Utility bill guard (email)
-  const utility = await routine({
-    name: "Pay utility bills unless they spike",
-    prompt: "When a bill from Pacific Power or Northwave comes in, pay it from Bills. If it's more than 20% over the usual, hold it and ask me first.",
-    icon: "zap",
-    trigger: {
-      kind: "email",
-      query: "from:(pacificpower OR northwave) subject:(bill OR statement) newer_than:1d",
-      label: "A bill email from Pacific Power or Northwave",
-    },
-    conditions: [{ text: "The amount is within 20% of the usual bill", check: "amount <= usual × 1.2" }],
-    steps: [
-      { kind: "check", title: "Read the amount and due date from the email", tool: "gmail" },
-      { kind: "check", title: "Compare it with the last three bills" },
-      { kind: "ask", title: "Ask you first if it's more than 20% over the usual" },
-      { kind: "money", title: "Pay it from Bills", tool: "agentMoney.pay" },
-    ],
-    guardrails: { potName: "Bills", maxSpendCents: 30_000, approval: "over_limit" },
-    summary: "When a Pacific Power or Northwave bill arrives, pays it from Bills, and holds it to ask you first if it's more than 20% above the usual.",
-    runWhere: "cloud",
-    missed: "run_on_wake",
-    createdDaysAgo: 45,
-  });
-  const utilityRuns = await runs(utility, "Pay utility bills unless they spike", [
-    {
-      at: ago(33, 2), status: "done", reason: "Email from Pacific Power", receiptIds: [powerOct],
-      steps: [
-        ["info", "Email from Pacific Power: October statement"],
-        ["tool", "Read the bill", "$94.10, due in 2 days"],
-        ["tool", "Compared with the usual", "$96 usual: 2% under"],
-        ["money", "Paid Pacific Power $94.10", "Bills: Up to $3,000 a month"],
-        ["done", "Done"],
-      ],
-      summary: "Pacific Power sent $94.10, close to the usual $96. Paid it from Bills.",
-    },
-    {
-      at: ago(30, 6), status: "done", reason: "Email from Northwave Internet", receiptIds: [netOct],
-      steps: [
-        ["info", "Email from Northwave Internet: your bill is ready"],
-        ["tool", "Read the bill", "$79.00, due in 2 days"],
-        ["money", "Paid Northwave Internet $79.00", "Bills: Up to $3,000 a month"],
-        ["done", "Done"],
-      ],
-      summary: "Northwave sent $79.00, as usual. Paid it from Bills.",
-    },
-    {
-      at: ago(1, 4), status: "done", reason: "Email from Pacific Power",
-      steps: [
-        ["info", "Email from Pacific Power: November statement"],
-        ["tool", "Read the bill", "$212.00, due in 6 days"],
-        ["tool", "Compared with the usual", "$96 usual: 121% over"],
-        ["ask", "Asked you before paying", "Pay Pacific Power $212.00?"],
-        ["done", "Done"],
-      ],
-      summary: "Pacific Power sent $212.00, more than double the usual $96. Asked you before paying.",
-    },
-  ]);
-
-  // 4. Subscription price watch (schedule, on the Mac for app usage)
-  const morningTrigger: RoutineTrigger = { kind: "schedule", cadence: "daily", time: "08:30" };
-  const watch = await routine({
-    name: "Watch my subscriptions",
-    prompt: "Every morning, check my subscriptions. Tell me if a price goes up, and ask before I keep paying for anything I haven't used in two months.",
-    icon: "repeat",
-    trigger: morningTrigger,
-    conditions: [],
-    steps: [
-      { kind: "check", title: "Look for price-change emails", tool: "gmail" },
-      { kind: "check", title: "Check when you last opened each app", tool: "app_usage" },
-      { kind: "ask", title: "Ask about anything unused for 60 days" },
-      { kind: "notify", title: "Tell you about price changes" },
-    ],
-    guardrails: { approval: "never_money" },
-    summary: "Every morning at 8:30, looks for subscription price increases and asks you about anything you haven't opened in 60 days.",
-    runWhere: "mac",
-    missed: "skip",
-    createdDaysAgo: 21,
-  });
-  const mornings = pastSlots(morningTrigger, 4, 5);
-  const morningRuns = mornings.map((at, i) => {
-    const latest = i === mornings.length - 1;
-    if (i === mornings.length - 3)
-      return {
-        at, status: "skipped" as const, reason: "Missed at 8:30 am while your Mac slept",
-        steps: [["info", "Missed at 8:30 am while your Mac slept"]] as StepSeed[],
-        summary: "Missed at 8:30 am while your Mac slept",
-      };
-    return latest
-      ? {
-          at, status: "done" as const, reason: "Scheduled for 8:30 am",
-          steps: [
-            ["info", "Started: Scheduled for 8:30 am"],
-            ["tool", "Searched Gmail for price changes", "1 found: Cloudnest"],
-            ["tool", "Checked app usage on your Mac", "Frame Studio: last opened 74 days ago"],
-            ["ask", "Asked you about Frame Studio", "Cancel Frame Studio?"],
-            ["done", "Done"],
-          ] as StepSeed[],
-          summary: "Cloudnest went up from $2.99 to $4.99 a month. Frame Studio hasn't been opened in 74 days: asked whether to cancel it.",
-        }
-      : {
-          at, status: "done" as const, reason: "Scheduled for 8:30 am",
-          steps: [
-            ["info", "Started: Scheduled for 8:30 am"],
-            ["tool", "Searched Gmail for price changes", "None"],
-            ["tool", "Checked app usage on your Mac"],
-            ["done", "Done"],
-          ] as StepSeed[],
-          summary: "No price changes and nothing new to flag.",
-        };
-  });
-  const watchRuns = await runs(watch, "Watch my subscriptions", morningRuns);
-
-  // 5. Pass the contractor her share (PayPal event)
-  const lena = await routine({
-    name: "Pass Lena her share",
-    prompt: "When a client pays one of my illustration invoices, send Lena her 30%.",
-    icon: "split",
-    trigger: { kind: "paypal", event: "INVOICING.INVOICE.PAID", label: "A client pays one of your invoices" },
-    conditions: [{ text: "The invoice is for an illustration project Lena worked on", check: "Invoice items or note mention illustration" }],
-    steps: [
-      { kind: "check", title: "Read the paid invoice", tool: "paypal.invoice" },
-      { kind: "check", title: "Confirm Lena worked on it" },
-      { kind: "money", title: "Send Lena 30% from Work", tool: "agentMoney.pay" },
-      { kind: "notify", title: "Tell you it's sent" },
-    ],
-    guardrails: { potName: "Work", maxSpendCents: 100_000, approval: "over_limit" },
-    summary: "When a client pays one of your illustration invoices, sends Lena Varga her 30% from Work.",
-    runWhere: "cloud",
-    missed: "run_on_wake",
-    createdDaysAgo: 30,
-  });
-  await runs(lena, "Pass Lena her share", [
-    {
-      at: ago(17, 3), status: "done", reason: "PayPal: A client pays one of your invoices", receiptIds: [lenaOct],
-      steps: [
-        ["info", "PayPal sent INVOICING.INVOICE.PAID"],
-        ["tool", "Read the invoice", "Halcyon Books, cover illustrations, $1,200.00"],
-        ["money", "Sent Lena Varga $360.00", "Work: Up to $3,000 a month"],
-        ["done", "Done"],
-      ],
-      summary: "Halcyon Books paid $1,200 for the cover illustrations. Sent Lena $360 (30%).",
-    },
-    {
-      at: ago(3, 6), status: "done", reason: "PayPal: A client pays one of your invoices", receiptIds: [lenaNov],
-      steps: [
-        ["info", "PayPal sent INVOICING.INVOICE.PAID"],
-        ["tool", "Read the invoice", "Moss & Pine Coffee, menu illustrations, $1,800.00"],
-        ["money", "Sent Lena Varga $540.00", "Work: Up to $3,000 a month"],
-        ["done", "Done"],
-      ],
-      summary: "Moss & Pine Coffee paid $1,800 for the menu illustrations. Sent Lena $540 (30%).",
-    },
-  ]);
-
-  // ── Needs you: one money approval, one question ──────────────────────────
-  const powerAt = ago(1, 4) + 3 * 20_000;
-  const approvalId = await ctx.db.insert("approvals", {
-    ownerId: adi,
-    potId: bills,
-    agentLabel: MAC,
-    description: "Pacific Power's November bill: $212.00, more than double the usual $96",
-    merchant: "Pacific Power",
-    amountCents: 21_200,
-    ruleText: "Ask before anything over $100",
-    status: "pending",
-  });
-  await ctx.db.insert("asks", {
-    ownerId: adi,
-    kind: "approval",
-    title: "Pay Pacific Power $212.00?",
-    detail: "November's bill is more than double your usual $96, most likely heating since the cold snap. Due in 5 days.",
-    amountCents: 21_200,
-    payee: "Pacific Power",
-    ruleText: "Ask before anything over $100",
-    potName: "Bills",
-    approvalId,
-    source: { kind: "routine", label: "Pay utility bills unless they spike", runId: utilityRuns.at(-1) },
-    status: "pending",
-    createdAt: powerAt,
-  });
-  const lastMorning = mornings.at(-1) ?? ago(0, 2);
-  const frameAt = lastMorning + 3 * 20_000;
-  await ctx.db.insert("asks", {
-    ownerId: adi,
-    kind: "question",
-    title: "Cancel Frame Studio?",
-    detail: "You haven't opened it in 74 days. It's $14.99 a month, and the next charge is in 8 days.",
-    options: ["Cancel it", "Keep it", "Ask me next month"],
-    source: { kind: "routine", label: "Watch my subscriptions", runId: watchRuns.at(-1) },
-    status: "pending",
-    createdAt: frameAt,
-  });
-
-  // ── Memory ────────────────────────────────────────────────────────────────
-  const mem = (
-    kind: "fact" | "preference" | "person" | "merchant" | "habit" | "note",
-    text: string,
-    x: { about?: string; source?: "said" | "learned" | "email" | "routine" | "settings"; pinned?: boolean; uses?: number; daysAgo?: number; confidence?: number } = {},
-  ) =>
-    ctx.db.insert("memories", {
-      ownerId: adi,
-      kind,
-      text,
-      about: x.about,
-      source: x.source ?? "said",
-      confidence: x.confidence ?? 0.95,
-      pinned: x.pinned ?? false,
-      uses: x.uses ?? 0,
-      lastUsedAt: x.uses ? ago(Math.min(x.daysAgo ?? 3, 2), 3) : undefined,
-      embedding: [],
-      archived: false,
-      createdAt: ago(x.daysAgo ?? 10),
-      updatedAt: ago(x.daysAgo ?? 10),
-    });
-  await mem("person", "Sam Okafor is the landlord. Rent is $1,850, due on the 1st.", { about: "Sam Okafor", pinned: true, uses: 9, daysAgo: 48 });
-  await mem("person", "Maya Chen is a roommate and pays $620 of the rent. Her PayPal email is maya.chen@example.com.", { about: "Maya Chen", uses: 7, daysAgo: 48 });
-  await mem("person", "Jonah Brooks is a roommate and pays $620 of the rent. His PayPal email is jonah.brooks@example.com.", { about: "Jonah Brooks", uses: 7, daysAgo: 48 });
-  await mem("person", "Lena Varga is a freelance illustrator who works with Adi. She gets 30% of every client invoice she worked on. lena.varga@example.com", { about: "Lena Varga", pinned: true, uses: 4, daysAgo: 30 });
-  await mem("preference", "Prefers to approve anything over $100.", { pinned: true, uses: 12, daysAgo: 52 });
-  await mem("preference", "Wants bills paid two days before they're due, not on the day.", { uses: 5, daysAgo: 1 });
-  await mem("preference", "Doesn't want to keep paying for a subscription unused for more than 60 days.", { uses: 2, daysAgo: 21 });
-  await mem("fact", "Keeps checking at Bayview Credit Union; PayPal is linked to it.", { source: "settings", uses: 1, daysAgo: 52 });
-  await mem("fact", "Lives in the Mission, San Francisco (Pacific time).", { source: "settings", uses: 3, daysAgo: 52 });
-  await mem("merchant", "Northwave Internet is usually $79 a month; the 12-month promo price ended in November.", { about: "Northwave Internet", source: "email", uses: 3, daysAgo: 2, confidence: 0.9 });
-  await mem("merchant", "Pacific Power bills run about $96 a month; winter bills run higher.", { about: "Pacific Power", source: "learned", uses: 4, daysAgo: 33, confidence: 0.85 });
-  await mem("habit", "Orders lunch from Juniper Noodle Bar most weekdays, usually about $14.", { about: "Juniper Noodle Bar", source: "learned", uses: 6, daysAgo: 12, confidence: 0.8 });
-  await mem("habit", "Sends 10% of what Plex saves to Lakeside Commons.", { about: "Lakeside Commons", source: "settings", uses: 2, daysAgo: 40 });
-  await mem("note", "Frame Studio was for a one-off poster project in August.", { about: "Frame Studio", source: "learned", uses: 1, daysAgo: 74, confidence: 0.7 });
-  // Where the demo world's businesses live online (apps/web /sites/*, served on their own *.localhost hosts).
-  await mem("merchant", "Clay Commons is the pottery studio Adi wants to try; it books classes at http://claycommons.localhost:3000.", { about: "Clay Commons", source: "said", uses: 1, daysAgo: 9 });
-  await mem("merchant", "Brightline Mobile never emails a bill; the balance is on the account page at http://brightline.localhost:3000.", { about: "Brightline Mobile", source: "learned", uses: 2, daysAgo: 35, confidence: 0.9 });
-  await mem("merchant", "Cloudnest's plans are changed on its site, http://cloudnest.localhost:3000, not through PayPal.", { about: "Cloudnest", source: "learned", uses: 1, daysAgo: 20, confidence: 0.85 });
-  await mem("merchant", "City of Lakeport parking citations are paid at http://lakeport.localhost:3000.", { about: "City of Lakeport", source: "learned", uses: 1, daysAgo: 120, confidence: 0.8 });
-  await mem("person", "Adi's full name is Adi Reddy; email for bookings and receipts: adi.reddy@plexmail.example.com.", { about: "Adi", source: "settings", pinned: true, uses: 4, daysAgo: 60 });
-  await mem("fact", "Adi's car is a Honda Civic, plate 8KDN042 (California).", { about: "car", source: "said", uses: 1, daysAgo: 60 });
-
-  // ── The rest of the week on Today ─────────────────────────────────────────
-  const feed: Array<Omit<Parameters<typeof activity>[0], "at"> & { at: number }> = [
-    { at: powerAt, kind: "handoff", title: "Plex needs you: Pay Pacific Power $212.00?", detail: "Ask before anything over $100" },
-    { at: frameAt, kind: "handoff", title: "Plex needs you: Cancel Frame Studio?", detail: "Unused for 74 days, $14.99 a month" },
-    { at: ago(5, 9) + 80_000, kind: "money", title: "Paid Sam Okafor $1,850", detail: rentWhy, receiptId: rentNov },
-    { at: ago(3, 6) + 40_000, kind: "money", title: "Paid Lena Varga $540", detail: lenaWhy, receiptId: lenaNov },
-    { at: ago(0, 3), kind: "voice", title: "You asked how much is left in Food", detail: "$214.50 left this month; $13 spent today" },
-    { at: ago(1, 6), kind: "memory", title: "Remembered", detail: "Wants bills paid two days before they're due, not on the day." },
-    { at: ago(1, 5) + 20 * MIN, kind: "money", title: "Requested $139.80 for dinner from Maya, Jonah and Priya", detail: "Split last night's dinner with the people in that chat" },
-    { at: ago(2, 1), kind: "system", title: "Ironleaf Fitness charged $49.00 by autopay", detail: "On your card, outside Plex. Matches the usual." },
-    { at: ago(2, 4), kind: "task", title: "Checked Northwave's plans", detail: "No cheaper plan at your speed. The $5.20 rise is the promo ending." },
-    { at: ago(2, 8), kind: "voice", title: "You asked Plex to nudge Priya about dinner", detail: "PayPal sent Priya a reminder for $45.80" },
-    { at: ago(3, 2), kind: "handoff", title: "You did it: Sign in to Northwave in the Plex browser", detail: "Plex keeps the session in its own browser profile" },
-    { at: ago(3, 8), kind: "system", title: "Plex for Mac connected", detail: "Accessibility and Calendar access granted" },
-    { at: ago(4, 2), kind: "memory", title: "Remembered", detail: "Lena Varga gets 30% of every client invoice she worked on." },
-    { at: ago(5, 6), kind: "task", title: "Added the Brightline Mobile bill", detail: "$62.14, read off Brightline's account page" },
-    { at: ago(6, 4), kind: "task", title: "Saved your Pacific Power statements", detail: "12 PDFs in Documents/Bills" },
-  ];
-  for (const f of feed) await activity(f);
-}

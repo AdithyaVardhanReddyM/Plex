@@ -8,7 +8,6 @@ Plex is a money layer for the agent era, built on PayPal. It has four connected 
 
 | Surface | What it is | Who it's for |
 |---|---|---|
-| **Plex for Mac** | A voice agent in the MacBook notch that shops, pays, splits bills and manages your budget within limits you set | Everyday people |
 | **Plex Tasks** | A marketplace where people and agents post work, humans (or their agents) take it, AI checks the proof, and PayPal pays out | Anyone who needs something done, and the people doing it |
 | **Plex Causes** | NGOs turn donations into *paid local work*, with proof sent back to every donor | Nonprofits, community groups, donors |
 | **Plex Ledger** | An AG Studio dashboard where agents build and explain your money views, and act on them | Everyone above |
@@ -46,8 +45,8 @@ The official rules cap what one project can win: **one Grand Prize or one Honora
 
 | Criterion | What earns it in Plex |
 |---|---|
-| Technological Implementation | Deep PayPal use: Orders, Payouts, Invoicing, Subscriptions, Refunds, Disputes, Webhooks, Transaction Search, PayPal MCP tools. A real multi-agent system across Mac, web and agents |
-| Design | One coherent product with a single idea (receipts) running through every surface. Native Mac app with polished web |
+| Technological Implementation | Deep PayPal use: Orders, Payouts, Invoicing, Subscriptions, Refunds, Disputes, Webhooks, Transaction Search, PayPal MCP tools. A real multi-agent system across the web app, the agent API and MCP |
+| Design | One coherent product with a single idea (receipts) running through every surface. One polished web app |
 | Potential Impact | Plex Causes turns donations into paid local jobs with proof. Plex Tasks gives people income from agent-posted work. Specific audiences, shown working |
 | Innovation | Proof-gated money is new: agents can spend, but only within rules; people get paid, but only on verified proof. On ordinary PayPal money, where most agent-hiring marketplaces run on crypto |
 | Presentation | One persona, one continuous story, end-to-end in under 3 minutes (script in §10) |
@@ -62,7 +61,7 @@ The official rules cap what one project can win: **one Grand Prize or one Honora
 
 ## 3. The Receipt: the core idea
 
-Every movement of money in Plex creates a **Receipt**. It's shown everywhere: in the notch, on a task page, in the donor's inbox, in the dashboard.
+Every movement of money in Plex creates a **Receipt**. It's shown everywhere: on Home, on a task page, in the donor's inbox, in the dashboard.
 
 A Receipt records:
 
@@ -79,33 +78,19 @@ Pitch line for the video: *"In Plex, no money moves without a receipt."*
 
 ## 4. The products
 
-### 4.1 Plex for Mac: your money agent in the notch
+### 4.1 Pots and limits: rules your agents can't talk their way past
 
-Built on Slice for Mac (Swift/SwiftUI notch app, Gemini Live voice, background worker). Hold **fn + control** and talk.
-
-**Shop.** "Buy a warm-white desk lamp under $40." The agent searches the Plex demo stores, compares, **negotiates with each store's seller agent** (haggle engine), and checks out with your saved PayPal wallet, within your limits. The Receipt shows what it saved and why it picked that lamp.
-
-**Split.** "Split last night's dinner with the people in that chat." The agent reads the receipt from your screen or a photo, works out who had what, and sends each friend a PayPal invoice or payment request. It nudges kindly when someone hasn't paid, and marks the split settled when PayPal's webhook confirms payment.
-
-**Bills and subscriptions.** It tracks recurring charges and upcoming invoices, pays what's due within your rules, flags price increases ("your storage plan went from $2.99 to $4.99"), and cancels on request.
-
-**Errands to humans.** "Find someone to check whether the café on 5th has a quiet corner, and photograph the menu." The agent writes a Plex Task, funds it from your Errands pot, and tells you when proof comes back.
-
-**Budget and limits.** Money is split into **Pots** (Food, Shopping, Errands, Giving), each with rules in plain English:
+Money is split into **Pots** (Food, Shopping, Errands, Giving), each with rules in plain English:
 
 > "Food up to $40 a day. Ask me before anything over $25. Never buy subscriptions without asking. No spending after midnight."
 
-The policy engine turns these into structured rules and checks every payment against them **in code, not in the prompt**. Anything over a limit becomes an **approval card in the notch**: approve by voice or click. A single **Pause** switch freezes all agent spending.
-
-**Saved-for-good.** Optional: when the agent negotiates a discount, a share of what it saved (say 10%) goes to a cause you chose. Your agent's haggling funds real work on Plex Causes.
-
-**Ask the Ledger.** "Where did my money go this week?" The request goes to the Plex Ledger, where the dashboard agent builds the widgets live (see §4.4).
+The policy engine turns these into structured rules once and checks every payment against them **in code, not in the prompt**. Anything over a limit becomes an **approval card** on Home. A single **Pause** switch freezes all agent spending. Agents act through the agent API or the Plex MCP server, each with a key scoped to a pot.
 
 ### 4.2 Plex Tasks: agents hire people, people get paid on proof
 
 The flow is **Prompt → Match → Proof → Pay**.
 
-**1. Posting.** A task can come from a person on the web, from Plex for Mac, or from **any agent through the Plex MCP server**. A *Task Writer* agent turns a loose request into a clear task card:
+**1. Posting.** A task can come from a person on the web or from **any agent through the agent API or the Plex MCP server**. A *Task Writer* agent turns a loose request into a clear task card:
 
 - Title, location (or remote), time window
 - Budget and payout rule
@@ -121,7 +106,7 @@ The flow is **Prompt → Match → Proof → Pay**.
 **5. Verification modes**, set per task:
 
 - **Auto**: if the AI verdict passes with high confidence, payment is released immediately
-- **One-tap**: the AI verifies, the owner taps approve (in the notch or on the web)
+- **One-tap**: the AI verifies, the owner taps approve on the web
 - **Manual**: the owner reviews everything
 
 **6. Pay.** The worker is paid by **PayPal Payouts**, and both sides get the Receipt.
@@ -188,7 +173,7 @@ AG Grid's prize looks at both how the dashboard looks and how it's built. They w
 - **Plex Analyst**: a custom agent with Plex domain knowledge and its own runner using Gemini. It answers questions ("which causes did my savings fund?"), then works *with Studio's built-in agents* to build and edit widgets.
 - **Watchdog**: watches the payment stream from PayPal webhooks. When it sees something off (a refund spike, several proofs failing in one area, unusual spending), it builds a widget showing it and raises an alert.
 - **Action tools**: custom tools that act through PayPal from the dashboard (send a reminder, release a payout, issue a refund), always with a confirmation step. Each role only gets the tools it should have. This follows AG Grid's own guardrail approach: don't give the model tools it shouldn't use.
-- **Voice bridge**: "Ask the Ledger" from Plex for Mac is sent to the dashboard's agent, and the widget appears live on screen. This is the moment in the demo where the Mac app and the dashboard meet.
+- **Agent bridge**: "Ask the Ledger" from an agent over MCP is sent to the dashboard's agent, and the widget appears live on an open Ledger.
 - **Stretch: WebMCP.** AG Studio supports WebMCP, so an outside agent (e.g. ChatGPT Desktop) could open the Ledger and build dashboards itself. It's still behind a flag in Chrome, so keep this as a bonus, not something the demo relies on.
 
 **Data:** Plex's own ledger (updated in real time from PayPal webhooks) is the main source. PayPal Transaction Search and Balances are used to reconcile, since new activity can take up to three hours to show up there and searches are limited to 31-day ranges.
@@ -216,7 +201,7 @@ This is also what makes Plex a real agentic-commerce product, if we decide to pi
 - **Video**: sampled key frames go through the same checks
 - **Output**: pass / fail / unsure, a confidence score, and reasons. Anything unsure goes to a human
 
-**Haggle engine.** A buyer agent and a seller agent, each with private limits, exchange offers in turns. The hard limits are enforced in code, so a persuasive message can't push an agent past them. The transcript goes in the Receipt. One engine serves Mac shopping, task applications and campaign rates.
+**Haggle engine.** A buyer agent and a seller agent, each with private limits, exchange offers in turns. The hard limits are enforced in code, so a persuasive message can't push an agent past them. The transcript goes in the Receipt. One engine serves task applications and campaign rates.
 
 **Money engine.** All PayPal calls go through one package (map in §6), and all state changes come from webhooks.
 
@@ -229,7 +214,7 @@ This is also what makes Plex a real agentic-commerce product, if we decide to pi
 | Plex feature | PayPal product |
 |---|---|
 | Task funding, shopping checkout, donations | **Orders v2** (create, authorize, capture) + **JS SDK v6** buttons |
-| Mac agent buys without a popup each time | **Vault**: saved PayPal wallet for returning payers *(confirm sandbox behavior on day 1)* |
+| An agent funds tasks without a popup each time | **Vault**: saved PayPal wallet for returning payers *(confirm sandbox behavior on day 1)* |
 | Paying workers, creators, field partners | **Payouts** (single and batch) |
 | Dinner splits, freelance-style tasks | **Invoicing** (create, send, remind, track paid) |
 | Monthly donations | **Subscriptions** (plans + subscriptions) |
@@ -247,7 +232,6 @@ This is also what makes Plex a real agentic-commerce product, if we decide to pi
 
 | Where | Model / tool |
 |---|---|
-| Notch voice | Gemini Live |
 | Agents (task writer, match, mediator, analyst, watchdog, haggle, cause page) | Gemini on Vertex AI, Google ADK |
 | Proof checks | Gemini (vision and video) |
 | Ledger agents | AG Studio Agent Framework with a Gemini runner |
@@ -261,29 +245,23 @@ Stays within GCP / Gemini.
 
 ```mermaid
 flowchart LR
-  mac(["Plex for Mac<br/>(Swift, Gemini Live)"])
   people(["People on the web<br/>posters, workers, donors, NGOs"])
   ext(["Other agents<br/>(Claude, ChatGPT)"])
 
   web["apps/web<br/>Next.js: Tasks, Causes, Ledger (AG Studio)"]
   mcp["apps/mcp<br/>Plex MCP server"]
-  agent["apps/agent<br/>Python ADK agents on Cloud Run"]
   convex["packages/backend<br/>Convex: data, receipts, policies"]
   paypal["packages/paypal<br/>money engine"]
   pp["PayPal sandbox<br/>Orders, Payouts, Invoicing,<br/>Subscriptions, Disputes, Webhooks"]
   vertex["Vertex AI<br/>Gemini"]
-  stores["apps/stores<br/>demo stores with seller agents"]
 
-  mac -- voice --> agent
   people --> web
   ext --> mcp
   web --> convex
   mcp --> convex
-  agent --> convex
-  agent --> vertex
+  convex --> vertex
   convex --> paypal --> pp
   pp -- webhooks --> convex
-  agent <-- haggle --> stores
 ```
 
 **Repo layout** (same monorepo pattern as Slice):
@@ -291,10 +269,7 @@ flowchart LR
 ```
 apps/
   web/       Next.js: landing, Tasks, Causes, Ledger (AG Studio), guest mode
-  mac/       Plex for Mac (Swift notch app)
-  agent/     Python agents + API: policy, proof, haggle, task writer, match, mediator, cause pages
   mcp/       Plex MCP server
-  stores/    Demo stores with seller agents and PayPal checkout
 packages/
   backend/   Convex schema, functions, webhook handlers, receipts
   paypal/    Typed PayPal client (one place for every PayPal call)
@@ -331,14 +306,14 @@ One persona, one continuous story. Every scene shows a real PayPal sandbox actio
 | Time | Scene |
 |---|---|
 | 0:00–0:15 | **Hook.** "Agents can spend money now. Would you let one spend yours?" Title: *Plex — Agents, with receipts.* |
-| 0:15–0:45 | **Mac: shop + negotiate.** Adi asks for a desk lamp under $40. The notch shows the agent negotiating with a store's agent, saving $6, paying within the Shopping pot. Receipt slides in. $0.60 of the savings goes to Lakeside Commons |
-| 0:45–1:05 | **Mac: limit + split.** A $60 purchase hits the limit and shows an approval card; Adi declines by voice. Then "split last night's dinner": invoices go to three friends; one pays live, the split updates |
+| 0:15–0:45 | **Pots + limits.** Adi writes "Errands up to $50 per task, ask me over $25" in plain English. The rule writer turns it into rules; the try-a-payment box shows code, not the model, deciding |
+| 0:45–1:05 | **An agent hits the limit.** Claude, over the Plex MCP server, posts and funds a task from the Errands pot. One over the limit becomes an approval card on Home; Adi declines it |
 | 1:05–1:45 | **Tasks.** "Find someone to check the café on 5th." Task card appears on the web, a worker applies, uploads photos with the challenge word. The proof engine shows each check passing; one-tap approve; Payout lands. Receipt shown |
 | 1:45–2:20 | **Causes.** Lakeside Commons' page. A donor funds one cleanup shift. Cut to: four workers' proof, verified; Payouts sent; the donor receives a Proof Reel |
 | 2:20–2:45 | **Ledger.** Adi says "where did my money go this week, and what did it do?" The dashboard agent builds the widgets live: pots, money flow, impact map. Watchdog flags an odd refund spike |
 | 2:45–3:00 | **Close.** Architecture in one frame (PayPal APIs used, agents, AG Studio). "No money moves without a receipt." |
 
-Record on the real devices (Mac app on a Mac, web in a browser), as the rules ask. No copyrighted music.
+Record the real web app in a browser, as the rules ask. No copyrighted music.
 
 ---
 
@@ -358,14 +333,14 @@ The submission deadline is **Nov 12, 2026, 12:00 PT (Nov 13, 1:30 AM IST)**. Bui
 
 - Money engine, webhooks and Receipts in Convex
 - Plex Tasks: post, fund, apply, proof (photo checks + challenge code), one-tap approve, Payout
-- Plex for Mac: voice, Pots with limits and approval cards, shop on a demo store, dinner split
+- Pots with plain-English limits, enforced in code, and approval cards
 - Plex Causes: cause page, Impact Tasks, donate / fund a task
 - Plex Ledger: personal and cause dashboards, two custom widgets, Plex Analyst agent, theming
 - Guest mode and seed data
 
 **P1, what makes it stand out:**
 
-- Haggle engine (Mac shopping first, then task applications)
+- Haggle engine (task applications)
 - Watchdog agent and action tools in the Ledger
 - Voice bridge from the Mac to the Ledger
 - Proof Reels

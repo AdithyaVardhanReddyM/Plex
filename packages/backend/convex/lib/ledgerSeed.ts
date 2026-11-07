@@ -60,7 +60,7 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
     daysAgo: number;
     area: { label: string; lat: number; lng: number };
     category: "local" | "remote" | "data";
-    via: "web" | "mac" | "mcp";
+    via: "web" | "mcp";
     spec: string[];
     outcome: "pass" | "fail" | "disputed";
     confidence: number;
@@ -72,7 +72,7 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
     {
       title: "Photograph the stalls at the Heart of the City market",
       brief: "Show me which stalls at the Wednesday market sell sourdough, with prices.",
-      worker: rosa, cents: 3_000, daysAgo: 16, category: "local", via: "mac",
+      worker: rosa, cents: 3_000, daysAgo: 16, category: "local", via: "mcp",
       area: { label: "UN Plaza, SF", lat: 37.7799, lng: -122.4142 },
       spec: ["Stall overview", "Bread prices", "Market sign"],
       outcome: "pass", confidence: 0.97,
@@ -82,7 +82,7 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
     {
       title: "Hold a place in line for the Saturday bread drop",
       brief: "Someone wait in line at Arizmendi from 8 and text me when it's my turn.",
-      worker: luis, cents: 2_500, daysAgo: 13, category: "local", via: "mac",
+      worker: luis, cents: 2_500, daysAgo: 13, category: "local", via: "mcp",
       area: { label: "Arizmendi, Valencia St", lat: 37.7562, lng: -122.4211 },
       spec: ["Line at 8am", "Front of line"],
       outcome: "pass", confidence: 0.91,
@@ -112,7 +112,7 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
     {
       title: "Return a package at the shipping store on Mission",
       brief: "Drop my return at the shipping store before it closes and send the receipt.",
-      worker: rosa, cents: 1_500, daysAgo: 3, category: "local", via: "mac",
+      worker: rosa, cents: 1_500, daysAgo: 3, category: "local", via: "mcp",
       area: { label: "Shipping store, Mission St", lat: 37.7609, lng: -122.4194 },
       spec: ["Drop-off receipt"],
       outcome: "pass", confidence: 0.98,
@@ -122,7 +122,7 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
     {
       title: "Photograph the parking signs on 3rd St, Dogpatch",
       brief: "What are the parking rules on 3rd between 20th and 22nd?",
-      worker: luis, cents: 2_000, daysAgo: 2, category: "local", via: "mac",
+      worker: luis, cents: 2_000, daysAgo: 2, category: "local", via: "mcp",
       area: { label: "3rd St, Dogpatch", lat: 37.7605, lng: -122.3884 },
       spec: ["North block signs", "South block signs"],
       outcome: "fail", confidence: 0.88,
@@ -150,7 +150,7 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
     const taskId = await ctx.db.insert("tasks", {
       posterId: adi._id,
       postedVia: p.via,
-      agentLabel: p.via === "mac" ? "Plex for Mac" : p.via === "mcp" ? "Claude (MCP)" : undefined,
+      agentLabel: p.via === "mcp" ? "Claude (MCP)" : undefined,
       title: p.title,
       brief: p.brief,
       description: p.brief,
@@ -195,7 +195,7 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
       potId,
       taskId,
       why: p.brief,
-      agentLabel: p.via === "mac" ? "Plex for Mac" : p.via === "mcp" ? "Claude (MCP)" : undefined,
+      agentLabel: p.via === "mcp" ? "Claude (MCP)" : undefined,
     };
     await receipt(
       {
@@ -259,7 +259,7 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
   await receipt(
     {
       kind: "refund", amountCents: 1_800, currency: "USD", ownerId: adi._id, payerLabel: "Plex", payeeId: adi._id,
-      payeeLabel: adi.name, category: "Errands", potId: pot("Errands"), agentLabel: "Plex for Mac",
+      payeeLabel: adi.name, category: "Errands", potId: pot("Errands"), agentLabel: "Claude (MCP)",
       why: "Drop my spare keys with the dog walker in Noe Valley (cancelled: no one showed)",
       rule: { source: "system", text: "Nobody started within the window, so the hold was refunded" },
       state: "refunded", paypal: { refundId: "SEED-LEDGER-REF-NOE" },
@@ -341,7 +341,7 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
           kind: "donation", amountCents: cents, currency: "USD", ownerId: lakeside._id,
           payerId: source === "campaign" ? fernway._id : undefined, payerLabel: label, payeeId: lakeside._id,
           payeeLabel: lakeside.name, causeId: cause._id, category: "Giving",
-          agentLabel: source === "saved_for_good" ? "Plex for Mac" : undefined,
+          agentLabel: source === "saved_for_good" ? "Claude (MCP)" : undefined,
           why: source === "campaign" ? "Fernway matches every verified view on “Tell the lake's story”"
             : source === "saved_for_good" ? "10% of what my agent saved this week"
             : recurring ? "Monthly gift to the shoreline" : "For the shoreline cleanups",

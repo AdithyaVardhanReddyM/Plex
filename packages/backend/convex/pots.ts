@@ -5,13 +5,10 @@ import { getViewer, requireViewer } from "./lib/viewer";
 import { decidingRuleIndex, describeRule, evaluate } from "./lib/policy";
 import { parsePolicy } from "./lib/policyAi";
 import { writeReceipt } from "./lib/receipts";
-import { resolveAsk } from "./asks";
 
 /**
  * Approve or decline an agent's purchase that needed a human. Approving
- * writes the purchase Receipt with the approval as its rule. (The PayPal
- * charge for agent purchases runs through the Mac/store flow; here the
- * money engine is represented by the Receipt.)
+ * writes the purchase Receipt with the approval as its rule.
  */
 export const decideApproval = mutation({
   args: { id: v.id("approvals"), approve: v.boolean() },
@@ -22,19 +19,6 @@ export const decideApproval = mutation({
     if (approval.status !== "pending") return approval.receiptId ?? null;
     const pot = await ctx.db.get(approval.potId);
     if (!pot) throw new Error("Pot not found");
-
-    // Plex for Mac's approvals have a mirroring ask: answer that, and the
-    // agent makes the payment itself (agentMoney:pay), receipt and all.
-    const linkedAsk = (
-      await ctx.db
-        .query("asks")
-        .withIndex("by_owner_status", (q) => q.eq("ownerId", user._id).eq("status", "pending"))
-        .collect()
-    ).find((a) => a.approvalId === id);
-    if (linkedAsk) {
-      await resolveAsk(ctx, linkedAsk, { approved: approve, by: "window" });
-      return null;
-    }
 
     if (!approve) {
       await ctx.db.patch(id, { status: "declined", decidedAt: Date.now() });

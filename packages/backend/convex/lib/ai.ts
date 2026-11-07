@@ -36,7 +36,7 @@ function deadline(ms: number): AbortSignal {
 /** Retries with back-off (about 2s, 4s, 8s, 16s): rides out Vertex's 429 "resource exhausted". */
 export const RETRIES = 4;
 
-// Same names as apps/agent (GOOGLE_CLOUD_*), or the AI SDK's (GOOGLE_VERTEX_*).
+// GOOGLE_CLOUD_* names, or the AI SDK's (GOOGLE_VERTEX_*).
 const vertexProject = () => process.env.GOOGLE_VERTEX_PROJECT ?? process.env.GOOGLE_CLOUD_PROJECT;
 const vertexLocation = () => process.env.GOOGLE_VERTEX_LOCATION ?? process.env.GOOGLE_CLOUD_LOCATION ?? "global";
 /** The model agents use unless they ask for a specific one. */

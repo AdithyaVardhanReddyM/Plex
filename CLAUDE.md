@@ -6,13 +6,14 @@ PayPal AI Hackathon entry: **agents, with receipts.** Product plan: [docs/Plex-P
 
 ```
 apps/web/          Next.js 16 (App Router, cacheComponents), Tailwind v4: landing, Tasks, Causes, Ledger
+apps/mcp/          Plex for Claude: an MCP server over the agent API
 packages/backend/  Convex: schema, functions, receipts, policy engine, seed (the demo world)
 packages/paypal/   Typed PayPal client: the one place that calls PayPal (fetch only, sandbox)
 docs/              Plan and runbooks
 ```
 
 - `pnpm dev` from the root starts Convex (a local anonymous deployment, no account needed) and Next on :3000.
-- `pnpm start` (`scripts/start.sh`) starts everything: Convex, the brain on :8790, Next on :3000, and builds and opens Plex for Mac; it seeds on the first run (`--no-web`, `--no-mac`). Not `pnpm up`: that's pnpm's alias for update.
+- `pnpm start` (`scripts/start.sh`) starts Convex and Next on :3000 and seeds on the first run (`--no-web` for Convex only). Not `pnpm up`: that's pnpm's alias for update.
 - `pnpm seed` creates the demo world. Rebuild it with `pnpm --filter @plex/backend exec convex run seed:run '{"reset":true}'`.
 - Checks: `pnpm typecheck` (all packages) and `pnpm --filter @plex/web lint`, then `pnpm --filter @plex/web build`. Run all of them before every commit.
 - Commit small and often, with Conventional Commits (`feat(tasks): …`, `fix(web): …`).
@@ -45,12 +46,11 @@ docs/              Plan and runbooks
 - **Whenever you build or change any UI, load the `stageshow` skill first and follow it.** That covers app screens, landing pages, hero and feature illustrations, bento grids, product demos and animations, and stills for the Devpost page and demo video.
 - For marketing visuals and demo animations, follow its full workflow: start from the closest gold example, use its kit, and film the result with `--gate` before handing over.
 - For the real, working app UI, apply its craft and framing rules (`references/craft.md`, `references/framing.md`): restraint, hierarchy, spacing, real icons, no stock AI sparkles or purple.
-- **Plex for Mac is shelved (7 Nov 2026).** `apps/mac` and `apps/agent` stay in the repo but are not part of the hackathon submission: don't build on them, mention them in the README, Devpost text or video, or let the web app depend on them. Why: the buyer-side purchase the Mac demo led with always ends in a PayPal hand-over (no API spends a consumer wallet), and the web app is what judges can open. Reasoning and the shelved demo plan: [docs/plex-mac-demo.md](docs/plex-mac-demo.md). The backend tables it added (routines, asks, bills, subscriptions, memory, agentMoney) are surface-agnostic and may be reused.
-- **Plex for Mac** (`apps/mac`) follows Slice for Mac's richer look, in Plex colors: mint→aqua aurora washes behind headers and the sidebar, one icon set everywhere, Lucide like the web (`PlexIcon` for bare glyphs beside text, `PlexIconTile` for a glyph on a soft tile: mint by default, steel for what waits on you, glass on the black island; both in `Sources/UI/PlexIcons.swift`; add a name to `apps/mac/scripts/lucide-icons.txt` and run `node scripts/lucide-icons.mjs`), real app logos, capsule buttons (black primary with an arrow badge), gradient progress bars, metallic foil on receipts. Restraint means hierarchy and spacing, not a flat grey UI. Tokens: `Sources/UI/PlexTheme.swift`. Contracts: [docs/plex-mac.md](docs/plex-mac.md).
+- **The web app is the product.** Plex for Mac and its Python brain were removed on 7 Nov 2026: no buyer-side API spends a consumer's PayPal wallet, so its purchase demo always ended in a hand-over, and the web app is what judges can open. Don't reintroduce a desktop client; agents reach Plex through the agent API and `apps/mcp`.
 - **Design system:** light only. Tokens live in `apps/web/src/app/globals.css`: canvas `#f6f8f7`, ink, the brand mint→aqua scale (token names `green-*`, from the palette #EBFFFA #C6FCE5 #6EF3D6 #0DCEDA; fills 300–500 take ink text, never white; text on white uses 700/800) for money that moved, and metallic steel blue (`steel-*`, plus the `--metal` gradient) for money that's held and for the receipt's foil edge. Use the tokens, never raw hex.
 - Use the primitives in `src/components/ui/` (`Button`, `Card`, `CardHeader`, `Badge`, `Avatar`, `Input`, `Textarea`, `Label`, `Skeleton`, `EmptyState`, `PageHeader`, `Amount`) before writing new ones. Icons: `lucide-react`, 16px, `strokeWidth={1.9}`, one set only.
 - Button roles: `primary` (ink) for the main action, `brand` (green) only when money moves (fund, approve, release, donate), `secondary` and `ghost` for the rest.
-- **Logo:** an aqua arc, a mint band and an ink corner, plus the "Plex" logotype. Files: `apps/web/public/brand/plex-logo.svg` (mark) and `plex-logo-full.svg`; the favicon is `apps/web/src/app/icon.svg`. Use `Wordmark` / `LogoMark` (`components/shell/wordmark.tsx`) on the web and `Wordmark` / `PlexLogo` (`Sources/UI/Wordmark.swift`) on the Mac. Their ink parts take the text color, so the logo works on dark grounds. All brands, people and the NGO in the demo are invented.
+- **Logo:** an aqua arc, a mint band and an ink corner, plus the "Plex" logotype. Files: `apps/web/public/brand/plex-logo.svg` (mark) and `plex-logo-full.svg`; the favicon is `apps/web/src/app/icon.svg`. Use `Wordmark` / `LogoMark` (`components/shell/wordmark.tsx`). Their ink parts take the text color, so the logo works on dark grounds. All brands, people and the NGO in the demo are invented.
 
 ## PayPal
 

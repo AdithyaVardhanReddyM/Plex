@@ -597,12 +597,12 @@ export const asks = query({
   },
 });
 
-/** Ask the Ledger. Web, Plex for Mac (voice bridge) and MCP all come in here. */
+/** Ask the Ledger. The web and MCP both come in here. */
 export const ask = mutation({
   args: {
     role: vRole,
     question: v.string(),
-    via: v.optional(v.union(v.literal("web"), v.literal("mac"), v.literal("mcp"))),
+    via: v.optional(v.union(v.literal("web"), v.literal("mcp"))),
   },
   handler: async (ctx, { role, question, via }) => {
     const { user } = await requireViewer(ctx);

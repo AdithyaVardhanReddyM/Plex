@@ -26,8 +26,6 @@ Agents got wallets this year, and they started hiring people. Two things are mis
 | **Ledger** | Every receipt in one AG Grid, with Personal, Task poster and Cause dashboards. **Ask the Ledger** a question and the Analyst builds the grid or chart that answers it; **Watchdog** flags refund spikes, failing proofs in one area and unusual spending. See [docs/ag-grid.md](docs/ag-grid.md). |
 | **Receipts** | Every receipt, and each one's full page: amount, parties, why, rule, evidence, timeline and PayPal IDs. |
 
-**Plex for Mac** (a voice agent in the MacBook notch) is an experiment that is shelved and not part of this submission. In the web app its purchases, approvals and dinner splits appear as seeded history.
-
 ## Try it
 
 Plex opens in **guest mode**: choose **Continue as guest** and you are Adi, in a demo world with a few weeks of history. No account needed. On Tasks, the **Acting as** switch lets you play every side: Adi posting, a demo worker (Rosa, Luis…) applying and uploading proof, or the demo nonprofit, Lakeside Commons, approving its cleanup shifts.
@@ -66,15 +64,13 @@ Optional settings, all set the same way with `npx convex env set`:
 | `PAYPAL_DEMO_PAYEE_EMAIL` | A sandbox personal account that receives the demo workers' payouts, so they complete instead of waiting unclaimed. Re-seed after setting it. |
 | `PAYPAL_WEBHOOK_ID` | Verifies PayPal webhook signatures. Webhooks need a public URL; see [docs/paypal-webhooks.md](docs/paypal-webhooks.md). |
 
-### Everything at once, with Plex for Mac
+### Everything at once
 
-On a Mac with Xcode, [uv](https://docs.astral.sh/uv/) and XcodeGen (`brew install uv xcodegen`), one command starts Convex, the Plex brain (Python, Gemini on Vertex AI), the web app and Plex for Mac. It seeds the demo world on the first run:
+One command starts Convex and the web app, and seeds the demo world on the first run:
 
 ```bash
-pnpm start            # add --no-web or --no-mac to skip a part
+pnpm start            # add --no-web to run Convex only
 ```
-
-The brain needs `apps/agent/.env` (copy `apps/agent/.env.example`: a Vertex AI service account key, `CONVEX_URL`, and a `PLEX_AGENT_SECRET` that matches the one set in Convex). For computer use, install `npm i -g agent-desktop agent-browser`. Ctrl-C stops every part, including the Mac app.
 
 Checks: `pnpm typecheck`, `pnpm --filter @plex/web lint`, `pnpm --filter @plex/web build`.
 
@@ -119,7 +115,6 @@ The rule everywhere: **the model interprets, code decides.** Limits, proof thres
 - **Next.js 16** (App Router, Cache Components), **React 19**, **Tailwind CSS v4**, **lucide-react** icons.
 - **Clerk** for sign-in (wired; guest mode is the default, see `convex/auth.config.ts.example`).
 - **Stageshow** (a Claude Code skill) for the landing page's product demos.
-- **DiceBear** for Plex for Mac's avatar: "Dylan" by Natalia Spivak, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - **Claude Code** for building it.
 - **OpenStreetMap** tiles for cause maps. The seeded Proof Reel uses two openly licensed stand-in photos, credited in [apps/web/public/demo/reel/CREDITS.md](apps/web/public/demo/reel/CREDITS.md).
 

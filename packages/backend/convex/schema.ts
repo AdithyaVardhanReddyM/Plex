@@ -7,7 +7,7 @@ import { vRole, vWidgetSpec } from "./lib/ledgerSpec";
  *
  * Money is always stored in integer cents. Every movement of money writes a
  * `receipts` row: that is the product's core idea ("no money moves without a
- * receipt"). Surfaces (Tasks, Causes, Ledger, Mac) read the same tables.
+ * receipt"). Surfaces (Tasks, Causes, Ledger) read the same tables.
  *
  * Sections are grouped by surface so parallel work rarely touches the same
  * lines. Add new tables at the end of your surface's section.
@@ -113,164 +113,6 @@ export const acceptanceCriterion = v.union(
   v.object({ kind: v.literal("image"), specIndex: v.number(), minPx: v.number() }),
 );
 
-// ── Plex for Mac value shapes ────────────────────────────────────────────────
-
-/**
- * One widget on Plex for Mac's Insights page. The worker picks them; the web's /insights
- * route draws them. Receipts, pots, bills and subscriptions are bound to live data (the
- * worker only chooses the view); a timeline and a figure carry what the worker worked out
- * from other sources (the Mac's calendar, a sum it computed), so it states them.
- */
-export const insightTone = v.union(v.literal("good"), v.literal("warn"), v.literal("neutral"));
-export const insightWidget = v.union(
-  v.object({ kind: v.literal("receipts"), spec: vWidgetSpec, note: v.optional(v.string()) }),
-  v.object({
-    kind: v.literal("pots"),
-    title: v.string(),
-    note: v.optional(v.string()),
-    pots: v.optional(v.array(v.string())), // only these, by name
-  }),
-  v.object({ kind: v.literal("bills"), title: v.string(), note: v.optional(v.string()), days: v.optional(v.number()) }),
-  v.object({
-    kind: v.literal("subscriptions"),
-    title: v.string(),
-    note: v.optional(v.string()),
-    flag: v.optional(v.array(v.string())), // merchants to point at
-  }),
-  v.object({
-    kind: v.literal("timeline"),
-    title: v.string(),
-    note: v.optional(v.string()),
-    items: v.array(
-      v.object({
-        at: v.number(), // ms
-        label: v.string(),
-        detail: v.optional(v.string()),
-        amountCents: v.optional(v.number()),
-        kind: v.union(v.literal("bill"), v.literal("event"), v.literal("payment"), v.literal("plan")),
-        tone: v.optional(insightTone),
-      }),
-    ),
-  }),
-  v.object({
-    kind: v.literal("figure"),
-    title: v.string(),
-    valueCents: v.optional(v.number()),
-    value: v.optional(v.string()),
-    caption: v.optional(v.string()),
-    tone: v.optional(insightTone),
-  }),
-);
-
-export const routineTrigger = v.union(
-  v.object({
-    kind: v.literal("schedule"),
-    cadence: v.union(
-      v.literal("hourly"),
-      v.literal("daily"),
-      v.literal("weekly"),
-      v.literal("monthly"),
-      v.literal("once"),
-    ),
-    time: v.optional(v.string()), // "HH:MM", local to the routine's timezone
-    days: v.optional(v.array(v.number())), // 0 = Sunday
-    dayOfMonth: v.optional(v.number()),
-    everyHours: v.optional(v.number()),
-    at: v.optional(v.number()), // once, ms
-  }),
-  v.object({ kind: v.literal("email"), query: v.string(), label: v.string() }),
-  v.object({ kind: v.literal("paypal"), event: v.string(), label: v.string() }),
-  v.object({ kind: v.literal("folder"), path: v.string(), pattern: v.optional(v.string()), label: v.string() }),
-  v.object({ kind: v.literal("manual") }),
-);
-
-export const routineSpec = v.object({
-  trigger: routineTrigger,
-  conditions: v.array(v.object({ text: v.string(), check: v.optional(v.string()) })),
-  steps: v.array(
-    v.object({
-      id: v.string(),
-      kind: v.union(
-        v.literal("check"),
-        v.literal("act"),
-        v.literal("money"),
-        v.literal("notify"),
-        v.literal("ask"),
-        v.literal("wait"),
-      ),
-      title: v.string(),
-      detail: v.optional(v.string()),
-      tool: v.optional(v.string()),
-    }),
-  ),
-  guardrails: v.object({
-    potName: v.optional(v.string()),
-    maxSpendCents: v.optional(v.number()),
-    approval: v.union(v.literal("always"), v.literal("over_limit"), v.literal("never_money")),
-  }),
-  summary: v.string(),
-});
-
-export const runStatus = v.union(
-  v.literal("queued"),
-  v.literal("running"),
-  v.literal("waiting"),
-  v.literal("done"),
-  v.literal("failed"),
-  v.literal("skipped"),
-  v.literal("cancelled"),
-);
-
-export const runStepKind = v.union(
-  v.literal("info"),
-  v.literal("tool"),
-  v.literal("money"),
-  v.literal("ask"),
-  v.literal("done"),
-  v.literal("error"),
-);
-
-export const askKind = v.union(
-  v.literal("approval"),
-  v.literal("question"),
-  v.literal("takeover"),
-  v.literal("login"),
-);
-
-export const askSource = v.object({
-  kind: v.union(v.literal("voice"), v.literal("task"), v.literal("routine")),
-  label: v.string(),
-  runId: v.optional(v.id("routineRuns")),
-  taskId: v.optional(v.string()),
-});
-
-export const memoryKind = v.union(
-  v.literal("fact"),
-  v.literal("preference"),
-  v.literal("person"),
-  v.literal("merchant"),
-  v.literal("habit"),
-  v.literal("note"),
-);
-
-export const memorySource = v.union(
-  v.literal("said"),
-  v.literal("learned"),
-  v.literal("email"),
-  v.literal("routine"),
-  v.literal("settings"),
-);
-
-export const activityKind = v.union(
-  v.literal("voice"),
-  v.literal("task"),
-  v.literal("routine"),
-  v.literal("money"),
-  v.literal("memory"),
-  v.literal("handoff"),
-  v.literal("system"),
-);
-
 export default defineSchema({
   // ── People, orgs and agents ────────────────────────────────────────────────
 
@@ -314,9 +156,8 @@ export default defineSchema({
 
   agents: defineTable({
     ownerId: v.id("users"),
-    name: v.string(), // "Plex for Mac", "Claude (MCP)"
+    name: v.string(), // "Claude (MCP)"
     kind: v.union(
-      v.literal("mac"),
       v.literal("mcp"),
       v.literal("ledger"),
       v.literal("system"),
@@ -469,7 +310,7 @@ export default defineSchema({
 
   tasks: defineTable({
     posterId: v.id("users"),
-    postedVia: v.union(v.literal("web"), v.literal("mac"), v.literal("mcp")),
+    postedVia: v.union(v.literal("web"), v.literal("mcp")),
     agentLabel: v.optional(v.string()),
     title: v.string(),
     brief: v.string(), // the loose request, in the poster's words
@@ -794,12 +635,12 @@ export default defineSchema({
   }).index("by_eventId", ["eventId"]),
   // ── Plex Ledger ────────────────────────────────────────────────────────────
 
-  /** Questions asked of the Ledger (web, Plex for Mac or MCP) and the Analyst's answer. */
+  /** Questions asked of the Ledger (web or MCP) and the Analyst's answer. */
   ledgerAsks: defineTable({
     ownerId: v.id("users"),
     role: vRole,
     question: v.string(),
-    via: v.union(v.literal("web"), v.literal("mac"), v.literal("mcp")),
+    via: v.union(v.literal("web"), v.literal("mcp")),
     status: v.union(v.literal("thinking"), v.literal("done"), v.literal("error")),
     answer: v.optional(v.string()),
     widgets: v.optional(v.array(vWidgetSpec)),
@@ -834,144 +675,4 @@ export default defineSchema({
     status: v.union(v.literal("handed_off"), v.literal("done")),
     note: v.string(),
   }).index("by_owner", ["ownerId"]),
-
-  // ── Plex for Mac: agent, routines, memory ──────────────────────────────────
-
-  /** A standing instruction, compiled once from the user's words, checked on every run. */
-  routines: defineTable({
-    ownerId: v.id("users"),
-    name: v.string(),
-    prompt: v.string(), // the user's own words
-    icon: v.string(), // lucide-style name; the Mac maps it to an SF Symbol
-    spec: routineSpec,
-    runWhere: v.union(v.literal("mac"), v.literal("cloud")),
-    missed: v.union(v.literal("run_on_wake"), v.literal("skip")),
-    timezone: v.string(), // IANA, from the Mac
-    enabled: v.boolean(),
-    nextRunAt: v.optional(v.number()), // only for schedule triggers
-    lastRunAt: v.optional(v.number()),
-    lastStatus: v.optional(runStatus),
-    lastSummary: v.optional(v.string()),
-    createdAt: v.number(),
-  })
-    .index("by_owner", ["ownerId"])
-    .index("by_next", ["enabled", "nextRunAt"]),
-
-  routineRuns: defineTable({
-    routineId: v.id("routines"),
-    ownerId: v.id("users"),
-    status: runStatus,
-    reason: v.string(), // "Scheduled for 9:00", "Run now"
-    startedAt: v.number(),
-    endedAt: v.optional(v.number()),
-    steps: v.array(
-      v.object({ at: v.number(), kind: runStepKind, label: v.string(), detail: v.optional(v.string()) }),
-    ),
-    summary: v.optional(v.string()),
-    receiptIds: v.array(v.id("receipts")),
-    askId: v.optional(v.id("asks")),
-    // What set off an event-triggered run (a PayPal webhook's payer, amount, invoice), handed to the brain.
-    trigger: v.optional(v.any()),
-  })
-    .index("by_routine", ["routineId", "startedAt"])
-    .index("by_owner", ["ownerId", "startedAt"])
-    .index("by_status", ["status"]),
-
-  /** The human hand-off inbox: approvals, questions, takeovers, logins. */
-  asks: defineTable({
-    ownerId: v.id("users"),
-    kind: askKind,
-    title: v.string(),
-    detail: v.optional(v.string()),
-    options: v.optional(v.array(v.string())),
-    amountCents: v.optional(v.number()),
-    payee: v.optional(v.string()),
-    ruleText: v.optional(v.string()),
-    potName: v.optional(v.string()),
-    approvalId: v.optional(v.id("approvals")), // a money approval mirrors its approvals row
-    source: askSource,
-    status: v.union(v.literal("pending"), v.literal("answered"), v.literal("cancelled"), v.literal("expired")),
-    answer: v.optional(
-      v.object({
-        approved: v.optional(v.boolean()),
-        always: v.optional(v.boolean()),
-        text: v.optional(v.string()),
-        by: v.union(v.literal("notch"), v.literal("window"), v.literal("voice")),
-      }),
-    ),
-    createdAt: v.number(),
-    answeredAt: v.optional(v.number()),
-  }).index("by_owner_status", ["ownerId", "status"]),
-
-  /** What the agent knows about the user: explicit, editable, forgettable. */
-  memories: defineTable({
-    ownerId: v.id("users"),
-    kind: memoryKind,
-    text: v.string(),
-    about: v.optional(v.string()),
-    source: memorySource,
-    confidence: v.number(), // 0-1
-    pinned: v.boolean(),
-    uses: v.number(),
-    lastUsedAt: v.optional(v.number()),
-    embedding: v.array(v.float64()), // 768 dims (gemini-embedding-001); [] until the brain embeds it
-    archived: v.boolean(),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_owner", ["ownerId", "updatedAt"])
-    .vectorIndex("by_embedding", { vectorField: "embedding", dimensions: 768, filterFields: ["ownerId"] }),
-
-  bills: defineTable({
-    ownerId: v.id("users"),
-    payee: v.string(),
-    payeeEmail: v.optional(v.string()),
-    category: v.string(), // "Utilities"
-    amountCents: v.number(),
-    dueAt: v.number(),
-    status: v.union(v.literal("upcoming"), v.literal("paid"), v.literal("overdue"), v.literal("scheduled")),
-    autopay: v.boolean(),
-    source: v.union(v.literal("email"), v.literal("invoice"), v.literal("manual")),
-    note: v.optional(v.string()),
-    usualCents: v.optional(v.number()), // average of the last bills, to spot a spike
-    receiptId: v.optional(v.id("receipts")),
-    paidAt: v.optional(v.number()),
-  }).index("by_owner_due", ["ownerId", "dueAt"]),
-
-  subscriptions: defineTable({
-    ownerId: v.id("users"),
-    merchant: v.string(),
-    plan: v.string(),
-    amountCents: v.number(),
-    cadence: v.union(v.literal("monthly"), v.literal("yearly")),
-    nextChargeAt: v.number(),
-    status: v.union(v.literal("active"), v.literal("cancelled"), v.literal("paused")),
-    lastUsedAt: v.optional(v.number()), // from Mac app usage or email
-    previousAmountCents: v.optional(v.number()), // set when the price went up
-    paypalSubscriptionId: v.optional(v.string()),
-    category: v.string(),
-  }).index("by_owner", ["ownerId"]),
-
-  /** Today's feed in Plex for Mac. */
-  agentActivity: defineTable({
-    ownerId: v.id("users"),
-    at: v.number(),
-    kind: activityKind,
-    title: v.string(),
-    detail: v.optional(v.string()),
-    receiptId: v.optional(v.id("receipts")),
-    runId: v.optional(v.id("routineRuns")),
-    routineId: v.optional(v.id("routines")),
-  }).index("by_owner_time", ["ownerId", "at"]),
-
-  /** A page of widgets the worker built to answer a question ("How did I do this month?"). */
-  insights: defineTable({
-    ownerId: v.id("users"),
-    title: v.string(),
-    question: v.optional(v.string()), // the user's words
-    summary: v.optional(v.string()), // what Plex said about it
-    widgets: v.array(insightWidget),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  }).index("by_owner", ["ownerId", "updatedAt"]),
 });
