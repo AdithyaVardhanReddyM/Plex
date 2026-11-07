@@ -292,7 +292,7 @@ export function ProofUpload({ id }: { id: string }) {
           </Card>
         </div>
 
-        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
+        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-8">
           {/* The challenge code: the screen's lit card */}
           <section className="spotlight rounded-xl p-6">
             <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">

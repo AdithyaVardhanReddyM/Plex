@@ -311,7 +311,7 @@ export function BuilderView() {
         </div>
 
         {/* Live preview */}
-        <div className="min-w-0 lg:sticky lg:top-20">
+        <div className="min-w-0 lg:sticky lg:top-8">
           <div className="mb-2.5 flex items-center justify-between px-1">
             <div className="flex items-center gap-1.5 text-[12.5px] font-medium text-muted">
               <Eye className="size-3.5" strokeWidth={1.9} />

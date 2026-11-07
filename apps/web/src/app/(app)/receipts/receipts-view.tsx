@@ -274,7 +274,7 @@ export function ReceiptsView() {
           )}
         </Card>
 
-        <aside className="hidden lg:sticky lg:top-20 lg:block" aria-label="Selected receipt">
+        <aside className="hidden lg:sticky lg:top-8 lg:block" aria-label="Selected receipt">
           {receipts === undefined ? (
             <Skeleton className="h-[560px] w-full rounded-lg" />
           ) : active ? (

@@ -92,7 +92,7 @@ export function CauseView({
           <Raised data={data} />
         </div>
 
-        <aside id="donate" className="scroll-mt-20 lg:sticky lg:top-20 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
+        <aside id="donate" className="scroll-mt-20 lg:sticky lg:top-8 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
           <DonatePanel data={data} selectedTaskId={taskId} onSelectTask={setTaskId} onceRequest={onceAsk} cancelled={cancelled} />
           <OrgNote data={data} />
         </aside>

@@ -66,7 +66,7 @@ export function DevelopersView() {
           <Keys />
           <Reference base={base} />
         </div>
-        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
+        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-8">
           <Safety />
         </aside>
       </div>

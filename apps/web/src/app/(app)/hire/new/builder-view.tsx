@@ -417,7 +417,7 @@ export function BuilderView() {
           </div>
         </div>
 
-        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
+        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-8">
           <div className="spotlight rounded-xl p-5">
             <div className="mb-4 flex items-center justify-between gap-3">
               <span className="flex items-center gap-2 text-[13px] font-medium text-white/60">

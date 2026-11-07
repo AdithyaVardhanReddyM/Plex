@@ -4,16 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { AnimatePresence, motion } from "motion/react";
-import { Bell, ChevronRight, Menu, Plus, Search, X } from "lucide-react";
+import { Menu, Search, X } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { api } from "@/lib/convex";
 import { Kbd, Meter, StatusDot, Switch } from "@/components/ui/primitives";
-import { buttonVariants } from "@/components/ui/button";
 import { cn, formatCents } from "@/lib/utils";
 import { Wordmark } from "./wordmark";
 import { UserRow } from "./account";
 import { CommandMenuProvider, useCommandMenu } from "./command-menu";
-import { NAV_GROUPS, navFor } from "./nav";
+import { NAV_GROUPS } from "./nav";
 
 /** Pathname is request data on dynamic routes, so anything that reads it streams in. */
 function usePath() {
@@ -170,83 +169,6 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-// ── Top bar ──────────────────────────────────────────────────────────────────
-
-const SUB_LABELS: Record<string, string> = { new: "New", proof: "Proof" };
-
-function Crumbs() {
-  const pathname = usePath();
-  const item = navFor(pathname);
-  if (!item) return null;
-  const rest = pathname.slice(item.href.length).split("/").filter(Boolean);
-  const sub = rest.length ? (SUB_LABELS[rest[rest.length - 1]!] ?? "Details") : null;
-  return (
-    <div className="flex min-w-0 items-center gap-1.5 text-[13px]">
-      <Link
-        href={item.href}
-        className={cn(
-          "flex items-center gap-2 rounded-full px-2 py-1 font-medium transition-colors hover:bg-surface/80",
-          sub ? "text-muted" : "text-ink",
-        )}
-      >
-        <item.icon className="size-4 text-faint" strokeWidth={1.9} />
-        {item.label}
-      </Link>
-      {sub ? (
-        <>
-          <ChevronRight className="size-3.5 flex-none text-line-strong" strokeWidth={2} />
-          <span className="truncate px-1 font-medium text-ink">{sub}</span>
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-function ApprovalsBell() {
-  const approvals = useQuery(api.pots.pendingApprovals);
-  const n = approvals?.length ?? 0;
-  return (
-    <Link
-      href="/pots"
-      aria-label={n ? `${n} approvals waiting` : "Approvals"}
-      className="relative flex size-8 items-center justify-center rounded-full text-ink-2 transition-colors hover:bg-sunken hover:text-ink"
-    >
-      <Bell className="size-4" strokeWidth={1.9} />
-      {n ? (
-        <span className="tabular absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-green-500 px-1 text-[10px] font-semibold text-ink ring-2 ring-panel">
-          {n}
-        </span>
-      ) : null}
-    </Link>
-  );
-}
-
-function TopBar() {
-  const { open } = useCommandMenu();
-  return (
-    <header className="sticky top-0 z-20 hidden h-14 items-center justify-between gap-4 bg-canvas/70 px-6 backdrop-blur-xl lg:flex lg:rounded-t-[22px]">
-      <Suspense fallback={<div />}>
-        <Crumbs />
-      </Suspense>
-      <div className="flex flex-none items-center gap-1.5">
-        <button
-          type="button"
-          onClick={open}
-          aria-label="Search"
-          className="flex size-8 items-center justify-center rounded-full text-ink-2 transition-colors hover:bg-sunken hover:text-ink"
-        >
-          <Search className="size-4" strokeWidth={1.9} />
-        </button>
-        <ApprovalsBell />
-        <span className="mx-1.5 h-5 w-px bg-line" />
-        <Link href="/tasks/new" className={buttonVariants({ size: "sm" })}>
-          <Plus /> Post a task
-        </Link>
-      </div>
-    </header>
-  );
-}
-
 // ── Shell ────────────────────────────────────────────────────────────────────
 
 function MobileBar({ open, onToggle }: { open: boolean; onToggle: () => void }) {
@@ -331,12 +253,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             id="app-scroll"
             className="scroll-quiet relative min-h-screen bg-canvas lg:h-full lg:min-h-0 lg:overflow-y-auto lg:rounded-[22px]"
           >
-            <TopBar />
             <Suspense fallback={null}>
               <ScrollReset />
             </Suspense>
             <div className="aurora pointer-events-none absolute inset-x-0 top-0 h-[420px] lg:rounded-t-[22px]" aria-hidden />
-            <main className="relative mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-10 lg:pt-9 lg:pb-14">
+            <main className="relative mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-10 lg:pt-12 lg:pb-14">
               {children}
             </main>
           </div>

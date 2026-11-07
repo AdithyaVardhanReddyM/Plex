@@ -129,7 +129,7 @@ export function TaskDetail({ id }: { id: string }) {
           ) : null}
           <BriefCard data={data} />
         </div>
-        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
+        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-8">
           <MoneyCard data={data} />
           <TaskReceipts receipts={data.receipts} />
           <PayPalDeskCard data={data} />

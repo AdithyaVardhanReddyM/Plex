@@ -31,7 +31,14 @@ export function TasksView() {
       <PageHeader
         title="Tasks"
         description="Post work for a person or an AI agent. PayPal holds the payout, Plex checks the proof, and the money moves only when it passes."
-        actions={<PersonaSwitch />}
+        actions={
+          <>
+            <PersonaSwitch />
+            <Link href="/tasks/new" className={buttonVariants({ variant: "primary" })}>
+              <Plus /> Post a task
+            </Link>
+          </>
+        }
       />
 
       <BoardStats />
@@ -45,9 +52,6 @@ export function TasksView() {
             { value: "mine", label: "My tasks", icon: <UserRound /> },
           ]}
         />
-        <Link href="/tasks/new" className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "sm:hidden")}>
-          <Plus /> Post
-        </Link>
       </div>
 
       {tab === "board" ? <Board /> : <MyTasks />}

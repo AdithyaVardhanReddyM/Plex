@@ -69,7 +69,7 @@ export function ProfileView({ handle }: { handle: string }) {
           <RecentWork p={p} first={first} />
         </div>
 
-        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
+        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-8">
           <HireCard p={p} first={first} hireHref={hireHref} />
           <Card>
             <CardHeader

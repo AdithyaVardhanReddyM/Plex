@@ -72,7 +72,7 @@ export function ReceiptDetail({ id }: { id: string }) {
           <Stage>
             <ReceiptCard receipt={receipt} className="w-full max-w-[460px]" />
           </Stage>
-          <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
+          <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-8">
             <AtAGlance receipt={receipt} />
             <BelongsTo receipt={receipt} />
           </div>

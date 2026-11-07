@@ -340,7 +340,7 @@ export function NewTaskView() {
           {form ? <Editor form={form} set={set} onBuild={() => save("build")} building={saving === "build"} /> : null}
         </div>
 
-        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
+        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-8">
           {form ? (
             <>
               <div>
