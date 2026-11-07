@@ -7,6 +7,7 @@ import type { FunctionReturnType } from "convex/server";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Bot, CircleAlert, Clock, Hand, ListChecks, Loader2, MapPin, ShieldCheck, UserCheck, Zap } from "lucide-react";
 import { payoutSummary, windowLabel } from "@plex/backend/lib/taskRules";
+import { criterionLabel, defaultCriteria } from "@plex/backend/lib/hire";
 import { api } from "@/lib/convex";
 import type { Id } from "@/lib/convex";
 import { Avatar, Card, EmptyState, Skeleton } from "@/components/ui/primitives";
@@ -14,7 +15,7 @@ import { ReceiptCard, ReceiptRow } from "@/components/receipt/receipt";
 import { PersonaSwitch, useAs } from "@/components/tasks/persona";
 import { CategoryLabel, SpecIcon, StatusBadge, errorMessage, timeLeft } from "@/components/tasks/task-ui";
 import { cn } from "@/lib/utils";
-import { ActionPanel, Applicants, ApplyCard, MoneyCard, ProofPanel } from "./panels";
+import { ActionPanel, Applicants, ApplyCard, MoneyCard, PayPalDeskCard, ProofPanel } from "./panels";
 
 export type TaskPage = NonNullable<FunctionReturnType<typeof api.tasks.get>>;
 
@@ -71,6 +72,17 @@ export function TaskDetail({ id }: { id: string }) {
           ) : null}
           <span className="text-faint">·</span>
           <span>posted {new Date(task._creationTime).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+          {data.invited ? (
+            <>
+              <span className="text-faint">·</span>
+              <span>
+                hired directly:{" "}
+                <Link href={`/hire/${data.invited.handle}`} className="font-medium text-ink-2 underline-offset-2 hover:underline">
+                  {data.invited.name}
+                </Link>
+              </span>
+            </>
+          ) : null}
         </div>
       </header>
 
@@ -93,6 +105,7 @@ export function TaskDetail({ id }: { id: string }) {
         </div>
         <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-10">
           <MoneyCard data={data} />
+          <PayPalDeskCard data={data} />
           <TaskReceipts receipts={data.receipts} />
         </aside>
       </div>
@@ -217,6 +230,16 @@ function BriefCard({ data }: { data: TaskPage }) {
           {Mode.label}
           <span className="block text-[12.5px] text-muted">{Mode.body}</span>
         </Fact>
+        <Fact icon={<Bot />} label="Who can take it">
+          {WHO[task.workerType ?? "human"]}
+          <span className="block text-[12.5px] text-muted">
+            {data.digital ? "Delivered as text, files or links" : "Needs someone on the ground"}
+          </span>
+        </Fact>
+        <Fact icon={<UserCheck />} label="Checked by">
+          {data.digital ? "Three blind proofer agents" : "The proof engine"}
+          <span className="block text-[12.5px] text-muted">{data.digital ? "Plex's rule decides the verdict" : "Photos, time, place, challenge code"}</span>
+        </Fact>
       </dl>
       <div className="px-5 pt-4 pb-5">
         <div className="flex items-center justify-between gap-3">
@@ -236,23 +259,42 @@ function BriefCard({ data }: { data: TaskPage }) {
             </li>
           ))}
         </ol>
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-md bg-steel-50/80 px-3.5 py-3 ring-1 ring-steel-100 ring-inset">
-          <span className="text-[12.5px] leading-snug text-steel-700">
-            Challenge code: shown in one photo, so proof can&apos;t be prepared in advance
-          </span>
-          <span
-            className={cn(
-              "flex-none rounded-[6px] px-2 py-1 font-mono text-[13px] font-medium",
-              seesCode ? "bg-surface text-ink shadow-card" : "bg-steel-100 text-steel-500",
-            )}
-          >
-            {seesCode ? task.challengeCode : "on accept"}
-          </span>
-        </div>
+        {data.digital ? (
+          <div className="mt-3 rounded-md bg-canvas px-3.5 py-3 ring-1 ring-line ring-inset">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[13px] font-medium text-ink">Done means</span>
+              {task.autoHire ? <span className="text-[12px] font-medium text-green-700">Hands-free</span> : null}
+            </div>
+            <ul className="mt-1.5 space-y-1 text-[12.5px] text-ink-2">
+              {(task.criteria ?? defaultCriteria(task.proofSpec)).map((c, i) => (
+                <li key={i}>
+                  {criterionLabel(c, task.proofSpec)} <span className="text-faint">· checked by code</span>
+                </li>
+              ))}
+              <li>Three blind proofer agents pass it, by Plex&apos;s majority rule</li>
+            </ul>
+          </div>
+        ) : (
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-md bg-steel-50/80 px-3.5 py-3 ring-1 ring-steel-100 ring-inset">
+            <span className="text-[12.5px] leading-snug text-steel-700">
+              Challenge code: shown in one photo, so proof can&apos;t be prepared in advance
+            </span>
+            <span
+              className={cn(
+                "flex-none rounded-[6px] px-2 py-1 font-mono text-[13px] font-medium",
+                seesCode ? "bg-surface text-ink shadow-card" : "bg-steel-100 text-steel-500",
+              )}
+            >
+              {seesCode ? task.challengeCode : "on accept"}
+            </span>
+          </div>
+        )}
       </div>
     </Card>
   );
 }
+
+const WHO = { human: "A person", either: "A person or an AI agent", agent: "An AI agent" } as const;
 
 function Fact({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (

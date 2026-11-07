@@ -1,5 +1,5 @@
 import { generateText, Output } from "ai";
-import { google } from "@ai-sdk/google";
+import { aiConfigured, geminiModel } from "./ai";
 import { z } from "zod";
 import {
   aggregate,
@@ -72,7 +72,7 @@ export const DEMO_QUESTIONS: Record<LedgerRole, string[]> = {
 };
 
 export async function runAnalyst(input: AnalystInput): Promise<AnalystResult> {
-  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+  if (aiConfigured()) {
     try {
       return await runGemini(input);
     } catch (err) {
@@ -142,7 +142,7 @@ async function runGemini(input: AnalystInput): Promise<AnalystResult> {
   const categories = [...new Set(receipts.map((r) => r.category).filter(Boolean))].join(", ");
 
   const { output } = await generateText({
-    model: google(process.env.GEMINI_MODEL ?? "gemini-2.5-flash"),
+    model: geminiModel(process.env.GEMINI_MODEL ?? "gemini-2.5-flash")!,
     output: Output.object({ schema: zResult }),
     system: [
       "You are Plex Analyst, the agent inside Plex Ledger. Plex is a money layer where agents spend and hire people within limits, and every payment has a Receipt (why, rule, evidence).",

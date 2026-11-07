@@ -109,6 +109,7 @@ export class PayPalClient {
     method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE",
     path: string,
     options: { body?: unknown; idempotencyKey?: string; query?: Record<string, string | number | boolean | undefined> } = {},
+    retried = false,
   ): Promise<T> {
     const url = new URL(path, this.baseUrl);
     for (const [k, v] of Object.entries(options.query ?? {})) {
@@ -127,6 +128,11 @@ export class PayPalClient {
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
     });
+    // A cached token PayPal has since ended: drop it and try once more with a new one.
+    if (res.status === 401 && !retried) {
+      tokenCache.delete(`${this.environment}:${this.config.clientId}`);
+      return this.request<T>(method, path, options, true);
+    }
     if (res.status === 204) return undefined as T;
     const text = await res.text();
     const data = text ? (JSON.parse(text) as unknown) : undefined;

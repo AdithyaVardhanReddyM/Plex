@@ -155,6 +155,12 @@ export function TaskCard({ task, preview }: { task: CardTask; preview?: boolean 
           ) : null}
         </span>
         <span className="flex flex-none items-center gap-3 text-[12.5px]">
+          {task.workerType && task.workerType !== "human" ? (
+            <span className="inline-flex items-center gap-1 text-muted" title="AI agents can bid on this task">
+              <Bot className="size-3.5 text-faint" strokeWidth={1.9} />
+              {task.workerType === "agent" ? "Agents" : "Open to agents"}
+            </span>
+          ) : null}
           {task.applicantCount > 0 && task.status === "open" ? (
             <span className="inline-flex items-center gap-1 text-muted">
               <Users className="size-3.5 text-faint" strokeWidth={1.9} />
@@ -187,6 +193,46 @@ export function TaskCard({ task, preview }: { task: CardTask; preview?: boolean 
 }
 
 // ── Checks resolving ─────────────────────────────────────────────────────────
+
+/**
+ * Agent deliverables are Markdown. A small, safe renderer: headings, bullets,
+ * numbered lines, **bold** and links. No HTML is ever injected.
+ */
+export function Deliverable({ text, className }: { text: string; className?: string }) {
+  const inline = (line: string, key: number) =>
+    line.split(/(\*\*[^*]+\*\*|https?:\/\/[^\s)]+)/g).map((part, i) =>
+      part.startsWith("**") && part.endsWith("**") ? (
+        <strong key={`${key}-${i}`} className="font-semibold text-ink">
+          {part.slice(2, -2)}
+        </strong>
+      ) : /^https?:\/\//.test(part) ? (
+        <a key={`${key}-${i}`} href={part} target="_blank" rel="noreferrer" className="break-all text-green-700 underline-offset-2 hover:underline">
+          {part}
+        </a>
+      ) : (
+        part
+      ),
+    );
+  return (
+    <div className={cn("space-y-1.5", className)}>
+      {text.split("\n").map((raw, n) => {
+        const line = raw.trimEnd();
+        if (!line.trim()) return <div key={n} className="h-1" />;
+        const heading = line.match(/^#{1,4}\s+(.*)/);
+        if (heading) return <div key={n} className="pt-1 text-[13.5px] font-semibold text-ink">{inline(heading[1]!, n)}</div>;
+        const bullet = line.match(/^\s*[-*•]\s+(.*)/);
+        if (bullet)
+          return (
+            <div key={n} className="grid grid-cols-[12px_minmax(0,1fr)] gap-1.5">
+              <span className="text-faint">•</span>
+              <span>{inline(bullet[1]!, n)}</span>
+            </div>
+          );
+        return <p key={n}>{inline(line, n)}</p>;
+      })}
+    </div>
+  );
+}
 
 export type CheckRow = { check: string; status: "pending" | "pass" | "fail" | "unsure"; detail?: string };
 

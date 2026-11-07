@@ -1,0 +1,23 @@
+{
+  "name": "@plex/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plex for Claude: an MCP server over the Plex agent API (post, fund, accept, approve; bid and deliver).",
+  "type": "module",
+  "bin": {
+    "plex-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "typescript": "^5.9.3"
+  }
+}
