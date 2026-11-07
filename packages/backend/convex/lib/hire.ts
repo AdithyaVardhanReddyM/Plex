@@ -6,12 +6,55 @@
  * The models propose (a price, a pitch, a score); these functions decide.
  */
 import type { Doc } from "../_generated/dataModel";
+import { servicesIn } from "./connect";
 
-type Task = Pick<Doc<"tasks">, "proofSpec" | "location" | "workerType" | "title" | "description" | "tags" | "category" | "invitedId">;
+type Task = Pick<Doc<"tasks">, "proofSpec" | "location" | "workerType" | "title" | "description" | "tags" | "category" | "invitedId" | "connections">;
 
 /** Work an AI agent can do end to end: nothing to photograph, nowhere to be. */
 export function isDigitalTask(task: Pick<Task, "proofSpec" | "location">): boolean {
   return !task.location && task.proofSpec.every((s) => s.type === "text" || s.type === "link" || s.type === "file");
+}
+
+/**
+ * Work that means acting inside someone's account on another service: merging
+ * or deploying code, buying, posting, sending. Plex agents have no logins, so
+ * they can prepare it but can't do it, and don't bid on it.
+ */
+const ACCOUNT_ACTION =
+  /\b(merge|merging|approve|close)\s+(the|this|that|a|my|our)?\s*(github\s+)?(pull request|pr|branch)\b|\b(deploy|deploying|push|commit)\s+(it|the|this|my|our|to)\b|\b(log|sign)\s*in(to)?\s+(to\s+)?(my|our|the|your)\b|\b(buy|purchase|order|book)\s+(me|us|it for|tickets?|a table|a flight|a hotel|a room)\b|\bplace\s+an?\s+order\b|\b(post|publish|tweet)\s+(it|this|the)?\s*(on|to)\s+(twitter|x|linkedin|instagram|facebook|reddit|our|my)\b|\bsend\s+(it|the|this|an?)\s+(email|message|invoice)\s+to\b/i;
+
+export function needsAccountAction(task: Pick<Task, "title" | "description">): boolean {
+  const text = `${task.title} ${task.description}`;
+  if (ACCOUNT_ACTION.test(text)) return true;
+  // A named service plus doing something in it: "add a row to my Google Sheet", "create a Linear ticket".
+  return servicesIn(text).length > 0 && /\b(create|add|update|edit|move|assign|close|schedule|reply|comment|upload|merge|send|invite|archive)\b/i.test(text);
+}
+
+/** Where a link item must point, when its spec names a service. */
+const HOSTS: [RegExp, string[]][] = [
+  [/github|pull request|\bpr\b|\brepo(sitory)?\b/i, ["github.com"]],
+  [/google doc|google sheet|google slide|drive/i, ["docs.google.com", "drive.google.com"]],
+  [/figma/i, ["figma.com"]],
+  [/youtube/i, ["youtube.com", "youtu.be"]],
+  [/notion/i, ["notion.so", "notion.site"]],
+];
+
+export function expectedHosts(s: Spec): string[] | null {
+  const text = `${s.label} ${s.description}`;
+  return HOSTS.find(([re]) => re.test(text))?.[1] ?? null;
+}
+
+/** Does a link item go where its spec says? null when the spec names no service. */
+export function linkGoesWhereAsked(s: Spec, url: string): { ok: boolean; host: string; want: string[] } | null {
+  const want = expectedHosts(s);
+  if (!want) return null;
+  let host = "";
+  try {
+    host = new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return { ok: false, host: "not a link", want };
+  }
+  return { ok: want.some((w) => host === w || host.endsWith(`.${w}`)), host, want };
 }
 
 type Spec = Doc<"tasks">["proofSpec"][number];
@@ -130,6 +173,11 @@ export function canTake(task: Task, worker: Pick<Doc<"users">, "kind">): { ok: t
   if (worker.kind === "agent") {
     if (type === "human") return { ok: false, reason: "The poster asked for a person for this task." };
     if (!isDigitalTask(task)) return { ok: false, reason: "This task needs someone on the ground." };
+    if (needsAccountAction(task) && !task.connections?.length)
+      return {
+        ok: false,
+        reason: "It means acting in an account on another service (merging, buying, posting). Connect that account on the task page (GitHub or any MCP server), and agents can do it.",
+      };
   } else if (type === "agent") return { ok: false, reason: "The poster asked for an AI agent for this task." };
   return { ok: true };
 }
@@ -156,6 +204,8 @@ export function agentFit(task: Task, agent: AgentLike): { ok: boolean; hits: str
   const hits = specialtyHits(task, agent.agentProfile?.specialties ?? []);
   if (!hits.length) return { ok: false, hits, reason: "None of its skills fit" };
   if (task.proofSpec.some(isImageSpec) && !makesImages(agent)) return { ok: false, hits, reason: "Can't make images" };
+  // Acting in the poster's connected account takes an agent built to use connected tools.
+  if (needsAccountAction(task) && !agent.agentProfile?.tools?.includes("mcp")) return { ok: false, hits, reason: "Can't use connected accounts" };
   return { ok: true, hits };
 }
 

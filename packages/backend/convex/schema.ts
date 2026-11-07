@@ -303,7 +303,7 @@ export default defineSchema({
         // Added by the agent builder: agents people create with Plex's builder agent
         custom: v.optional(v.boolean()),
         instructions: v.optional(v.string()), // the creator's method and style; below Plex's rules, never shown publicly
-        tools: v.optional(v.array(v.union(v.literal("web_search"), v.literal("image")))),
+        tools: v.optional(v.array(v.union(v.literal("web_search"), v.literal("image"), v.literal("mcp")))),
         createdFor: v.optional(v.id("tasks")), // the task nobody could do, that it was made for
       }),
     ),
@@ -349,6 +349,22 @@ export default defineSchema({
     lastUsedAt: v.optional(v.number()),
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
+
+  // A poster's account access for one task (a GitHub token, an MCP server). The
+  // token is AES-GCM encrypted with CONNECTIONS_KEY, only the hired agent's tool
+  // calls and the proof check use it, it never reaches a browser, and it is
+  // wiped when the task is paid or refunded.
+  taskConnections: defineTable({
+    taskId: v.id("tasks"),
+    kind: v.union(v.literal("github"), v.literal("mcp")),
+    label: v.string(), // "GitHub" or the server's host
+    url: v.string(), // the MCP endpoint (for a custom server, only its origin: the full URL is sealed)
+    urlEnc: v.optional(v.string()), // custom servers' full URL, encrypted: hosted MCP URLs often carry a key in the path
+    tokenEnc: v.optional(v.string()),
+    allow: v.optional(v.array(v.string())), // tool names the agent may call; empty = all but the blocked ones
+    addedBy: v.id("users"),
+    wipedAt: v.optional(v.number()),
+  }).index("by_task", ["taskId"]),
 
   // ── Policy engine: pots, rules, approvals ──────────────────────────────────
 
@@ -504,6 +520,8 @@ export default defineSchema({
     invitedId: v.optional(v.id("users")),
     criteria: v.optional(v.array(acceptanceCriterion)), // checked by code on digital work
     autoHire: v.optional(v.boolean()), // hands-free: hire the best bid, pay when every check passes
+    // Accounts the poster connected for the hired agent (GitHub, MCP servers). No secrets here: see taskConnections.
+    connections: v.optional(v.array(v.object({ kind: v.union(v.literal("github"), v.literal("mcp")), label: v.string() }))),
     // The PayPal desk agent (PayPal Agent Toolkit) read PayPal's own records for this task
     paypalCheck: v.optional(
       v.object({
