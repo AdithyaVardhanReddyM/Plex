@@ -104,6 +104,15 @@ export const verdictCheck = v.object({
   detail: v.string(),
 });
 
+/** Objective acceptance criteria for digital work, checked by code before anyone is paid. */
+export const acceptanceCriterion = v.union(
+  v.object({ kind: v.literal("min_words"), specIndex: v.number(), words: v.number(), max: v.optional(v.number()) }),
+  v.object({ kind: v.literal("min_sources"), count: v.number() }),
+  v.object({ kind: v.literal("links_resolve") }),
+  v.object({ kind: v.literal("must_mention"), terms: v.array(v.string()) }),
+  v.object({ kind: v.literal("image"), specIndex: v.number(), minPx: v.number() }),
+);
+
 // ── Plex for Mac value shapes ────────────────────────────────────────────────
 
 /**
@@ -269,7 +278,7 @@ export default defineSchema({
     clerkId: v.optional(v.string()),
     handle: v.string(), // stable slug, e.g. "adi"
     name: v.string(),
-    kind: v.union(v.literal("person"), v.literal("org"), v.literal("brand")),
+    kind: v.union(v.literal("person"), v.literal("org"), v.literal("brand"), v.literal("agent")),
     avatarColor: v.optional(v.string()), // hex used for the initials avatar
     avatarUrl: v.optional(v.string()),
     bio: v.optional(v.string()),
@@ -281,6 +290,18 @@ export default defineSchema({
     paypalEmail: v.optional(v.string()), // sandbox personal account for payouts
     agentsPaused: v.optional(v.boolean()), // the global Pause switch
     isDemo: v.optional(v.boolean()),
+    // Added by Hire: AI agents that take work (kind "agent")
+    agentProfile: v.optional(
+      v.object({
+        house: v.boolean(), // run by Plex (Scout, Quill, Tally) or by an outside developer
+        ownerId: v.optional(v.id("users")), // who is paid for its work
+        model: v.string(), // "gemini-2.5-flash"
+        tagline: v.string(),
+        specialties: v.array(v.string()), // keywords it bids on
+        floorCents: v.number(), // private: the least it will take, enforced in code
+        turnaround: v.string(), // "about 2 minutes"
+      }),
+    ),
   })
     .index("by_handle", ["handle"])
     .index("by_clerkId", ["clerkId"])
@@ -299,7 +320,12 @@ export default defineSchema({
     keyPrefix: v.optional(v.string()), // first chars of a scoped API key
     keyHash: v.optional(v.string()),
     revoked: v.optional(v.boolean()),
-  }).index("by_owner", ["ownerId"]),
+    // Added by Hire: a key can also act as an agent worker that applies and delivers
+    workerId: v.optional(v.id("users")),
+    lastUsedAt: v.optional(v.number()),
+  })
+    .index("by_owner", ["ownerId"])
+    .index("by_keyHash", ["keyHash"]),
 
   // ── Policy engine: pots, rules, approvals ──────────────────────────────────
 
@@ -449,6 +475,11 @@ export default defineSchema({
     payoutReceiptId: v.optional(v.id("receipts")),
     policyNote: v.optional(v.string()), // what the policy engine said at funding
     writerModel: v.optional(v.string()), // "gemini-2.5-flash" | "heuristic"
+    // Added by Hire: who may take it, and who the poster invited
+    workerType: v.optional(v.union(v.literal("human"), v.literal("agent"), v.literal("either"))),
+    invitedId: v.optional(v.id("users")),
+    criteria: v.optional(v.array(acceptanceCriterion)), // checked by code on digital work
+    autoHire: v.optional(v.boolean()), // hands-free: hire the best bid, pay when every check passes
   })
     .index("by_status", ["status"])
     .index("by_poster", ["posterId"])
@@ -470,6 +501,19 @@ export default defineSchema({
       v.literal("accepted"),
       v.literal("declined"),
       v.literal("withdrawn"),
+    ),
+    // Added by Hire: agent bidding rounds, each clamped in code to the agent's floor and the held amount
+    bids: v.optional(
+      v.array(
+        v.object({
+          round: v.number(),
+          cents: v.number(),
+          note: v.string(),
+          model: v.string(),
+          clamped: v.optional(v.boolean()), // code moved the model's number back inside the limits
+          at: v.number(),
+        }),
+      ),
     ),
   })
     .index("by_task", ["taskId"])
@@ -530,9 +574,36 @@ export default defineSchema({
         model: v.string(),
       }),
     ),
+    // Added by Hire: blind proofer agents scoring digital work
+    scorecards: v.optional(
+      v.array(
+        v.object({
+          proofer: v.string(), // "Proofer A · Strict"
+          completeness: v.number(), // 1-5
+          accuracy: v.number(),
+          method: v.number(),
+          quality: v.number(),
+          verdict: v.union(v.literal("pass"), v.literal("fail"), v.literal("unsure")),
+          note: v.string(),
+          model: v.string(),
+        }),
+      ),
+    ),
   })
     .index("by_task", ["taskId"])
     .index("by_worker", ["workerId"]),
+
+  /** Hire: a review can only be left on a task that was paid. */
+  reviews: defineTable({
+    taskId: v.id("tasks"),
+    authorId: v.id("users"),
+    subjectId: v.id("users"),
+    stars: v.number(), // 1-5
+    text: v.string(),
+    receiptId: v.optional(v.id("receipts")), // the payout it's tied to
+  })
+    .index("by_subject", ["subjectId"])
+    .index("by_task", ["taskId"]),
 
   // ── Plex Causes ────────────────────────────────────────────────────────────
 

@@ -5,9 +5,11 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { proofSpecItem, verificationMode } from "./schema";
 import { getActor, requireActor } from "./lib/actor";
 import { generateStructured } from "./lib/ai";
+import { defaultCriteria, isDigitalTask } from "./lib/hire";
 import { challengeCode } from "./lib/money";
 import { evaluate } from "./lib/policy";
 import { fundingCents, lookupPlace } from "./lib/taskRules";
+import { userByHandle } from "./lib/viewer";
 
 /**
  * Plex Tasks: post work, fund it through PayPal, pay on proof.
@@ -45,6 +47,16 @@ async function personCard(ctx: QueryCtx, id: Id<"users"> | undefined) {
     proofPassRate: u.proofPassRate,
     tasksCompleted: u.tasksCompleted,
     hasPaypal: Boolean(u.paypalEmail),
+    // Public half of an agent's profile; its floor price stays private.
+    agent: u.agentProfile
+      ? {
+          house: u.agentProfile.house,
+          model: u.agentProfile.model,
+          tagline: u.agentProfile.tagline,
+          specialties: u.agentProfile.specialties,
+          turnaround: u.agentProfile.turnaround,
+        }
+      : null,
   };
 }
 
@@ -77,8 +89,9 @@ export const board = query({
   args: {
     category: v.optional(categoryV),
     status: v.optional(v.union(v.literal("open"), v.literal("active"), v.literal("done"))),
+    who: v.optional(v.union(v.literal("human"), v.literal("agent"))),
   },
-  handler: async (ctx, { category, status = "open" }) => {
+  handler: async (ctx, { category, status = "open", who }) => {
     const statuses = status === "open" ? (["open"] as const) : status === "active" ? ACTIVE : DONE;
     const rows: Doc<"tasks">[] = [];
     for (const s of statuses) {
@@ -92,6 +105,10 @@ export const board = query({
     }
     const filtered = rows
       .filter((t) => !category || t.category === category)
+      .filter((t) => {
+        const type = t.workerType ?? "human";
+        return !who || type === "either" || type === who;
+      })
       .sort((a, b) => (status === "open" ? a.windowEnd - b.windowEnd : b._creationTime - a._creationTime));
     return withPeople(ctx, filtered);
   },
@@ -102,7 +119,7 @@ export const mine = query({
   args: { as: v.optional(v.string()) },
   handler: async (ctx, { as }) => {
     const actor = await getActor(ctx, as);
-    if (!actor) return { posted: [], taking: [], applied: [] };
+    if (!actor) return { posted: [], taking: [], applied: [], invited: [] };
     const me = actor.user._id;
     const posted = await ctx.db
       .query("tasks")
@@ -124,10 +141,15 @@ export const mine = query({
       const t = await ctx.db.get(a.taskId);
       if (t && t.assigneeId !== me) appliedTasks.push(t);
     }
+    // Hired directly from a profile: open tasks that invited this person.
+    const invited = (await ctx.db.query("tasks").withIndex("by_status", (q) => q.eq("status", "open")).collect()).filter(
+      (t) => t.invitedId === me && !appliedTasks.some((x) => x._id === t._id),
+    );
     return {
       posted: await withPeople(ctx, posted),
       taking: await withPeople(ctx, taking),
       applied: await withPeople(ctx, appliedTasks),
+      invited: await withPeople(ctx, invited),
     };
   },
 });
@@ -203,10 +225,16 @@ export const get = query({
       }
     }
 
+    const review = await ctx.db
+      .query("reviews")
+      .withIndex("by_task", (q) => q.eq("taskId", id))
+      .first();
+
     return {
       task: { ...task, fundingCents: fundingCents(task.payout) },
       poster: await personCard(ctx, task.posterId),
       assignee: await personCard(ctx, task.assigneeId),
+      invited: await personCard(ctx, task.invitedId),
       applications,
       myApplication: applications.find((a) => a.applicantId === me) ?? null,
       proof,
@@ -215,6 +243,8 @@ export const get = query({
       role,
       me: actor ? await personCard(ctx, actor.user._id) : null,
       policy,
+      review,
+      digital: isDigitalTask(task),
     };
   },
 });
@@ -283,6 +313,9 @@ const writerSchema = z.object({
     .max(5),
   verificationMode: z.enum(["auto", "one_tap", "manual"]),
   tags: z.array(z.string()).max(3),
+  workerType: z
+    .enum(["human", "agent", "either"])
+    .describe("'either' when the work is purely digital (research, writing, data) and needs nobody on the ground; 'human' when someone must be somewhere, judge in person or take photos"),
 });
 
 export type TaskDraft = z.infer<typeof writerSchema>;
@@ -301,9 +334,11 @@ export const write = action({
       name: "task-writer",
       schema: writerSchema,
       system: [
-        "You are Plex's Task Writer. You turn a poster's loose request into a clear, fair task card for a human worker.",
+        "You are Plex's Task Writer. You turn a poster's loose request into a clear, fair task card for a person or an AI agent.",
         "Be concrete and brief. Never invent facts the poster did not give; leave the location null if the work is remote.",
-        "The proof spec lists exactly what evidence proves the work: usually 1-3 photos with what each must show.",
+        "The proof spec lists exactly what evidence proves the work: usually 1-3 photos with what each must show for work in the world, or text, file and link deliverables for digital work.",
+        "Digital work (research, writing, data, design) gets text, file or link items only, so an AI agent can do it; then workerType is 'either'.",
+        "A logo, icon or other image is a 'file' item labeled for what it is (e.g. 'Logo'), described with its subject, colors and any exact text.",
         "Every task also asks the worker to show a challenge code in one photo; do not add it to the spec yourself.",
         "Pick 'one_tap' verification unless the poster asks for automatic or manual review.",
         "Pay fairly: about $15-25 for a short local errand, more for long or skilled work. Respect any budget the poster names.",
@@ -327,16 +362,28 @@ export function heuristicDraft(brief: string): TaskDraft {
       ? "impact"
       : /label|rate|rating|transcri|annotat|survey/.test(text)
         ? "data"
-        : /video|reel|tiktok|short|post about/.test(text)
-          ? "creator"
-          : /test|review|remote|online|app|website|call/.test(text) && !place
-            ? "remote"
-            : "local";
+        : DIGITAL_ASK.test(text) && !place
+          ? "agent"
+          : /video|reel|tiktok|short|post about/.test(text)
+            ? "creator"
+            : /test|review|remote|online|app|website|call/.test(text) && !place
+              ? "remote"
+              : "local";
 
   const spec: TaskDraft["proofSpec"] = [];
   const add = (label: string, description: string, type: TaskDraft["proofSpec"][number]["type"] = "photo") =>
     spec.length < 4 && !spec.some((s) => s.label === label) && spec.push({ label, description, type });
-  if (/caf[eé]|shop|store|restaurant|bar|bakery|taqueria|place/.test(text))
+  if (category === "agent") {
+    if (/logo|icon|banner|illustration|design (a|an|the|me)/.test(text)) {
+      add("Logo", "A square PNG image, at least 512 px, matching the brief", "file");
+      add("Design notes", "The idea, the colors and the font, in a few sentences", "text");
+    } else if (/research|compare|competitor|find out|look up|market/.test(text)) {
+      add("Findings", "The answer, organized with a short summary first and specifics after", "text");
+      add("Sources", "Where each fact came from, one per line", "text");
+    } else if (/csv|spreadsheet|data|table|clean/.test(text)) add("Data file", "The finished table as a CSV or Markdown file", "file");
+    else add("Draft", "The finished writing, ready to use", "text");
+  }
+  if (category !== "agent" && /caf[eé]|shop|store|restaurant|bar|bakery|taqueria|place/.test(text))
     add("Storefront", "The front of the place, with its sign readable");
   if (/menu/.test(text)) add("Menu", "The full menu with prices, legible");
   if (/quiet|corner|seat|table|outlet|work from/.test(text))
@@ -353,7 +400,7 @@ export function heuristicDraft(brief: string): TaskDraft {
   if (category === "data") add("Completed work", "A link to the finished sheet or file", "link");
   if (category === "remote") add("Recording", "A screen recording of the full flow", "video");
   if (spec.length === 0) add("Photo of the result", "A clear photo showing the task done");
-  if (category !== "data") add("Notes", "Anything the poster should know, in a sentence or two", "text");
+  if (category !== "data" && category !== "agent") add("Notes", "Anything the poster should know, in a sentence or two", "text");
 
   let startsInHours = 0;
   let durationHours = 4;
@@ -369,7 +416,7 @@ export function heuristicDraft(brief: string): TaskDraft {
     if (diff > 0) durationHours = diff;
   }
 
-  const base = category === "local" ? 1800 : category === "impact" ? 4500 : category === "data" ? 3000 : 2500;
+  const base = category === "local" ? 1800 : category === "impact" ? 4500 : category === "data" ? 3000 : category === "agent" ? 1500 : 2500;
   const payoutCents = money ? Math.round(Number(money[1]) * 100) : base;
 
   const first = brief.split(/[.!?\n]/)[0]!.trim();
@@ -398,12 +445,17 @@ export function heuristicDraft(brief: string): TaskDraft {
     proofSpec: spec,
     verificationMode: /automatic|auto[- ]?approve|just pay/.test(text) ? "auto" : /manual|i'll check/.test(text) ? "manual" : "one_tap",
     tags: [
-      category === "local" ? "Errand" : category === "impact" ? "Impact" : category === "data" ? "Data" : "Remote",
+      category === "local" ? "Errand" : category === "impact" ? "Impact" : category === "data" ? "Data" : category === "agent" ? "Research" : "Remote",
       spec.some((s) => s.type === "photo") ? "Photos" : "Online",
       durationHours <= 8 ? "Today" : "This week",
     ],
+    workerType: spec.every((s) => s.type === "text" || s.type === "link" || s.type === "file") && !place ? "either" : "human",
   };
 }
+
+/** Requests an AI agent can do end to end, from the heuristic writer's point of view. */
+const DIGITAL_ASK =
+  /research|summari[sz]e|competitor|compare|report on|write (a|an|the|me)|draft|blog|copy|translate|spreadsheet|csv|clean (up )?(the )?data|look up|find out|logo|icon|banner|illustration|design (a|an|the|me)/;
 
 function sentence(s: string) {
   const t = s.trim().replace(/\s+/g, " ");
@@ -449,9 +501,12 @@ export const createDraft = mutation({
     verificationMode,
     tags: v.array(v.string()),
     writerModel: v.optional(v.string()),
+    workerType: v.optional(v.union(v.literal("human"), v.literal("agent"), v.literal("either"))),
+    invitedHandle: v.optional(v.string()),
+    autoHire: v.optional(v.boolean()),
     as: v.optional(v.string()),
   },
-  handler: async (ctx, { as, ...args }) => {
+  handler: async (ctx, { as, invitedHandle, autoHire, ...args }) => {
     const { user } = await requireActor(ctx, as);
     if (!args.title.trim()) throw new Error("Give the task a title.");
     if (!Number.isInteger(args.payoutCents) || args.payoutCents < 100)
@@ -459,6 +514,15 @@ export const createDraft = mutation({
     if (args.payoutCents > 100_000) throw new Error("Sandbox tasks are capped at $1,000.");
     if (args.windowEnd <= args.windowStart) throw new Error("The window must end after it starts.");
     if (args.proofSpec.length === 0) throw new Error("Add at least one proof item.");
+    const invited = invitedHandle ? await userByHandle(ctx, invitedHandle) : null;
+    if (invitedHandle && (!invited || (invited.kind !== "person" && invited.kind !== "agent")))
+      throw new Error("That person isn't on Plex.");
+    let workerType = args.workerType ?? "human";
+    if (invited?.kind === "agent" && workerType === "human") workerType = "either";
+    const draft = { proofSpec: args.proofSpec, location: args.location };
+    if (workerType !== "human" && !isDigitalTask(draft))
+      throw new Error("AI agents can only take work delivered as text, files or links, with no place to be.");
+    const handsFree = Boolean(autoHire) && workerType !== "human";
     const pots = await ctx.db
       .query("pots")
       .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
@@ -483,6 +547,12 @@ export const createDraft = mutation({
       tags: args.tags.slice(0, 4),
       potId: pots.find((p) => p.name === "Errands")?._id,
       writerModel: args.writerModel,
+      workerType,
+      invitedId: invited?._id,
+      criteria: isDigitalTask(draft) ? defaultCriteria(args.proofSpec) : undefined,
+      autoHire: handsFree || undefined,
+      // Hands-free pays automatically, so it needs the AI verdict to release.
+      ...(handsFree ? { verificationMode: "auto" as const } : {}),
     });
   },
 });

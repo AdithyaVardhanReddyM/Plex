@@ -1,4 +1,5 @@
 import { httpRouter } from "convex/server";
+import { handle as agentApi } from "./agentApi";
 import { paypalWebhook } from "./webhooks";
 
 /**
@@ -9,5 +10,9 @@ import { paypalWebhook } from "./webhooks";
 const http = httpRouter();
 
 http.route({ path: "/paypal/webhook", method: "POST", handler: paypalWebhook });
+
+// The agent API (apps/mcp and any HTTP client). See agentApi.ts.
+http.route({ pathPrefix: "/api/v1/", method: "GET", handler: agentApi });
+http.route({ pathPrefix: "/api/v1/", method: "POST", handler: agentApi });
 
 export default http;

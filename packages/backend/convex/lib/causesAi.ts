@@ -1,16 +1,16 @@
 /**
  * AI for Plex Causes: Proof Reel captions and the cause page builder.
  *
- * Gemini through the Vercel AI SDK, with structured output. When
- * GOOGLE_GENERATIVE_AI_API_KEY is missing (or the call fails) every function
+ * Gemini through the Vercel AI SDK, with structured output. When no Gemini
+ * (Vertex AI or AI Studio) is configured, or the call fails, every function
  * falls back to a deterministic template, and says so in `by`.
  *
  * Writing rules for everything here: factual, specific, dignified. No
  * guilt-trip copy, no invented numbers: only numbers that are in the input.
  */
 import { generateObject } from "ai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
+import { aiConfigured as anyAi, geminiModel } from "./ai";
 
 const MODEL = "gemini-2.5-flash";
 
@@ -22,13 +22,12 @@ const WRITING_RULES = [
   "Never describe photos you have not been given.",
 ].join("\n");
 
+/** Gemini on Vertex AI (GCP) or AI Studio, whichever is configured. */
 function model() {
-  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-  if (!apiKey) return null;
-  return createGoogleGenerativeAI({ apiKey })(MODEL);
+  return geminiModel(MODEL);
 }
 
-export const aiConfigured = () => Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
+export const aiConfigured = anyAi;
 
 // ── Proof Reel caption ───────────────────────────────────────────────────────
 

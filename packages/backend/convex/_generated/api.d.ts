@@ -9,7 +9,9 @@
  */
 
 import type * as agent from "../agent.js";
+import type * as agentApi from "../agentApi.js";
 import type * as agentMoney from "../agentMoney.js";
+import type * as apiKeys from "../apiKeys.js";
 import type * as applications from "../applications.js";
 import type * as asks from "../asks.js";
 import type * as bills from "../bills.js";
@@ -17,6 +19,8 @@ import type * as campaigns from "../campaigns.js";
 import type * as causeBuilder from "../causeBuilder.js";
 import type * as causes from "../causes.js";
 import type * as donations from "../donations.js";
+import type * as hire from "../hire.js";
+import type * as houseAgents from "../houseAgents.js";
 import type * as http from "../http.js";
 import type * as insights from "../insights.js";
 import type * as ledger from "../ledger.js";
@@ -24,6 +28,8 @@ import type * as lib_actor from "../lib/actor.js";
 import type * as lib_agentAuth from "../lib/agentAuth.js";
 import type * as lib_ai from "../lib/ai.js";
 import type * as lib_causesAi from "../lib/causesAi.js";
+import type * as lib_hire from "../lib/hire.js";
+import type * as lib_hireSeed from "../lib/hireSeed.js";
 import type * as lib_ledgerAi from "../lib/ledgerAi.js";
 import type * as lib_ledgerSeed from "../lib/ledgerSeed.js";
 import type * as lib_ledgerSpec from "../lib/ledgerSpec.js";
@@ -55,7 +61,9 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   agent: typeof agent;
+  agentApi: typeof agentApi;
   agentMoney: typeof agentMoney;
+  apiKeys: typeof apiKeys;
   applications: typeof applications;
   asks: typeof asks;
   bills: typeof bills;
@@ -63,6 +71,8 @@ declare const fullApi: ApiFromModules<{
   causeBuilder: typeof causeBuilder;
   causes: typeof causes;
   donations: typeof donations;
+  hire: typeof hire;
+  houseAgents: typeof houseAgents;
   http: typeof http;
   insights: typeof insights;
   ledger: typeof ledger;
@@ -70,6 +80,8 @@ declare const fullApi: ApiFromModules<{
   "lib/agentAuth": typeof lib_agentAuth;
   "lib/ai": typeof lib_ai;
   "lib/causesAi": typeof lib_causesAi;
+  "lib/hire": typeof lib_hire;
+  "lib/hireSeed": typeof lib_hireSeed;
   "lib/ledgerAi": typeof lib_ledgerAi;
   "lib/ledgerSeed": typeof lib_ledgerSeed;
   "lib/ledgerSpec": typeof lib_ledgerSpec;

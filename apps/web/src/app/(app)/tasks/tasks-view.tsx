@@ -13,15 +13,23 @@ import { PersonaSwitch, useAs } from "@/components/tasks/persona";
 import { CategoryLabel, StatusBadge, TaskCard, timeLeft } from "@/components/tasks/task-ui";
 import { cn } from "@/lib/utils";
 
-type Category = "local" | "remote" | "data" | "impact";
+type Category = "local" | "remote" | "data" | "agent" | "impact";
 type StatusFilter = "open" | "active" | "done";
+type Who = "human" | "agent" | undefined;
 
 const CATEGORIES: { value: Category | undefined; label: string }[] = [
   { value: undefined, label: "All" },
   { value: "local", label: "Local" },
   { value: "remote", label: "Remote" },
+  { value: "agent", label: "Agent work" },
   { value: "data", label: "Data" },
   { value: "impact", label: "Impact" },
+];
+
+const WHO: { value: Who; label: string }[] = [
+  { value: undefined, label: "Anyone" },
+  { value: "human", label: "For people" },
+  { value: "agent", label: "For agents" },
 ];
 
 const STATUSES: { value: StatusFilter; label: string }[] = [
@@ -36,7 +44,7 @@ export function TasksView() {
     <div className="animate-rise">
       <PageHeader
         title="Tasks"
-        description="People and agents post work. Someone takes it, Plex checks the proof, and PayPal pays out. Money is held until the proof passes."
+        description="Post work for a person or an AI agent. Someone takes it, Plex checks the proof, and PayPal pays out. Money is held until the proof passes."
         actions={
           <>
             <PersonaSwitch />
@@ -83,7 +91,8 @@ export function TasksView() {
 function Board() {
   const [category, setCategory] = useState<Category | undefined>();
   const [status, setStatus] = useState<StatusFilter>("open");
-  const tasks = useQuery(api.tasks.board, { category, status });
+  const [who, setWho] = useState<Who>();
+  const tasks = useQuery(api.tasks.board, { category, status, who });
 
   return (
     <>
@@ -106,21 +115,39 @@ function Board() {
             </button>
           ))}
         </div>
-        <div className="inline-flex flex-none self-start rounded-sm bg-sunken p-0.5" role="group" aria-label="Status">
-          {STATUSES.map((s) => (
-            <button
-              key={s.value}
-              type="button"
-              onClick={() => setStatus(s.value)}
-              aria-pressed={status === s.value}
-              className={cn(
-                "h-7 rounded-[6px] px-3 text-[13px] font-medium transition-colors",
-                status === s.value ? "bg-surface text-ink shadow-card" : "text-muted hover:text-ink",
-              )}
-            >
-              {s.label}
-            </button>
-          ))}
+        <div className="flex flex-none flex-wrap gap-2 self-start">
+          <div className="inline-flex rounded-sm bg-sunken p-0.5" role="group" aria-label="Who can take it">
+            {WHO.map((w) => (
+              <button
+                key={w.label}
+                type="button"
+                onClick={() => setWho(w.value)}
+                aria-pressed={who === w.value}
+                className={cn(
+                  "h-7 rounded-[6px] px-3 text-[13px] font-medium transition-colors",
+                  who === w.value ? "bg-surface text-ink shadow-card" : "text-muted hover:text-ink",
+                )}
+              >
+                {w.label}
+              </button>
+            ))}
+          </div>
+          <div className="inline-flex rounded-sm bg-sunken p-0.5" role="group" aria-label="Status">
+            {STATUSES.map((s) => (
+              <button
+                key={s.value}
+                type="button"
+                onClick={() => setStatus(s.value)}
+                aria-pressed={status === s.value}
+                className={cn(
+                  "h-7 rounded-[6px] px-3 text-[13px] font-medium transition-colors",
+                  status === s.value ? "bg-surface text-ink shadow-card" : "text-muted hover:text-ink",
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -167,7 +194,7 @@ function MyTasks() {
       </div>
     );
 
-  const taking = [...mine.taking, ...mine.applied];
+  const taking = [...mine.invited, ...mine.taking, ...mine.applied];
   return (
     <div className="grid items-start gap-4 lg:grid-cols-2">
       <MineList
@@ -178,9 +205,10 @@ function MyTasks() {
       />
       <MineList
         title="Taking"
-        description="Tasks you're doing or applied for."
+        description="Tasks you're doing, applied for, or were hired for directly."
         tasks={taking}
         appliedIds={new Set(mine.applied.map((t) => t._id))}
+        invitedIds={new Set(mine.invited.map((t) => t._id))}
         empty="Switch to a worker above, or apply to an open task."
       />
     </div>
@@ -193,12 +221,14 @@ function MineList({
   tasks,
   empty,
   appliedIds,
+  invitedIds,
 }: {
   title: string;
   description: string;
   tasks: FunctionReturnType<typeof api.tasks.mine>["posted"];
   empty: string;
   appliedIds?: Set<string>;
+  invitedIds?: Set<string>;
 }) {
   return (
     <Card>
@@ -222,7 +252,9 @@ function MineList({
                 <div className="min-w-0">
                   <div className="truncate text-[14px] font-medium text-ink">{t.title}</div>
                   <div className="mt-1 flex min-w-0 items-center gap-2">
-                    {appliedIds?.has(t._id) ? (
+                    {invitedIds?.has(t._id) ? (
+                      <span className="text-[12.5px] font-medium text-green-700">Hired you directly</span>
+                    ) : appliedIds?.has(t._id) ? (
                       <span className="text-[12.5px] font-medium text-steel-600">Applied</span>
                     ) : (
                       <StatusBadge status={t.status} />
