@@ -65,7 +65,7 @@ export function ReceiptsCard({
           </Button>
         }
       />
-      <div className="mt-4 flex flex-col gap-3 px-5 pb-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-4 flex flex-col gap-3 px-6 pb-3 sm:flex-row sm:items-center sm:justify-between">
         <Segmented
           size="sm"
           items={FILTERS.filter((f) => f.key === "all" || counts[f.key]! > 0).map((f) => ({ value: f.key, label: f.label, count: counts[f.key] }))}
@@ -75,10 +75,15 @@ export function ReceiptsCard({
         <label className="relative block sm:w-64">
           <span className="sr-only">Search receipts</span>
           <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-faint" strokeWidth={1.9} />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search why, who, rule" className="h-8 pl-8 text-[13px] shadow-none" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search why, who, rule"
+            className="h-9 rounded-full border-transparent bg-sunken/80 pl-8 text-[13px] shadow-none hover:border-transparent focus:bg-surface"
+          />
         </label>
       </div>
-      <div className="border-t border-line">
+      <div className="px-2 pb-2">
         <ReceiptsGrid
           ref={grid}
           rows={receipts}

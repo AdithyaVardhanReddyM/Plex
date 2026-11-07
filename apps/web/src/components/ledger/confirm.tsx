@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -49,10 +50,10 @@ export function ConfirmDialog({
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center p-4 sm:items-center" role="dialog" aria-modal aria-label={title}>
       <button type="button" aria-label="Close" className="absolute inset-0 bg-ink/20 backdrop-blur-[2px]" onClick={close} />
-      <div className="relative w-full max-w-[420px] animate-rise rounded-xl border border-line bg-surface p-5 shadow-float">
+      <div className="relative w-full max-w-[420px] animate-rise rounded-xl bg-surface p-6 shadow-float">
         <div className="text-[16px] font-semibold tracking-[-0.015em] text-ink">{title}</div>
         <div className="mt-1.5 text-[13.5px] leading-relaxed text-ink-2">{body}</div>
-        {detail ? <div className="mt-3.5 rounded-[10px] bg-canvas px-3.5 py-3 text-[12.5px] leading-relaxed text-muted ring-1 ring-inset ring-line">{detail}</div> : null}
+        {detail ? <div className="mt-3.5 rounded-[12px] bg-canvas px-3.5 py-3 text-[12.5px] leading-relaxed text-muted">{detail}</div> : null}
         {error ? <div className="mt-3 text-[13px] text-disputed">{error}</div> : null}
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="secondary" onClick={close} disabled={busy}>
@@ -95,7 +96,7 @@ export function Toast({ message, onDone }: { message: string | null; onDone: () 
   return createPortal(
     <div className="pointer-events-none fixed inset-x-0 bottom-5 z-[70] flex justify-center px-4">
       <div className="flex animate-rise items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-[13px] font-medium text-white shadow-float" role="status">
-        <span className="size-1.5 rounded-full bg-green-400" aria-hidden />
+        <Check className="size-4 text-green-300" strokeWidth={2.2} aria-hidden />
         {message}
       </div>
     </div>,

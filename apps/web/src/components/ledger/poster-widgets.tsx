@@ -12,7 +12,7 @@ import { Avatar, Badge, Card, EmptyState, Meter } from "@/components/ui/primitiv
 import { Amount } from "@/components/ui/money";
 import { cn, formatCents, relativeTime } from "@/lib/utils";
 import { GRID_WRAP, plexChartTheme, plexGridTheme, registerAg, stateColor } from "./ag";
-import { WidgetFrame } from "./kit";
+import { DisplayMoney, Legend, WidgetFrame } from "./kit";
 import { MiniChart } from "./mini-chart";
 import { useTokens } from "./widget";
 import { useWidth } from "./use-width";
@@ -78,25 +78,33 @@ export function MoneyFlow({ flow, count }: { flow: Poster["flow"]; count: Poster
   const settled = flow.released + flow.refunded;
   return (
     <WidgetFrame title="Money flow" description="Every task you funded, by where the money is now">
-      <div className="flex flex-wrap items-center gap-1.5 text-[12.5px]">
-        <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-sunken px-2.5 text-ink-2">
-          Funded <span className="tabular font-semibold text-ink">{formatCents(flow.funded)}</span>
-        </span>
-        <ChevronRight className="size-3.5 text-faint" strokeWidth={1.9} />
-        <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-steel-50 px-2.5 text-steel-700 ring-1 ring-inset ring-steel-100">
-          <Lock className="size-3" strokeWidth={2.2} />
-          <span className="tabular font-semibold">{formatCents(flow.held)}</span> held
-        </span>
-        <ChevronRight className="size-3.5 text-faint" strokeWidth={1.9} />
-        <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-green-50 px-2.5 text-green-800 ring-1 ring-inset ring-green-100">
-          <span className="tabular font-semibold">{formatCents(settled)}</span> settled,{" "}
-          {Math.round((flow.released / Math.max(settled, 1)) * 100)}% to workers
-        </span>
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+        <FlowFigure label="Funded" cents={flow.funded} />
+        <ChevronRight className="mb-2 size-4 text-faint" strokeWidth={1.9} />
+        <FlowFigure label="Held" cents={flow.held} icon={<Lock className="size-3.5" strokeWidth={2} />} className="text-steel-700" />
+        <ChevronRight className="mb-2 size-4 text-faint" strokeWidth={1.9} />
+        <FlowFigure
+          label={`Settled, ${Math.round((flow.released / Math.max(settled, 1)) * 100)}% to workers`}
+          cents={settled}
+          className="text-green-700"
+        />
       </div>
-      <div className="mt-3">
+      <div className="mt-5">
         <AgCharts options={options} />
       </div>
     </WidgetFrame>
+  );
+}
+
+function FlowFigure({ label, cents, icon, className }: { label: string; cents: number; icon?: React.ReactNode; className?: string }) {
+  return (
+    <div className="min-w-0">
+      <div className={cn("flex items-center gap-1.5 text-[12.5px] font-medium text-muted", className)}>
+        {icon}
+        {label}
+      </div>
+      <DisplayMoney cents={cents} className="mt-1.5 text-[26px] text-ink" />
+    </div>
   );
 }
 
@@ -127,10 +135,10 @@ export function ProofWall({ proofs }: { proofs: Poster["proofs"] }) {
         const failed = checks.filter((c) => !c.passed);
         const passed = checks.length - failed.length;
         return (
-          <Card key={p._id} className="flex flex-col p-4">
+          <Card key={p._id} className="flex flex-col p-5">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2.5">
-                <Avatar name={p.worker.name} color={p.worker.color} size={28} />
+                <Avatar name={p.worker.name} color={p.worker.color} size={34} />
                 <div className="min-w-0 leading-[1.3]">
                   <div className="truncate text-[13.5px] font-medium text-ink">{p.worker.name}</div>
                   <div className="text-[12px] text-faint">{relativeTime(p.submittedAt)}</div>
@@ -142,28 +150,26 @@ export function ProofWall({ proofs }: { proofs: Poster["proofs"] }) {
                 {p.verdict ? ` · ${Math.round(p.verdict.confidence * 100)}%` : ""}
               </Badge>
             </div>
-            <div className="mt-3 line-clamp-2 text-[13.5px] leading-snug font-medium text-ink">{p.taskTitle}</div>
+            <div className="mt-4 line-clamp-2 font-display text-[15.5px] leading-snug font-bold tracking-[-0.015em] text-ink">{p.taskTitle}</div>
 
-            {/* The evidence frames, by spec item: what was asked for, and whether it held up */}
-            <div className="mt-3 grid grid-cols-3 gap-1.5">
+            {/* What was asked for, and whether it held up */}
+            <ul className="mt-3 space-y-1.5">
               {p.spec.slice(0, 3).map((label, i) => {
                 const bad = failed.some((f) => f.check === label);
                 return (
-                  <div
-                    key={label + i}
-                    className={cn(
-                      "flex h-14 flex-col justify-between rounded-[8px] p-2 ring-1 ring-inset",
-                      bad ? "bg-disputed-bg ring-disputed/20" : "bg-canvas ring-line",
+                  <li key={label + i} className="flex min-w-0 items-center gap-2 text-[12.5px]">
+                    {bad ? (
+                      <X className="size-4 flex-none text-disputed" strokeWidth={2} />
+                    ) : (
+                      <Camera className="size-4 flex-none text-faint" strokeWidth={1.9} />
                     )}
-                  >
-                    <Camera size={14} strokeWidth={1.9} className={bad ? "text-disputed" : "text-faint"} />
-                    <span className="truncate text-[11px] leading-tight text-muted">{label}</span>
-                  </div>
+                    <span className={cn("truncate", bad ? "text-disputed" : "text-ink-2")}>{label}</span>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
 
-            <div className="mt-3 line-clamp-2 text-[12.5px] leading-relaxed text-muted">
+            <div className="mt-3 mb-1 line-clamp-2 text-[12.5px] leading-relaxed text-muted">
               {failed.length ? (
                 <span className="text-disputed">
                   {failed[0]!.check}: {failed[0]!.detail}
@@ -173,7 +179,7 @@ export function ProofWall({ proofs }: { proofs: Poster["proofs"] }) {
               )}
             </div>
 
-            <div className="mt-auto flex items-center justify-between gap-3 border-t border-line pt-3 text-[12px] text-faint">
+            <div className="mt-auto flex items-center justify-between gap-3 pt-4 text-[12px] text-faint">
               <span className="flex min-w-0 items-center gap-1">
                 <MapPin size={13} strokeWidth={1.9} className="flex-none" />
                 <span className="truncate">{p.location ?? "Remote"}</span>
@@ -198,7 +204,7 @@ function WorkerCell({ data }: WP) {
   if (!data) return null;
   return (
     <div className="flex h-full min-w-0 items-center gap-3">
-      <Avatar name={data.name} color={data.color} size={30} />
+      <Avatar name={data.name} color={data.color} size={34} />
       <div className="min-w-0 leading-[1.3]">
         <div className="truncate text-[13.5px] font-medium text-ink">{data.name}</div>
         <div className="truncate text-[12px] text-muted">{data.area ?? data.skills[0]}</div>
@@ -265,7 +271,7 @@ export function TopWorkers({ workers }: { workers: Worker[] }) {
   );
   return (
     <WidgetFrame flush title="Top workers" description="Who you've paid, and how their proof holds up">
-      <div ref={ref} className={GRID_WRAP} style={{ height: 38 + Math.max(workers.length, 1) * 54 + 2 }}>
+      <div ref={ref} className={GRID_WRAP} style={{ height: 40 + Math.max(workers.length, 1) * 60 + 2 }}>
         {width !== null ? <AgGridReact<Worker>
           theme={plexGridTheme}
           rowData={workers}
@@ -309,13 +315,19 @@ export function ProofVerdicts({ counts, passRate }: { counts: Poster["proofCount
           ],
         },
       ],
-      legend: { position: "bottom" as const, spacing: 16, item: { marker: { shape: "circle" as const, size: 7 }, label: { color: t.muted, fontSize: 12 } } },
+      legend: { enabled: false },
     };
   }, [counts, passRate, t]);
+  const legend = [
+    { label: "Pass", value: counts.pass, color: t.green[500] },
+    { label: "Unsure", value: counts.unsure, color: t.refunded },
+    { label: "Fail", value: counts.fail, color: t.disputed },
+  ].filter((d) => d.value > 0);
   const total = counts.pass + counts.fail + counts.unsure;
   return (
     <WidgetFrame title="Proof verdicts" description={`${total} proofs checked by the proof engine`}>
       <AgCharts options={options} />
+      <Legend items={legend.map((d) => ({ label: `${d.label} ${d.value}`, color: d.color }))} className="mt-4 justify-center" />
     </WidgetFrame>
   );
 }

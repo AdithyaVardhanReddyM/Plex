@@ -76,12 +76,8 @@ function PartyCell({ data, context }: CellProps) {
     <div className="flex h-full min-w-0 items-center gap-3">
       <span
         className={cn(
-          "flex size-8 flex-none items-center justify-center rounded-[10px] ring-1 ring-inset",
-          dir === "in"
-            ? "bg-green-50 text-green-700 ring-green-100"
-            : dir === "via"
-              ? "bg-sunken text-muted ring-line/70"
-              : "bg-surface text-ink-2 shadow-card ring-line",
+          "flex w-5 flex-none items-center justify-center [&_svg]:size-[18px]",
+          dir === "in" ? "text-green-700" : dir === "via" ? "text-faint" : "text-ink-2",
         )}
       >
         {dir === "in" ? <ArrowDownLeft {...ICON} /> : dir === "via" ? <CornerDownRight {...ICON} /> : KIND_ICON[data.kind]}
@@ -384,7 +380,7 @@ export const ReceiptsGrid = forwardRef<ReceiptsGridHandle, ReceiptsGridProps>(fu
   }, [selectedId, rows]);
 
   const visible = rows?.length ?? 0;
-  const autoHeight = 38 + Math.max(Math.min(visible, maxRows), 2) * 54 + (showTotal ? 54 : 0) + 2;
+  const autoHeight = 40 + Math.max(Math.min(visible, maxRows), 2) * 60 + (showTotal ? 60 : 0) + 2;
 
   return (
     <div ref={wrapRef} className={cn("ledger-grid w-full", GRID_WRAP, className)} style={{ height: height ?? autoHeight }}>

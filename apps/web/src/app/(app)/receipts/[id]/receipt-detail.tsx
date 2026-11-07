@@ -18,9 +18,11 @@ import {
   Share,
   ShieldCheck,
 } from "lucide-react";
+import { direction } from "@plex/backend/lib/ledgerSpec";
 import { api } from "@/lib/convex";
 import type { Id } from "@/lib/convex";
-import { Avatar, Badge, Card, CardHeader, EmptyState, IconTile, Meter, Skeleton } from "@/components/ui/primitives";
+import { Avatar, Badge, Card, CardHeader, EmptyState, Meter, Skeleton } from "@/components/ui/primitives";
+import { DisplayMoney } from "@/components/ledger/kit";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ReceiptCard, StatePill, receiptKindLabel, type Receipt } from "@/components/receipt/receipt";
 import { PotIcon } from "@/components/pots/pot-meta";
@@ -80,10 +82,10 @@ export function ReceiptDetail({ id }: { id: string }) {
   );
 }
 
-/** The calm ground the receipt sits on: a sunken well, the receipt centred on it. */
+/** The calm ground the receipt sits on: a soft well with steel light from above, the receipt centred on it. */
 function Stage({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex justify-center rounded-xl bg-canvas px-4 py-8 ring-1 ring-line/80 ring-inset sm:px-8 sm:py-14">
+    <div className="flex justify-center rounded-xl bg-[radial-gradient(70%_55%_at_50%_0%,var(--color-steel-100),transparent_70%),radial-gradient(60%_50%_at_50%_100%,var(--color-green-50),transparent_70%)] bg-sunken/70 px-4 py-10 shadow-[inset_0_1px_2px_rgb(12_21_18/0.04)] sm:px-8 sm:py-16">
       {children}
     </div>
   );
@@ -142,7 +144,7 @@ function ShareActions({ receipt }: { receipt: Receipt }) {
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[96px_minmax(0,1fr)] items-baseline gap-3 py-2.5">
+    <div className="grid grid-cols-[96px_minmax(0,1fr)] items-baseline gap-3 py-2">
       <dt className="text-[12.5px] text-muted">{label}</dt>
       <dd className="min-w-0 truncate text-right text-[13px] text-ink">{children}</dd>
     </div>
@@ -151,19 +153,21 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 
 function AtAGlance({ receipt }: { receipt: Receipt }) {
   const last = receipt.timeline[receipt.timeline.length - 1];
+  // Money still held by PayPal sits on brushed metal, like Home's held card.
+  const held = receipt.state === "held" || receipt.state === "funded";
   return (
-    <Card>
-      <CardHeader title="At a glance" description="What this receipt proves, in one place." />
-      <dl className="mt-2 divide-y divide-line px-5 pb-2">
-        <Fact label="State">
-          <span className="inline-flex justify-end">
-            <StatePill state={receipt.state} />
-          </span>
-        </Fact>
-        <Fact label="Type">{receiptKindLabel(receipt.kind)}</Fact>
-        <Fact label="Amount">
-          <span className="tabular font-semibold">{formatCents(receipt.amountCents, receipt.currency)}</span>
-        </Fact>
+    <div className={cn("rounded-xl p-6", held ? "metal-card [&_dd]:text-steel-900 [&_dt]:text-steel-800/75" : "bg-surface shadow-card")}>
+      <div className="flex items-center justify-between gap-3">
+        <span className={cn("text-[13px] font-medium", held ? "text-steel-800" : "text-muted")}>{receiptKindLabel(receipt.kind)}</span>
+        <StatePill state={receipt.state} />
+      </div>
+      <div className="mt-3">
+        <DisplayMoney cents={receipt.amountCents} className={cn("text-[40px]", held ? "text-steel-900 [&>span]:text-steel-700/60" : "text-ink")} />
+      </div>
+      <div className={cn("mt-1.5 truncate text-[13px]", held ? "text-steel-800" : "text-muted")}>
+        {direction(receipt) === "in" ? `from ${receipt.payerLabel}` : `to ${receipt.payeeLabel}`}
+      </div>
+      <dl className="mt-5">
         <Fact label="Occurred">
           <span className="tabular">{shortDate(receipt.occurredAt)}</span>
         </Fact>
@@ -174,14 +178,14 @@ function AtAGlance({ receipt }: { receipt: Receipt }) {
         ) : null}
         <Fact label="Receipt ID">
           <span className="inline-flex items-center gap-1.5 font-mono text-[12px] text-muted">
-            <Fingerprint className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
+            <Fingerprint className="size-4 flex-none text-faint" strokeWidth={1.9} />
             <span title={receipt._id}>
               {receipt._id.slice(0, 6)}…{receipt._id.slice(-4)}
             </span>
           </span>
         </Fact>
       </dl>
-    </Card>
+    </div>
   );
 }
 
@@ -200,6 +204,15 @@ const TASK_STATUS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
+/** A 20px icon on its own, centred in the row's 34px leading column. */
+function BareIcon({ className, children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <span className={cn("flex size-[34px] items-center justify-center text-ink-2 [&_svg]:size-5 [&_svg]:stroke-[1.8]", className)}>
+      {children}
+    </span>
+  );
+}
+
 function ContextRow({
   href,
   icon,
@@ -216,7 +229,7 @@ function ContextRow({
   children?: React.ReactNode;
 }) {
   const body = (
-    <div className="grid grid-cols-[34px_minmax(0,1fr)_16px] items-start gap-3 rounded-[10px] px-3 py-3 transition-colors group-hover:bg-sunken/70">
+    <div className="grid grid-cols-[34px_minmax(0,1fr)_16px] items-start gap-3 rounded-[12px] px-4 py-3.5 transition-colors group-hover:bg-sunken/70">
       {icon}
       <div className="min-w-0">
         <div className="text-[11.5px] font-medium text-faint">{eyebrow}</div>
@@ -248,7 +261,7 @@ function BelongsTo({ receipt }: { receipt: Receipt }) {
   return (
     <Card>
       <CardHeader title="Where it fits" description="The work, the cause and the limits behind this payment." />
-      <div className="px-2 pt-2 pb-2">
+      <div className="px-2 pt-3 pb-1">
         {loading ? (
           <div className="space-y-1 p-3">
             <Skeleton className="h-12 w-full" />
@@ -259,16 +272,12 @@ function BelongsTo({ receipt }: { receipt: Receipt }) {
         {task ? (
           <ContextRow
             href={`/tasks/${task.task._id}`}
-            icon={
-              <IconTile tone="neutral" size="md" className="size-[34px]">
-                <ListChecks />
-              </IconTile>
-            }
+            icon={<BareIcon><ListChecks /></BareIcon>}
             eyebrow="Task"
             title={task.task.title}
             meta={
               <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-                <Badge tone="outline" className="text-muted">
+                <Badge tone="neutral" className="text-muted">
                   {TASK_STATUS[task.task.status] ?? task.task.status}
                 </Badge>
                 <span className="tabular">{formatCents(task.task.fundingCents)}</span>
@@ -319,11 +328,7 @@ function BelongsTo({ receipt }: { receipt: Receipt }) {
 
         {receipt.taskId || receipt.causeId || receipt.potId ? null : receipt.agentLabel ? (
           <ContextRow
-            icon={
-              <IconTile tone="steel" size="md" className="size-[34px]">
-                <Cpu />
-              </IconTile>
-            }
+            icon={<BareIcon className="text-steel-600"><Cpu /></BareIcon>}
             eyebrow="Agent"
             title={receipt.agentLabel}
             meta={
@@ -336,9 +341,9 @@ function BelongsTo({ receipt }: { receipt: Receipt }) {
         ) : (
           <ContextRow
             icon={
-              <IconTile tone={receipt.kind === "donation" ? "mint" : "neutral"} size="md" className="size-[34px]">
+              <BareIcon className={receipt.kind === "donation" ? "text-green-700" : undefined}>
                 {receipt.kind === "donation" ? <HeartHandshake /> : <HandCoins />}
-              </IconTile>
+              </BareIcon>
             }
             eyebrow="Who acted"
             title={receipt.payerLabel}
@@ -346,7 +351,7 @@ function BelongsTo({ receipt }: { receipt: Receipt }) {
           />
         )}
       </div>
-      <div className="border-t border-line px-5 py-3">
+      <div className="px-6 pt-1 pb-5">
         <Link
           href="/ledger"
           className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-3 text-muted")}

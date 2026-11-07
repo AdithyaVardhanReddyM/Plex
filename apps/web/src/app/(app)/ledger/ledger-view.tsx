@@ -7,11 +7,10 @@ import { Eye, HeartHandshake, ListChecks, MapPin, TrendingDown, TrendingUp, Wall
 import { ROLE_LABEL, type LedgerRole, type WidgetSpec } from "@plex/backend/lib/ledgerSpec";
 import { api } from "@/lib/convex";
 import type { Receipt } from "@/components/receipt/receipt";
-import { Avatar, Card, EmptyState, Meter, PageHeader, SectionHeading, Segmented } from "@/components/ui/primitives";
-import { Amount } from "@/components/ui/money";
+import { Avatar, Card, EmptyState, PageHeader, SectionHeading, Segmented } from "@/components/ui/primitives";
 import { cn, formatCents } from "@/lib/utils";
 import { Analyst, PinnedWidgets, Watchdog, WidgetCard, type WidgetHost } from "@/components/ledger/analyst";
-import { DashboardSkeleton, Figure, StatStrip } from "@/components/ledger/kit";
+import { DashboardSkeleton, DisplayMoney, FACE, FaceRing, Figure, StatStrip } from "@/components/ledger/kit";
 import { ReceiptPanel } from "@/components/ledger/receipt-panel";
 import { ReceiptsCard } from "@/components/ledger/receipts-card";
 import { PotGauges } from "@/components/ledger/pots";
@@ -53,6 +52,10 @@ function useNow() {
   }, []);
   return now;
 }
+
+/** Figure sizes on the stat board and on the metal card. */
+const BIG = "text-[38px] text-ink";
+const HELD = "text-[44px] text-steel-900";
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -164,7 +167,7 @@ function PersonalDashboard({ host, onToast }: { host: WidgetHost; onToast: (m: s
         stats={[
           {
             label: "Spent this week",
-            value: <Amount cents={k.spentWeekCents} size="lg" />,
+            value: <DisplayMoney cents={k.spentWeekCents} className={BIG} />,
             foot: (
               <span className="inline-flex items-center gap-1">
                 {delta >= 0 ? (
@@ -183,14 +186,14 @@ function PersonalDashboard({ host, onToast }: { host: WidgetHost; onToast: (m: s
           {
             label: "Held by Plex",
             tone: "steel",
-            value: <Amount cents={k.heldCents} size="lg" className="text-steel-800" />,
+            value: <DisplayMoney cents={k.heldCents} className={HELD} />,
             foot: `${plural(k.heldCount, "receipt")}, waiting on proof`,
           },
-          { label: "Owed to you", value: <Amount cents={k.owedCents} size="lg" />, foot: "From splits, invoiced by PayPal" },
+          { label: "Owed to you", value: <DisplayMoney cents={k.owedCents} className={BIG} />, foot: "From splits, invoiced by PayPal" },
           {
             label: "Saved by agents",
             tone: "green",
-            value: <Amount cents={k.savedCents} size="lg" className="text-green-700" />,
+            value: <DisplayMoney cents={k.savedCents} className={cn(BIG, "text-green-700")} />,
             foot: "Off list prices",
           },
         ]}
@@ -225,23 +228,23 @@ function PosterDashboard() {
           {
             label: "Held now",
             tone: "steel",
-            value: <Amount cents={p.flow.held} size="lg" className="text-steel-800" />,
+            value: <DisplayMoney cents={p.flow.held} className={HELD} />,
             foot: `${plural(p.flowCount.held, "task")}, waiting on proof`,
           },
           {
             label: "Paid to workers",
             tone: "green",
-            value: <Amount cents={p.flow.released} size="lg" />,
+            value: <DisplayMoney cents={p.flow.released} className={BIG} />,
             foot: `${plural(p.flowCount.released, "payout")}, all on proof`,
           },
           {
             label: "Refunded to you",
-            value: <Amount cents={p.flow.refunded} size="lg" />,
+            value: <DisplayMoney cents={p.flow.refunded} className={BIG} />,
             foot: `${Math.round((p.flow.refunded / Math.max(settled, 1)) * 100)}% of settled money`,
           },
           {
             label: "Open tasks",
-            value: <Figure>{p.openTasks}</Figure>,
+            value: <Figure className={BIG}>{p.openTasks}</Figure>,
             foot: p.flowCount.disputed ? `${p.flowCount.disputed} in dispute` : "None in dispute",
           },
         ]}
@@ -286,51 +289,60 @@ function CauseDashboard({ host }: { host: WidgetHost }) {
   const raised = c.cause.raisedCents / Math.max(c.cause.goalCents, 1);
   return (
     <div className="space-y-4">
-      <Card className="overflow-hidden">
-        <div className="grid gap-5 p-5 md:grid-cols-[minmax(0,1fr)_320px] md:items-center md:gap-8">
-          <div className="flex min-w-0 items-center gap-3.5">
-            {c.org ? <Avatar name={c.org.name} color={c.org.color} size={44} square /> : null}
-            <div className="min-w-0">
-              <div className="truncate text-[17px] font-semibold tracking-[-0.015em] text-ink">{c.cause.name}</div>
-              <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[13px] text-muted">
-                <span className="truncate">{c.org?.name}</span>
-                <span className="text-line-strong">·</span>
-                <MapPin className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
-                <span className="truncate">{c.cause.location}</span>
+      <div className={cn("relative overflow-hidden rounded-xl p-6 shadow-card sm:p-7", FACE.green)}>
+        <FaceRing />
+        <div className="relative grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,360px)] md:items-end md:gap-10">
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-3">
+              {c.org ? <Avatar name={c.org.name} color={c.org.color} size={40} square /> : null}
+              <div className="min-w-0">
+                <div className="truncate font-display text-[19px] font-bold tracking-[-0.02em] text-ink">{c.cause.name}</div>
+                <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[13px] text-ink-2/75">
+                  <span className="truncate">{c.org?.name}</span>
+                  <MapPin className="ml-1 size-3.5 flex-none" strokeWidth={1.9} />
+                  <span className="truncate">{c.cause.location}</span>
+                </div>
               </div>
             </div>
+            <p className="mt-5 flex items-start gap-2 text-[12.5px] leading-relaxed text-ink-2/75">
+              <Eye className="mt-0.5 size-4 flex-none" strokeWidth={1.9} />
+              The view {c.org?.name ?? "the cause"} sees. Donors get the same receipts for the shifts they fund.
+            </p>
           </div>
           <div className="min-w-0">
-            <div className="flex items-baseline justify-between gap-3">
-              <div className="flex items-baseline gap-1.5">
-                <Amount cents={c.cause.raisedCents} size="lg" />
-                <span className="tabular text-[12.5px] text-muted">of {formatCents(c.cause.goalCents)}</span>
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <DisplayMoney cents={c.cause.raisedCents} className="text-[44px] text-ink" />
+                <div className="tabular mt-1.5 text-[12.5px] font-medium text-ink-2/70">raised of {formatCents(c.cause.goalCents)}</div>
               </div>
-              <span className="tabular text-[12.5px] font-medium text-ink-2">{Math.round(Math.min(raised, 1) * 100)}%</span>
+              <span className="tabular font-display text-[20px] font-bold tracking-[-0.03em] text-ink">{Math.round(Math.min(raised, 1) * 100)}%</span>
             </div>
-            <Meter value={raised} className="mt-2.5" label="Raised toward the goal" />
+            <div
+              className="mt-3 h-2 overflow-hidden rounded-full bg-white/60"
+              role="meter"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(Math.min(raised, 1) * 100)}
+              aria-label="Raised toward the goal"
+            >
+              <div className="h-full rounded-full bg-ink transition-[width] duration-700" style={{ width: `${Math.min(raised, 1) * 100}%` }} />
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 border-t border-line bg-canvas/50 px-5 py-2.5 text-[12.5px] text-muted">
-          <Eye className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
-          <span className="truncate">
-            The view {c.org?.name ?? "the cause"} sees. Donors get the same receipts for the shifts they fund.
-          </span>
-        </div>
-      </Card>
+      </div>
       <StatStrip
         stats={[
           {
             label: "Raised, 21 days",
             tone: "green",
-            value: <Amount cents={c.totals.last21Cents} size="lg" />,
+            value: <DisplayMoney cents={c.totals.last21Cents} className={BIG} />,
             foot: `${plural(c.totals.gifts, "gift")}, ${c.totals.recurring} monthly`,
           },
-          { label: "Paid to local workers", value: <Amount cents={c.totals.paidToWorkersCents} size="lg" />, foot: "Released on proof" },
-          { label: "Shifts done", value: <Figure>{c.totals.shiftsDone}</Figure>, foot: `${c.totals.shiftsOpen} open` },
+          { label: "Paid to local workers", value: <DisplayMoney cents={c.totals.paidToWorkersCents} className={BIG} />, foot: "Released on proof" },
+          { label: "Shifts done", value: <Figure className={BIG}>{c.totals.shiftsDone}</Figure>, foot: `${c.totals.shiftsOpen} open` },
           {
             label: "Donors, all time",
-            value: <Figure>{c.cause.donorsCount}</Figure>,
+            value: <Figure className={BIG}>{c.cause.donorsCount}</Figure>,
             foot: `${plural(c.cause.workersPaidCount, "worker")} paid so far`,
           },
         ]}

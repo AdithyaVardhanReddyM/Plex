@@ -16,7 +16,7 @@ import { cn, formatCents } from "@/lib/utils";
 import { ChartColumn } from "lucide-react";
 import { EmptyState } from "@/components/ui/primitives";
 import { categoryPalette, plexChartTheme, readTokens, registerAg, stateColor, valueAxis, type Tokens } from "./ag";
-import { Figure } from "./kit";
+import { DisplayMoney, Figure, Legend } from "./kit";
 import { ReceiptsGrid } from "./receipts-grid";
 
 registerAg();
@@ -79,8 +79,8 @@ function StatWidget({ spec, rows, receipts, now }: { spec: WidgetSpec; rows: Rec
   const up = prev !== null && value >= prev;
   return (
     <div>
-      {measure === "count" ? <Figure className="text-[40px] tracking-[-0.04em]">{value}</Figure> : <Amount cents={value} size="xl" />}
-      <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-muted">
+      {measure === "count" ? <Figure className="text-[56px]">{value}</Figure> : <DisplayMoney cents={value} className="text-[56px] text-ink" />}
+      <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-muted">
         <span className="tabular">
           {rows.length} receipt{rows.length === 1 ? "" : "s"}
         </span>
@@ -101,7 +101,7 @@ function StatWidget({ spec, rows, receipts, now }: { spec: WidgetSpec; rows: Rec
 function SpecChart({ spec, rows, now }: { spec: WidgetSpec; rows: Receipt[]; now: number }) {
   const t = useTokens();
   const c = spec.chart!;
-  const options = useMemo<AgChartOptions>(() => {
+  const { options, legend } = useMemo<{ options: AgChartOptions; legend: { label: string; color: string }[] }>(() => {
     const { buckets: raw, stackKeys } = aggregate(rows, c.groupBy, c.measure, c.stackBy);
     const buckets = c.groupBy === "day" && spec.filter.sinceDays ? fillDays(raw, Math.min(spec.filter.sinceDays, 31), now) : raw;
     const isMoney = c.measure === "sum";
@@ -134,7 +134,7 @@ function SpecChart({ spec, rows, now }: { spec: WidgetSpec; rows: Receipt[]; now
         ],
         legend: { enabled: false },
       };
-      return o;
+      return { options: o, legend: [] };
     }
 
     const horizontal = c.type === "bar";
@@ -194,15 +194,11 @@ function SpecChart({ spec, rows, now }: { spec: WidgetSpec; rows: Receipt[]; now
           label: { color: t.faint, fontSize: 11.5, formatter: ({ value }: { value: number }) => fmt(value) },
         },
       },
-      legend: {
-        enabled: legendOn,
-        position: "bottom",
-        spacing: 16,
-        item: { marker: { shape: "circle", size: 7 }, label: { color: t.muted, fontSize: 12 }, padding: 14 },
-      },
+      // The legend is drawn in HTML below the chart, with bars instead of dots.
+      legend: { enabled: false },
       padding: { top: 8, right: 4, bottom: 0, left: 0 },
     };
-    return o;
+    return { options: o, legend: legendOn ? stackKeys.map((k, i) => ({ label: k, color: colorFor(k, i) })) : [] };
   }, [rows, c, spec.filter.sinceDays, spec.title, now, t]);
 
   if (!rows.length) {
@@ -219,11 +215,13 @@ function SpecChart({ spec, rows, now }: { spec: WidgetSpec; rows: Receipt[]; now
   // Charts fill whatever height the card gets beside its neighbour; horizontal
   // bars start from a height that fits their rows (and the legend, when stacked).
   const bars = c.type === "bar" ? aggregate(rows, c.groupBy, c.measure).buckets.length : 0;
-  // (AG Charts drops the legend when a chart is short, so stacked bars get room for it.)
-  const minHeight = c.type === "bar" ? Math.max(c.stackBy ? 260 : 160, Math.min(bars, 8) * 44 + 60 + (c.stackBy ? 48 : 0)) : 248;
+  const minHeight = c.type === "bar" ? Math.max(160, Math.min(bars, 8) * 44 + 60) : 248;
   return (
-    <div className="relative flex-1" style={{ minHeight }}>
-      <AgCharts options={options} className="absolute inset-0" />
+    <div className="flex flex-1 flex-col">
+      <div className="relative flex-1" style={{ minHeight }}>
+        <AgCharts options={options} className="absolute inset-0" />
+      </div>
+      {legend.length ? <Legend items={legend} className="mt-4" /> : null}
     </div>
   );
 }
@@ -238,10 +236,10 @@ function DonutWithBreakdown({ options, rows, spec }: { options: AgChartOptions; 
   return (
     <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
       <AgCharts options={options} />
-      <ul className="divide-y divide-line">
+      <ul className="space-y-1">
         {buckets.slice(0, 6).map((b, i) => (
-          <li key={String(b.key)} className="grid grid-cols-[8px_minmax(0,1fr)_auto_40px] items-center gap-3 py-2.5">
-            <span className="size-2 rounded-full" style={{ background: fills[i % fills.length] }} />
+          <li key={String(b.key)} className="grid grid-cols-[4px_minmax(0,1fr)_auto_40px] items-center gap-3 py-2">
+            <span className="h-4 w-1 rounded-full" style={{ background: fills[i % fills.length] }} aria-hidden />
             <span className="truncate text-[13.5px] text-ink-2">
               {b.label}
               <span className="ml-1.5 text-[12px] text-faint">{b.count}</span>

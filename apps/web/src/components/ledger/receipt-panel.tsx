@@ -9,7 +9,6 @@ import { ACTION_TOOLS, type ActionTool, type LedgerRole } from "@plex/backend/li
 import { api } from "@/lib/convex";
 import { ReceiptCard, type Receipt } from "@/components/receipt/receipt";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { IconTile } from "@/components/ui/primitives";
 import { formatCents } from "@/lib/utils";
 import { ConfirmDialog } from "./confirm";
 
@@ -58,12 +57,12 @@ export function ReceiptPanel({
         onClick={onClose}
       />
       <aside
-        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[88vh] animate-rise flex-col overflow-hidden rounded-t-xl border border-line bg-canvas shadow-float sm:inset-x-auto sm:top-2 sm:right-2 sm:bottom-2 sm:max-h-none sm:w-[460px] sm:rounded-xl"
+        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[88vh] animate-rise flex-col overflow-hidden rounded-t-xl bg-canvas shadow-float sm:inset-x-auto sm:top-2 sm:right-2 sm:bottom-2 sm:max-h-none sm:w-[460px] sm:rounded-xl"
         aria-label="Receipt"
       >
-        <div className="flex h-14 flex-none items-center justify-between gap-3 border-b border-line bg-surface/80 pr-3 pl-5 backdrop-blur">
+        <div className="flex h-16 flex-none items-center justify-between gap-3 pr-3 pl-6">
           <div className="min-w-0">
-            <div className="text-[14.5px] font-semibold tracking-[-0.012em] text-ink">Receipt</div>
+            <div className="font-display text-[18px] font-bold tracking-[-0.025em] text-ink">Receipt</div>
           </div>
           <div className="flex items-center gap-1">
             <Link href={`/receipts/${receipt._id}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
@@ -76,23 +75,20 @@ export function ReceiptPanel({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-4 sm:px-5 sm:pb-5">
           {actions.length ? (
-            <div className="mb-4 rounded-lg border border-line bg-surface p-4 shadow-card">
-              <div className="flex items-start gap-3">
-                <IconTile tone="steel" size="sm">
-                  <Lock />
-                </IconTile>
-                <div className="min-w-0">
-                  <div className="text-[13.5px] font-semibold text-ink">{amount} is held for this task</div>
-                  <p className="mt-0.5 text-[12.5px] leading-relaxed text-muted">
-                    {requested
-                      ? `${requested} requested. Tasks runs it through PayPal and this receipt updates.`
-                      : "Release it to the worker, or refund it to you. Both ask first."}
-                  </p>
-                </div>
+            <div className="metal-card mb-4 rounded-xl p-5">
+              <div className="flex items-center gap-2 text-[13px] font-semibold text-steel-800">
+                <Lock className="size-4" strokeWidth={2} />
+                Held for this task
               </div>
-              <div className="mt-3.5 flex flex-wrap gap-2 pl-10">
+              <div className="tabular mt-3 font-display text-[36px] leading-none font-extrabold tracking-[-0.045em] text-steel-900">{amount}</div>
+              <p className="mt-2 text-[12.5px] leading-relaxed text-steel-800/80">
+                {requested
+                  ? `${requested} requested. Tasks runs it through PayPal and this receipt updates.`
+                  : "Release it to the worker, or refund it to you. Both ask first."}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
                 {actions.includes("release_payout") && receipt.state !== "disputed" ? (
                   <Button variant="brand" size="sm" onClick={() => setConfirm("release_payout")} disabled={Boolean(requested)}>
                     <ArrowUpRight />

@@ -106,8 +106,8 @@ function RankCell({ data }: CustomCellRendererProps<Leader>) {
   return (
     <span
       className={cn(
-        "tabular inline-flex size-6 items-center justify-center rounded-full text-[12px] font-semibold",
-        data.rank === 1 ? "bg-green-400 text-ink" : data.rank <= 3 ? "bg-green-50 text-green-700" : "text-faint",
+        "tabular inline-flex h-full items-center font-display font-extrabold tracking-[-0.03em]",
+        data.rank === 1 ? "text-[20px] text-green-700" : data.rank <= 3 ? "text-[16px] text-ink" : "text-[14px] text-faint",
       )}
     >
       {data.rank}
@@ -155,7 +155,7 @@ export function DonorLeaderboard({ leaders }: { leaders: Cause["leaderboard"] })
   );
   return (
     <WidgetFrame flush title="Donor leaderboard" description="Named donors, by total given">
-      <div ref={ref} className={GRID_WRAP} style={{ height: 36 + Math.min(rows.length, 7) * 50 + 2 }}>
+      <div ref={ref} className={GRID_WRAP} style={{ height: 36 + Math.min(rows.length, 7) * 54 + 2 }}>
         {width !== null ? <AgGridReact<Leader>
           theme={plexGridThemeCompact}
           rowData={rows}
@@ -174,13 +174,13 @@ export function DonorLeaderboard({ leaders }: { leaders: Cause["leaderboard"] })
 
 export function CauseTasks({ tasks }: { tasks: Cause["tasks"] }) {
   return (
-    <WidgetFrame flush title="Shifts funded and done" description="Each shift is paid local work, released on proof" bodyClassName="mt-3 border-t-0">
-      <ul className="divide-y divide-line px-5 pb-1.5">
+    <WidgetFrame flush title="Shifts funded and done" description="Each shift is paid local work, released on proof">
+      <ul className="space-y-1">
         {tasks.map((t) => {
           const done = t.status === "paid" || t.status === "approved";
           const ratio = t.fundedCents / Math.max(t.neededCents, 1);
           return (
-            <li key={t._id} className="py-3.5">
+            <li key={t._id} className="rounded-[12px] px-4 py-3.5 transition-colors hover:bg-sunken/70">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate text-[13.5px] font-medium text-ink">{t.title}</div>
@@ -201,11 +201,11 @@ export function CauseTasks({ tasks }: { tasks: Cause["tasks"] }) {
                 )}
               </div>
               {done ? (
-                <div className="mt-2.5 flex items-center justify-between gap-3">
+                <div className="mt-3 flex items-center justify-between gap-3">
                   <div className="flex -space-x-1.5">
                     {t.workers.map((w, i) => (
                       <span key={i} className="rounded-full ring-2 ring-surface">
-                        <Avatar name={w.name} color={w.color} size={22} />
+                        <Avatar name={w.name} color={w.color} size={24} />
                       </span>
                     ))}
                   </div>

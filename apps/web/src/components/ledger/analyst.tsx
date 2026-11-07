@@ -20,11 +20,11 @@ import {
 import type { LedgerRole, WidgetSpec } from "@plex/backend/lib/ledgerSpec";
 import { api, type Doc, type Id } from "@/lib/convex";
 import type { Receipt } from "@/components/receipt/receipt";
-import { Badge, Card, CardHeader, IconTile, Kbd, SectionHeading, Skeleton, StatusDot } from "@/components/ui/primitives";
+import { Badge, Card, CardHeader, SectionHeading, Skeleton } from "@/components/ui/primitives";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { WidgetBody } from "./widget";
-import { Chip, WidgetFrame } from "./kit";
+import { Chip, GLASS, WidgetFrame } from "./kit";
 
 export interface WidgetHost {
   receipts: Receipt[];
@@ -173,9 +173,26 @@ export function Analyst({ host, spotlight, onClearSpotlight }: {
 
   return (
     <section aria-label="Ask the Ledger" className="space-y-4">
-      <Card className="overflow-hidden shadow-raised">
+      {/* The spotlight: the screen's one lit object is the question you ask */}
+      <div className="@container spotlight rounded-xl p-6 sm:p-8">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
+            <TextSearch className="size-[18px] text-green-300" strokeWidth={1.9} aria-hidden />
+            Plex Analyst
+          </div>
+          <span className={cn(GLASS, "tabular rounded-full px-2.5 py-1 text-[11.5px] font-medium text-white/60")}>
+            Reads {host.receipts.length} receipts
+          </span>
+        </div>
+        <h2 className="mt-5 max-w-2xl font-display text-[30px] leading-[1.08] font-extrabold tracking-[-0.04em] text-balance text-white @[640px]:text-[40px]">
+          Ask your money anything.
+        </h2>
+        <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-white/55">
+          The Analyst reads every receipt and builds the view. Pin what you want to keep.
+        </p>
+
         <form
-          className="group/ask flex items-center gap-3 px-4 py-3 sm:px-5"
+          className="mt-6"
           onSubmit={(e) => {
             e.preventDefault();
             void submit(text);
@@ -183,38 +200,66 @@ export function Analyst({ host, spotlight, onClearSpotlight }: {
         >
           <label
             htmlFor="ledger-ask"
-            className="flex h-12 min-w-0 flex-1 cursor-text items-center gap-3 rounded-[12px] border border-line bg-surface pr-1.5 pl-3.5 transition-[border-color,box-shadow] group-hover/ask:border-line-strong focus-within:!border-green-500 focus-within:ring-[3px] focus-within:ring-green-100"
+            className={cn(
+              GLASS,
+              "flex h-[60px] min-w-0 cursor-text items-center gap-3 rounded-[18px] pr-2 pl-5 backdrop-blur-sm transition-[box-shadow,background-color] duration-200 hover:bg-white/[0.1]",
+              "focus-within:bg-white/[0.11] focus-within:shadow-[inset_0_0_0_1px_rgb(110_243_214/0.55),0_0_0_5px_rgb(110_243_214/0.12),0_0_36px_-6px_rgb(110_243_214/0.45)]",
+            )}
           >
-            <TextSearch className="size-[18px] flex-none text-faint" strokeWidth={1.9} aria-hidden />
             <span className="sr-only">Ask the Ledger</span>
             <input
               id="ledger-ask"
               ref={inputRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Ask about your money, like “what did my agents buy this week?”"
-              className="h-full min-w-0 flex-1 bg-transparent text-[15px] text-ink placeholder:text-faint focus:outline-none"
+              placeholder="What did my agents buy this week?"
+              className="h-full min-w-0 flex-1 bg-transparent text-[16px] font-medium text-white placeholder:text-white/40 focus:outline-none sm:text-[17px]"
               autoComplete="off"
             />
-            {text ? null : <Kbd className="hidden sm:inline-flex">/</Kbd>}
-            <Button type="submit" size="icon-sm" disabled={!text.trim()} aria-label="Ask">
-              <ArrowUp />
-            </Button>
+            {text ? null : (
+              <kbd className={cn(GLASS, "hidden h-6 min-w-6 items-center justify-center rounded-[7px] px-1.5 font-sans text-[12px] text-white/50 sm:inline-flex")}>/</kbd>
+            )}
+            <button
+              type="submit"
+              disabled={!text.trim()}
+              aria-label="Ask"
+              className="flex size-11 flex-none items-center justify-center rounded-[14px] bg-white text-ink transition-[opacity,transform] hover:scale-[1.03] disabled:opacity-30 disabled:hover:scale-100 focus-visible:ring-[3px] focus-visible:ring-green-300/60 focus-visible:outline-none"
+            >
+              <ArrowUp className="size-5" strokeWidth={2.2} />
+            </button>
           </label>
         </form>
-        <div className="flex items-center gap-2 border-t border-line bg-canvas/50 px-4 py-2.5 sm:px-5">
-          <span className="flex-none text-[12px] font-medium text-faint">Try</span>
-          <div className="flex min-w-0 gap-1.5 overflow-x-auto [scrollbar-width:none]">
-            {questions === undefined
-              ? ["w-40", "w-32", "w-44"].map((w) => <Skeleton key={w} className={cn("h-7 flex-none rounded-full", w)} />)
-              : questions.map((q) => (
-                  <Chip key={q} onClick={() => void submit(q)}>
-                    {q}
-                  </Chip>
-                ))}
-          </div>
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          {questions === undefined
+            ? ["w-40", "w-32", "w-44"].map((w) => <span key={w} className={cn("h-8 flex-none rounded-full bg-white/[0.07]", w)} />)
+            : questions.map((q) => (
+                <Chip key={q} glass onClick={() => void submit(q)}>
+                  {q}
+                </Chip>
+              ))}
         </div>
-      </Card>
+
+        {!spotlight && !active && earlier.length ? (
+          <div className="mt-6 flex items-center gap-2 overflow-x-auto [scrollbar-width:none]">
+            <span className="flex flex-none items-center gap-1.5 text-[12px] font-medium text-white/40">
+              <History className="size-3.5" strokeWidth={1.9} />
+              Earlier
+            </span>
+            {earlier.map((a) => (
+              <button
+                key={a._id}
+                type="button"
+                onClick={() => setActiveId(a._id)}
+                title={a.question}
+                className="max-w-[280px] flex-none truncate rounded-full px-2.5 py-1 text-[12.5px] text-white/55 transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:bg-white/[0.08] focus-visible:outline-none"
+              >
+                {a.question}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
 
       {spotlight ? (
         <div className="animate-rise space-y-4">
@@ -243,18 +288,6 @@ export function Analyst({ host, spotlight, onClearSpotlight }: {
               <Skeleton className="h-[300px] w-full rounded-lg" />
             </div>
           ) : null}
-        </div>
-      ) : earlier.length ? (
-        <div className="flex items-center gap-2 overflow-x-auto px-1 [scrollbar-width:none]">
-          <span className="flex flex-none items-center gap-1.5 text-[12px] font-medium text-faint">
-            <History className="size-3.5" strokeWidth={1.9} />
-            Earlier
-          </span>
-          {earlier.map((a) => (
-            <Chip key={a._id} onClick={() => setActiveId(a._id)} title={a.question} className="max-w-[280px] border-transparent bg-transparent hover:border-line">
-              {a.question}
-            </Chip>
-          ))}
         </div>
       ) : null}
     </section>
@@ -286,38 +319,24 @@ function AnswerHead({
 }) {
   const watchdog = label === "Watchdog";
   return (
-    <Card className="overflow-hidden">
-      <div className="grid grid-cols-[36px_minmax(0,1fr)_auto] gap-x-3.5 px-5 pt-4 pb-4">
-        <IconTile tone={watchdog ? "steel" : "mint"} size="md">
-          {watchdog ? <Radar /> : <TextSearch />}
-        </IconTile>
-        <div className="min-w-0">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <span className={cn("text-[12.5px] font-semibold", watchdog ? "text-steel-700" : "text-green-700")}>{label}</span>
-            {question ? (
-              <span className="flex min-w-0 items-center gap-1.5 text-[12.5px] text-muted">
-                <span className="text-line-strong">·</span>
-                {via ? <Laptop className="size-3.5 flex-none text-steel-600" strokeWidth={1.9} aria-label={via} /> : null}
-                <span className="truncate">“{question}”</span>
-              </span>
-            ) : null}
-          </div>
-          {text === null ? (
-            <div className="mt-2 space-y-2" aria-live="polite">
-              <div className="flex items-center gap-2 text-[13.5px] text-muted">
-                <StatusDot live />
-                Reading {count ?? "your"} receipts
-              </div>
-              <Skeleton className="h-3.5 w-[78%] rounded-full" />
-              <Skeleton className="h-3.5 w-[52%] rounded-full" />
-            </div>
-          ) : (
-            <p className={cn("mt-1 max-w-3xl text-[15px] leading-relaxed text-pretty", error ? "text-disputed" : "text-ink")}>{text}</p>
-          )}
+    <Card className="p-6 sm:p-7">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
+          <span className={cn("flex items-center gap-2 font-semibold", watchdog ? "text-steel-700" : "text-green-700")}>
+            {watchdog ? <Radar className="size-[18px]" strokeWidth={1.9} /> : <TextSearch className="size-[18px]" strokeWidth={1.9} />}
+            {label}
+          </span>
+          {question ? (
+            <span className="flex min-w-0 items-center gap-1.5 text-muted">
+              <span className="text-line-strong">·</span>
+              {via ? <Laptop className="size-4 flex-none text-steel-600" strokeWidth={1.9} aria-label={via} /> : null}
+              <span className="truncate">“{question}”</span>
+            </span>
+          ) : null}
         </div>
-        <div className="flex items-start gap-2">
+        <div className="flex flex-none items-center gap-2">
           {note ? (
-            <Badge tone="outline" className="hidden text-muted md:inline-flex">
+            <Badge tone="neutral" className="hidden text-muted md:inline-flex">
               {note}
             </Badge>
           ) : null}
@@ -326,17 +345,30 @@ function AnswerHead({
           </Button>
         </div>
       </div>
+      {text === null ? (
+        <div className="mt-4 space-y-3" aria-live="polite">
+          <div className="text-[14px] text-muted">Reading {count ?? "your"} receipts…</div>
+          <Skeleton className="h-5 w-[78%] rounded-full" />
+          <Skeleton className="h-5 w-[52%] rounded-full" />
+        </div>
+      ) : (
+        <p
+          className={cn(
+            "mt-3 max-w-4xl font-display text-[20px] leading-[1.4] font-bold tracking-[-0.02em] text-pretty sm:text-[22px]",
+            error ? "text-disputed" : "text-ink",
+          )}
+        >
+          {text}
+        </p>
+      )}
       {followUps?.length && onFollowUp ? (
-        <div className="flex items-center gap-2 border-t border-line bg-canvas/50 px-5 py-2.5">
-          <CornerDownRight className="size-3.5 flex-none text-faint" strokeWidth={1.9} aria-hidden />
-          <span className="flex-none text-[12px] font-medium text-faint">Next</span>
-          <div className="flex min-w-0 gap-1.5 overflow-x-auto [scrollbar-width:none]">
-            {followUps.map((f) => (
-              <Chip key={f} onClick={() => onFollowUp(f)}>
-                {f}
-              </Chip>
-            ))}
-          </div>
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <CornerDownRight className="size-4 flex-none text-faint" strokeWidth={1.9} aria-hidden />
+          {followUps.map((f) => (
+            <Chip key={f} onClick={() => onFollowUp(f)}>
+              {f}
+            </Chip>
+          ))}
         </div>
       ) : null}
     </Card>
@@ -386,24 +418,30 @@ export function Watchdog({ role, onShow }: { role: LedgerRole; onShow: (a: { tit
           </Badge>
         }
       />
-      <ul className="px-2 pt-2 pb-2">
-        {alerts.map((a, i) => (
-          <li key={a.id} className={cn(i > 0 && "border-t border-line/70")}>
-            <div className="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3 rounded-[10px] px-3 py-2.5">
-              <IconTile tone={a.severity === "warning" ? "amber" : "steel"} size="sm" className="size-[34px] rounded-[10px]">
-                {a.severity === "warning" ? <TriangleAlert /> : <Eye />}
-              </IconTile>
-              <div className="min-w-0">
-                <div className="line-clamp-2 text-[13.5px] leading-snug font-medium text-ink sm:truncate">{a.title}</div>
-                <p className="mt-0.5 line-clamp-2 text-[12.5px] leading-snug text-muted sm:truncate" title={a.detail}>
+      <ul className="px-2 pt-3 pb-2">
+        {alerts.map((a) => (
+          <li key={a.id}>
+            <button
+              type="button"
+              onClick={() => onShow({ title: a.title, spec: a.spec })}
+              className="group grid w-full grid-cols-[20px_minmax(0,1fr)_auto] items-start gap-3.5 rounded-[12px] px-4 py-3.5 text-left transition-colors hover:bg-sunken/70 focus-visible:ring-[3px] focus-visible:ring-green-200 focus-visible:outline-none"
+            >
+              {a.severity === "warning" ? (
+                <TriangleAlert className="mt-px size-5 text-refunded" strokeWidth={1.8} />
+              ) : (
+                <Eye className="mt-px size-5 text-steel-600" strokeWidth={1.8} />
+              )}
+              <span className="min-w-0">
+                <span className="line-clamp-2 block text-[14px] leading-snug font-semibold text-ink sm:truncate">{a.title}</span>
+                <span className="mt-1 line-clamp-2 block text-[12.5px] leading-snug text-muted sm:truncate" title={a.detail}>
                   {a.detail}
-                </p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => onShow({ title: a.title, spec: a.spec })} className="-mr-1">
-                Show me
-                <ArrowRight />
-              </Button>
-            </div>
+                </span>
+              </span>
+              <span className="mt-0.5 flex items-center gap-1 text-[12.5px] font-medium text-muted transition-colors group-hover:text-ink">
+                <span className="hidden sm:inline">Show me</span>
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.9} />
+              </span>
+            </button>
           </li>
         ))}
       </ul>

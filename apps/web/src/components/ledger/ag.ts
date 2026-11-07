@@ -61,8 +61,8 @@ export function registerAg() {
 /**
  * The Plex grid theme. Built with the Theming API from the app's CSS tokens
  * (globals.css), so the grid follows the design system: a 12px muted header on
- * the canvas, ink text, 1px hairline rows (no zebra), a sunken hover, a green
- * focus ring and a green-50 selection. The grid sits inside a Card, so it
+ * the card, no header rule and no row rules (rows are separated by height and a
+ * sunken hover), a green focus ring and a soft green-50 selection. The grid sits inside a Card, so it
  * draws no wrapper border of its own.
  */
 export const plexGridTheme = themeQuartz.withPart(iconSetQuartzLight).withParams({
@@ -79,21 +79,21 @@ export const plexGridTheme = themeQuartz.withPart(iconSetQuartzLight).withParams
   borderRadius: 8,
   wrapperBorder: false,
   wrapperBorderRadius: 0,
-  headerBackgroundColor: "color-mix(in srgb, var(--color-canvas) 70%, var(--color-surface))",
-  headerTextColor: "var(--color-muted)",
+  headerBackgroundColor: "var(--color-surface)",
+  headerTextColor: "var(--color-faint)",
   headerFontSize: 12,
   headerFontWeight: 500,
-  headerHeight: 38,
-  headerRowBorder: { color: "var(--color-line)" },
+  headerHeight: 40,
+  headerRowBorder: false,
   headerColumnBorder: false,
   headerColumnResizeHandleColor: "transparent",
   headerCellHoverBackgroundColor: "var(--color-sunken)",
-  rowHeight: 54,
-  rowBorder: { color: "var(--color-line)" },
+  rowHeight: 60,
+  rowBorder: false,
   columnBorder: false,
   oddRowBackgroundColor: "var(--color-surface)",
-  rowHoverColor: "color-mix(in srgb, var(--color-sunken) 60%, transparent)",
-  selectedRowBackgroundColor: "color-mix(in srgb, var(--color-green-50) 85%, var(--color-surface))",
+  rowHoverColor: "color-mix(in srgb, var(--color-sunken) 70%, transparent)",
+  selectedRowBackgroundColor: "color-mix(in srgb, var(--color-green-50) 90%, var(--color-surface))",
   cellHorizontalPadding: 16,
   spacing: 8,
   iconColor: "var(--color-faint)",
@@ -109,8 +109,8 @@ export const plexGridTheme = themeQuartz.withPart(iconSetQuartzLight).withParams
   tooltipBackgroundColor: "var(--color-ink)",
   tooltipTextColor: "var(--color-surface)",
   tooltipBorder: false,
-  pinnedRowBackgroundColor: "color-mix(in srgb, var(--color-canvas) 70%, var(--color-surface))",
-  pinnedRowBorder: { color: "var(--color-line)" },
+  pinnedRowBackgroundColor: "color-mix(in srgb, var(--color-canvas) 80%, var(--color-surface))",
+  pinnedRowBorder: false,
   pinnedRowFontWeight: 600,
   rangeSelectionBorderColor: "var(--color-green-400)",
   valueChangeValueHighlightBackgroundColor: "var(--color-green-100)",
@@ -118,13 +118,14 @@ export const plexGridTheme = themeQuartz.withPart(iconSetQuartzLight).withParams
 });
 
 /** The same grid, tighter: for small widgets inside cards. */
-export const plexGridThemeCompact = plexGridTheme.withParams({ rowHeight: 50, headerHeight: 36 });
+export const plexGridThemeCompact = plexGridTheme.withParams({ rowHeight: 54, headerHeight: 36 });
 
 /**
- * Classes for the box a grid sits in: tabular figures in every cell, and a
- * header label that reads as a label (sentence case, no bold).
+ * Classes for the box a grid sits in: tabular figures in every cell, a header
+ * label that reads as a label (sentence case, no bold), and rounded rows so
+ * the hover and selection fills sit like list rows.
  */
-export const GRID_WRAP = "[&_.ag-cell]:tabular-nums [&_.ag-header-cell-text]:tracking-[-0.003em]";
+export const GRID_WRAP = "[&_.ag-cell]:tabular-nums [&_.ag-header-cell-text]:tracking-[-0.003em] [&_.ag-row]:rounded-[12px]";
 
 // ── Charts ──────────────────────────────────────────────────────────────────
 
@@ -192,12 +193,23 @@ export function stateColor(t: Tokens, state: string) {
   return map[state] ?? t.steel[300];
 }
 
-/** Axis styling every cartesian chart shares: faint labels, faint dashed gridlines, no axis lines. */
+/** A token color at a lower opacity (tokens are hex or rgb). */
+export function fade(color: string, alpha: number) {
+  const hex = color.match(/^#([0-9a-f]{6})$/i)?.[1];
+  if (hex) {
+    const n = parseInt(hex, 16);
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+  }
+  const rgb = color.match(/rgba?\(([^)]+)\)/)?.[1]?.split(/[\s,/]+/).filter(Boolean);
+  return rgb && rgb.length >= 3 ? `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})` : color;
+}
+
+/** Axis styling every cartesian chart shares: faint labels, barely-there solid gridlines, no axis lines. */
 export function valueAxis(t: Tokens) {
   return {
     line: { enabled: false },
     tick: { enabled: false },
-    gridLine: { style: [{ stroke: t.line, lineDash: [2, 4] }] },
+    gridLine: { style: [{ stroke: fade(t.line, 0.6) }] },
     label: { color: t.faint, fontSize: 11.5 },
   };
 }

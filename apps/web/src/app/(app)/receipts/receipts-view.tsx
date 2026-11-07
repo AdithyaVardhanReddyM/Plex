@@ -3,17 +3,17 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { ArrowUpRight, Cpu, HandCoins, HeartHandshake, Layers, Lock, ReceiptText, Search } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Clock, Cpu, HandCoins, HeartHandshake, Layers, Lock, ReceiptText, Search } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { direction } from "@plex/backend/lib/ledgerSpec";
 import { api } from "@/lib/convex";
 import type { Id } from "@/lib/convex";
 import { Card, EmptyState, Input, PageHeader, Segmented, Skeleton } from "@/components/ui/primitives";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Amount } from "@/components/ui/money";
 import { ReceiptCard, ReceiptRow, receiptKindLabel, type Receipt } from "@/components/receipt/receipt";
 import { AgentArt, HeldArt, ReceiptStackArt, TaskArt } from "@/components/art/empty-art";
-import { Figure, StatStrip, StatStripSkeleton } from "@/components/ledger/kit";
+import { DisplayMoney, GLASS } from "@/components/ledger/kit";
+import { DayBars } from "@/components/ui/viz";
 import { cn, formatCents } from "@/lib/utils";
 
 const FILTERS = [
@@ -120,6 +120,19 @@ export function ReceiptsView() {
     return t;
   }, [receipts]);
 
+  // Paid out per day, the last 14 days, for the spotlight's bars.
+  const days = useMemo(() => {
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    return Array.from({ length: 14 }, (_, i) => {
+      const from = start.getTime() - (13 - i) * 86_400_000;
+      const cents = (receipts ?? [])
+        .filter((r) => r.state !== "declined" && direction(r) === "out" && r.occurredAt >= from && r.occurredAt < from + 86_400_000)
+        .reduce((sum, r) => sum + r.amountCents, 0);
+      return { cents, label: new Date(from).toLocaleDateString("en-US", { day: "numeric" }) };
+    });
+  }, [receipts, now]);
+
   const visible = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return receipts?.filter((r) => matches(r, filter) && (!needle || searchable(r).includes(needle))) ?? [];
@@ -170,38 +183,9 @@ export function ReceiptsView() {
         }
       />
 
-      {receipts === undefined ? (
-        <StatStripSkeleton />
-      ) : (
-        <StatStrip
-          stats={[
-            {
-              label: "Paid out",
-              value: <Amount cents={totals.out} size="lg" />,
-              foot: `${totals.outCount} payment${totals.outCount === 1 ? "" : "s"}`,
-            },
-            {
-              label: "Came in",
-              tone: "green",
-              value: <Amount cents={totals.in} size="lg" className="text-green-700" />,
-              foot: "Refunds, splits and invoices",
-            },
-            {
-              label: "Held until proof",
-              tone: "steel",
-              value: <Amount cents={totals.held} size="lg" className="text-steel-800" />,
-              foot: `${totals.heldCount} waiting on proof`,
-            },
-            {
-              label: "Moved by agents",
-              value: <Figure>{totals.agents}</Figure>,
-              foot: `of ${receipts.length} receipts`,
-            },
-          ]}
-        />
-      )}
+      <Summary loading={receipts === undefined} totals={totals} count={receipts?.length ?? 0} days={days} />
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Segmented
           items={FILTERS.map((f) => ({ value: f.key, label: f.label, icon: f.icon, count: receipts ? counts[f.key] : undefined }))}
           value={filter}
@@ -210,7 +194,12 @@ export function ReceiptsView() {
         <label className="relative block sm:w-64">
           <span className="sr-only">Search receipts</span>
           <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-faint" strokeWidth={1.9} />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search who, why or rule" className="pl-8" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search who, why or rule"
+            className="rounded-full border-transparent bg-surface pl-8 hover:border-transparent"
+          />
         </label>
       </div>
 
@@ -235,29 +224,29 @@ export function ReceiptsView() {
               <EmptyState art={EMPTY[filter].art} title={EMPTY[filter].title} body={EMPTY[filter].body} className="py-16" />
             )
           ) : (
-            <div ref={listRef} onKeyDown={onKeyDown} className="pb-2">
-              {groups.map((g, gi) => {
+            <div ref={listRef} onKeyDown={onKeyDown} className="px-2 pt-2 pb-3">
+              {groups.map((g) => {
                 const n = net(g.items);
                 return (
-                  <section key={g.day} aria-label={g.day}>
-                    <div
-                      className={cn(
-                        "sticky top-14 z-10 flex items-center justify-between gap-3 border-b border-line bg-surface/90 px-5 py-2 backdrop-blur-md",
-                        gi === 0 ? "rounded-t-lg" : "border-t",
-                      )}
-                    >
-                      <span className="text-[12px] font-medium text-ink-2">{g.day}</span>
-                      <span className="flex items-baseline gap-2 text-[12px]">
-                        <span className="tabular text-faint">
+                  <section key={g.day} aria-label={g.day} className="pt-4 first:pt-3">
+                    <div className="flex items-baseline justify-between gap-3 px-4 pb-2">
+                      <span className="font-display text-[15px] font-bold tracking-[-0.02em] text-ink-2">{g.day}</span>
+                      <span className="flex items-baseline gap-2.5">
+                        <span className="tabular text-[12px] text-faint">
                           {g.items.length} receipt{g.items.length === 1 ? "" : "s"}
                         </span>
-                        <span className={cn("tabular font-medium", n > 0 ? "text-green-700" : "text-ink-2")}>
+                        <span
+                          className={cn(
+                            "tabular font-display text-[15px] font-bold tracking-[-0.02em]",
+                            n > 0 ? "text-green-700" : "text-ink-2",
+                          )}
+                        >
                           {n > 0 ? "+" : n < 0 ? "−" : ""}
                           {formatCents(Math.abs(n))}
                         </span>
                       </span>
                     </div>
-                    <div className="px-2 pt-1.5 pb-1.5">
+                    <div>
                       {g.items.map((r) => {
                         const on = active?._id === r._id;
                         return (
@@ -268,8 +257,8 @@ export function ReceiptsView() {
                             onClick={() => pick(r)}
                             aria-current={on ? "true" : undefined}
                             className={cn(
-                              "block w-full rounded-[10px] text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-green-200 focus-visible:outline-none",
-                              on && "lg:bg-green-50/70 lg:ring-1 lg:ring-green-100 lg:ring-inset",
+                              "block w-full rounded-[12px] text-left transition-colors focus-visible:ring-[3px] focus-visible:ring-green-200 focus-visible:outline-none",
+                              on ? "lg:bg-green-50" : "group",
                             )}
                             aria-label={`${receiptKindLabel(r.kind)}: ${r.payeeLabel}, ${formatCents(r.amountCents, r.currency)}`}
                           >
@@ -301,12 +290,14 @@ export function ReceiptsView() {
               </div>
             </div>
           ) : (
-            <EmptyState
-              icon={<ReceiptText />}
-              title="No receipt selected"
-              body="Pick one from the list to see its why, its rule and its PayPal trail."
-              className="rounded-lg border border-dashed border-line-strong/80 py-14"
-            />
+            <Card>
+              <EmptyState
+                icon={<ReceiptText />}
+                title="No receipt selected"
+                body="Pick one from the list to see its why, its rule and its PayPal trail."
+                className="py-14"
+              />
+            </Card>
           )}
         </aside>
       </div>
@@ -316,30 +307,107 @@ export function ReceiptsView() {
 
 function ListSkeleton() {
   return (
-    <div className="pb-2" aria-hidden>
+    <div className="px-2 pt-2 pb-3" aria-hidden>
       {[3, 4].map((n, g) => (
-        <div key={g}>
-          <div className={cn("flex items-center justify-between border-b border-line px-5 py-2.5", g > 0 && "border-t")}>
-            <Skeleton className="h-3 w-20 rounded-full" />
-            <Skeleton className="h-3 w-14 rounded-full" />
+        <div key={g} className="pt-4 first:pt-3">
+          <div className="flex items-center justify-between px-4 pb-3">
+            <Skeleton className="h-4 w-24 rounded-full" />
+            <Skeleton className="h-4 w-16 rounded-full" />
           </div>
-          <div className="px-2 pt-1.5 pb-1.5">
-            {Array.from({ length: n }).map((_, i) => (
-              <div key={i} className="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5">
-                <Skeleton className="size-[34px] rounded-[10px]" />
-                <div className="space-y-2">
-                  <Skeleton className={cn("h-3.5 rounded-full", ["w-40", "w-56", "w-32", "w-48"][i % 4])} />
-                  <Skeleton className={cn("h-3 rounded-full", ["w-28", "w-36", "w-24", "w-32"][i % 4])} />
-                </div>
-                <div className="flex flex-col items-end gap-1.5">
-                  <Skeleton className="h-3.5 w-14 rounded-full" />
-                  <Skeleton className="h-[22px] w-16 rounded-full" />
-                </div>
+          {Array.from({ length: n }).map((_, i) => (
+            <div key={i} className="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3">
+              <Skeleton className="size-5 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className={cn("h-3.5 rounded-full", ["w-40", "w-56", "w-32", "w-48"][i % 4])} />
+                <Skeleton className={cn("h-3 rounded-full", ["w-28", "w-36", "w-24", "w-32"][i % 4])} />
               </div>
-            ))}
-          </div>
+              <div className="flex flex-col items-end gap-1.5">
+                <Skeleton className="h-3.5 w-14 rounded-full" />
+                <Skeleton className="h-[22px] w-16 rounded-full" />
+              </div>
+            </div>
+          ))}
         </div>
       ))}
+    </div>
+  );
+}
+
+// ── Summary ──────────────────────────────────────────────────────────────────
+
+type Totals = { out: number; in: number; held: number; heldCount: number; agents: number; outCount: number; inCount: number };
+
+/** Paid out, lit as the screen's spotlight; held money beside it on brushed metal. */
+function Summary({
+  loading,
+  totals,
+  count,
+  days,
+}: {
+  loading: boolean;
+  totals: Totals;
+  count: number;
+  days: { cents: number; label: string }[];
+}) {
+  const peak = days.reduce((m, d, i) => (d.cents > days[m]!.cents ? i : m), 0);
+  return (
+    <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="@container spotlight flex min-h-[260px] flex-col rounded-xl p-6 sm:p-7">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
+            <ArrowUpRight className="size-[18px] text-green-300" strokeWidth={1.9} />
+            Paid out
+          </div>
+          <span className={cn(GLASS, "tabular rounded-full px-2.5 py-1 text-[11.5px] font-medium text-white/60")}>
+            {loading ? "All receipts" : `${totals.outCount} payment${totals.outCount === 1 ? "" : "s"}`}
+          </span>
+        </div>
+        <div className="mt-5 grid flex-1 items-end gap-6 @[640px]:grid-cols-[auto_minmax(0,1fr)] @[640px]:gap-10">
+          {loading ? (
+            <div className="h-14 w-56 rounded-lg bg-white/10" />
+          ) : (
+            <DisplayMoney cents={totals.out} onDark className="text-[56px] text-white @[520px]:text-[72px]" />
+          )}
+          <div className="hidden min-w-0 @[640px]:block">
+            <div className="mb-2 text-right text-[11.5px] text-white/40">Paid out by day, last 14 days</div>
+            <DayBars values={days.map((d) => d.cents)} labels={days.map((d) => d.label)} highlight={peak} height={84} onDark />
+          </div>
+        </div>
+        <div className="mt-7 flex flex-wrap items-center gap-2 text-[12.5px] font-medium">
+          <span className="tabular flex items-center gap-1.5 rounded-full bg-green-300/15 px-3 py-1.5 text-green-200 shadow-[inset_0_0_0_1px_rgb(110_243_214/0.25)]">
+            <ArrowDownLeft className="size-3.5" strokeWidth={2.2} />
+            {loading ? "…" : formatCents(totals.in)} came in
+          </span>
+          <span className={cn(GLASS, "tabular flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white/75")}>
+            <Cpu className="size-3.5 text-white/50" strokeWidth={2} />
+            {loading ? "…" : `${totals.agents} of ${count}`} moved by agents
+          </span>
+          <span className="hidden text-[12px] text-white/40 sm:inline">Refunds, splits and invoices count as in.</span>
+        </div>
+      </div>
+
+      <div className="metal-card flex min-h-[200px] flex-col justify-between rounded-xl p-6 sm:p-7">
+        <div className="flex items-center gap-2 text-[13px] font-semibold text-steel-800">
+          <Lock className="size-4" strokeWidth={2} />
+          Held until proof
+        </div>
+        <div>
+          {loading ? (
+            <Skeleton className="h-11 w-28" />
+          ) : (
+            <span className="tabular font-display text-[48px] leading-none font-extrabold tracking-[-0.045em] text-steel-900">
+              {formatCents(totals.held)}
+            </span>
+          )}
+          <div className="mt-2 flex items-center gap-1.5 text-[12.5px] font-medium text-steel-800">
+            <Clock className="size-3.5" strokeWidth={2} />
+            {totals.heldCount} waiting on proof
+          </div>
+          <p className="mt-3 text-[12px] leading-relaxed text-steel-800/75">
+            Paid out the moment the work is verified. Back to you if it isn&apos;t.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
