@@ -265,6 +265,16 @@ function fitColumns(keys: ColumnKey[], width: number): ColumnKey[] {
 
 export const DEFAULT_COLUMNS: ColumnKey[] = ["when", "party", "why", "rule", "agent", "state", "amount"];
 
+// Grid options live outside render: AG Grid reprocesses any prop whose
+// identity changes, and a fresh object each render re-runs the row model,
+// whose onModelUpdated renders us again. That loop pinned the main thread
+// and stalled every client navigation away from the Ledger.
+const DEFAULT_COL_DEF: ColDef<Row> = { sortable: true, resizable: true, suppressMovable: false, suppressHeaderMenuButton: true };
+const ROW_SELECTION = { mode: "singleRow", checkboxes: false, enableClickSelection: false } as const;
+const getRowId = (p: { data: Row }) => (isTotal(p.data) ? "__total" : p.data._id);
+const sameTotal = (a: TotalRow | null, b: TotalRow) =>
+  Boolean(a && a.count === b.count && a.inCents === b.inCents && a.outCents === b.outCents);
+
 // ── Grid ─────────────────────────────────────────────────────────────────────
 
 export interface ReceiptsGridHandle {
@@ -324,8 +334,28 @@ export const ReceiptsGrid = forwardRef<ReceiptsGridHandle, ReceiptsGridProps>(fu
       if (d === "in") t.inCents += n.data.amountCents;
       if (d === "out") t.outCents += n.data.amountCents;
     });
-    setTotal(t);
+    setTotal((prev) => (sameTotal(prev, t) ? prev : t));
   }, [showTotal]);
+
+  const pinnedBottomRowData = useMemo(() => (showTotal && total && total.count > 0 ? [total] : undefined), [showTotal, total]);
+  const isExternalFilterPresent = useCallback(() => Boolean(matchRef.current), []);
+  const doesExternalFilterPass = useCallback(
+    (node: IRowNode<Row>) => !node.data || isTotal(node.data) || (matchRef.current?.(node.data) ?? true),
+    [],
+  );
+  const onRowClicked = useCallback(
+    (e: RowClickedEvent<Row>) => {
+      if (e.data && !isTotal(e.data) && !e.node.rowPinned) onOpen?.(e.data);
+    },
+    [onOpen],
+  );
+  const getRowClass = useCallback(
+    (p: { node: IRowNode<Row> }) => (p.node.rowPinned ? undefined : onOpen ? "cursor-pointer" : undefined),
+    [onOpen],
+  );
+  const onGridReady = useCallback((e: GridReadyEvent<Row>) => {
+    apiRef.current = e.api;
+  }, []);
 
   useImperativeHandle(ref, () => ({
     exportCsv: (fileName = "plex-ledger.csv") =>
@@ -365,21 +395,17 @@ export const ReceiptsGrid = forwardRef<ReceiptsGridHandle, ReceiptsGridProps>(fu
         loading={rows === undefined}
         loadingRows
         columnDefs={columnDefs}
-        defaultColDef={{ sortable: true, resizable: true, suppressMovable: false, suppressHeaderMenuButton: true }}
-        getRowId={(p) => (isTotal(p.data) ? "__total" : p.data._id)}
+        defaultColDef={DEFAULT_COL_DEF}
+        getRowId={getRowId}
         context={context}
         quickFilterText={quickFilter}
-        isExternalFilterPresent={() => Boolean(matchRef.current)}
-        doesExternalFilterPass={(node) => !node.data || isTotal(node.data) || (matchRef.current?.(node.data) ?? true)}
-        pinnedBottomRowData={showTotal && total && total.count > 0 ? [total] : undefined}
-        rowSelection={{ mode: "singleRow", checkboxes: false, enableClickSelection: false }}
-        onRowClicked={(e: RowClickedEvent<Row>) => {
-          if (e.data && !isTotal(e.data) && !e.node.rowPinned) onOpen?.(e.data);
-        }}
-        getRowClass={(p) => (p.node.rowPinned ? undefined : onOpen ? "cursor-pointer" : undefined)}
-        onGridReady={(e: GridReadyEvent<Row>) => {
-          apiRef.current = e.api;
-        }}
+        isExternalFilterPresent={isExternalFilterPresent}
+        doesExternalFilterPass={doesExternalFilterPass}
+        pinnedBottomRowData={pinnedBottomRowData}
+        rowSelection={ROW_SELECTION}
+        onRowClicked={onRowClicked}
+        getRowClass={getRowClass}
+        onGridReady={onGridReady}
         onModelUpdated={recomputeTotal}
         animateRows
         suppressCellFocus={false}
