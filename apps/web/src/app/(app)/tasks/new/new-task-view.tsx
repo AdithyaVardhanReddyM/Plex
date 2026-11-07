@@ -6,7 +6,10 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import {
   ArrowLeft,
+  ArrowRight,
+  BadgeCheck,
   Bot,
+  Camera,
   Check,
   CircleAlert,
   Crosshair,
@@ -14,13 +17,16 @@ import {
   ListChecks,
   Loader2,
   Lock,
+  MapPin,
+  Palette,
   PenLine,
   Plus,
+  RotateCcw,
+  Search,
   Trash2,
   UserCheck,
   UserRound,
   UsersRound,
-  Wand2,
   Zap,
 } from "lucide-react";
 import type { TaskDraft } from "@plex/backend/tasks";
@@ -29,19 +35,19 @@ import { criterionLabel, defaultCriteria } from "@plex/backend/lib/hire";
 import { api } from "@/lib/convex";
 import type { Id } from "@/lib/convex";
 import { Button } from "@/components/ui/button";
-import { Avatar, Badge, Card, Input, Label, PageHeader, Textarea } from "@/components/ui/primitives";
+import { Avatar, Badge, Card, CardHeader, IconTile, Input, Kbd, Label, PageHeader, Segmented, Skeleton, Switch, Textarea } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
 import { PersonaSwitch, useAs } from "@/components/tasks/persona";
-import { PolicyLine, SpecIcon, TaskCard, errorMessage, type CardTask } from "@/components/tasks/task-ui";
+import { KIND_ICON, PolicyLine, SpecIcon, TaskCard, errorMessage, type CardTask } from "@/components/tasks/task-ui";
 import { useAutoPay, useFund } from "@/components/tasks/use-fund";
 import { cn } from "@/lib/utils";
 
 const HOUR = 3_600_000;
 
-const EXAMPLES = [
-  "Find someone to check if the café on 5th has a quiet corner, and photograph the menu.",
-  "Research three standing desks under $400 that fit a 100cm wall. Compare them, with sources.",
-  "Design a logo for Kettle Corner, a coffee cart in the Mission. Two colors, friendly.",
+const EXAMPLES: { text: string; icon: React.ReactNode }[] = [
+  { text: "Find someone to check if the café on 5th has a quiet corner, and photograph the menu.", icon: <MapPin /> },
+  { text: "Research three standing desks under $400 that fit a 100cm wall. Compare them, with sources.", icon: <Search /> },
+  { text: "Design a logo for Kettle Corner, a coffee cart in the Mission. Two colors, friendly.", icon: <Palette /> },
 ];
 
 type SpecItem = TaskDraft["proofSpec"][number];
@@ -81,21 +87,21 @@ function AgentFitLine({ form, onBuild, building }: { form: Form; onBuild: () => 
       remote: true,
     },
   });
-  if (!fit) return null;
+  if (!fit) return <div className="skeleton -mt-1 h-[18px] w-72 rounded-full" />;
   if (!fit.digital)
-    return <p className="mt-1.5 text-[12.5px] leading-snug text-refunded">Agents can&apos;t take this one. {fit.reason}</p>;
+    return <p className="-mt-1 text-[12.5px] leading-snug text-refunded">Agents can&apos;t take this one. {fit.reason}</p>;
   const names = fit.fits.map((f) => f.name);
   return names.length ? (
-    <p className="mt-1.5 flex items-center gap-1.5 text-[12.5px] text-green-700">
-      <Check className="size-3.5" strokeWidth={2.2} /> {names.slice(0, 3).join(", ")} can do this. They bid once it&apos;s funded.
+    <p className="-mt-1 flex items-center gap-1.5 text-[12.5px] text-green-800">
+      <Check className="size-3.5 flex-none" strokeWidth={2.2} /> {names.slice(0, 3).join(", ")} can do this. They bid once it&apos;s funded.
     </p>
   ) : (
-    <div className="mt-2 flex flex-wrap items-center justify-between gap-2.5 rounded-md bg-refunded-bg px-3 py-2.5 ring-1 ring-refunded/15 ring-inset">
-      <span className="text-[12.5px] leading-snug text-ink-2">
-        <span className="font-medium text-ink">No agent on Plex can do this yet.</span> Create one for it with the agent builder; it bids once you fund the task.
+    <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-[12px] bg-refunded-bg px-3.5 py-3 ring-1 ring-refunded/15 ring-inset">
+      <span className="min-w-0 flex-1 basis-64 text-[12.5px] leading-snug text-ink-2">
+        <span className="font-medium text-ink">No agent on Plex can do this yet.</span> Create one with the agent builder. It bids once you fund the task.
       </span>
-      <Button variant="brand" size="sm" onClick={onBuild} disabled={building}>
-        {building ? <Loader2 className="animate-spin" /> : <Wand2 />} Create an agent for this
+      <Button variant="secondary" size="sm" onClick={onBuild} disabled={building}>
+        {building ? <Loader2 className="animate-spin" /> : <Bot />} Create an agent for this
       </Button>
     </div>
   );
@@ -226,18 +232,18 @@ export function NewTaskView() {
 
   return (
     <div className="animate-rise">
-      <Link href="/tasks" className="mb-5 inline-flex items-center gap-1.5 text-[13px] font-medium text-muted hover:text-ink">
-        <ArrowLeft className="size-4" /> Tasks
+      <Link href="/tasks" className="mb-5 inline-flex items-center gap-1.5 text-[13px] font-medium text-muted transition-colors hover:text-ink">
+        <ArrowLeft className="size-4" strokeWidth={1.9} /> Tasks
       </Link>
       <PageHeader
         title={invited ? `Hire ${invited.name}` : "Post a task"}
-        description="Describe it the way you'd text a friend. The Task Writer turns it into a clear card with a proof spec; you edit, then fund it through PayPal."
+        description="Describe it the way you'd text a friend. The Task Writer turns it into a clear card with a proof spec. You edit it, then fund it through PayPal."
         actions={<PersonaSwitch />}
       />
 
       {invited ? (
-        <div className="mb-5 flex items-center gap-3 rounded-md bg-surface px-4 py-3 text-[13.5px] text-ink-2 shadow-card ring-1 ring-line ring-inset">
-          <Avatar name={invited.name} color={invited.avatarColor} size={28} />
+        <div className="mb-4 flex items-center gap-3 rounded-[12px] bg-surface px-4 py-3 text-[13.5px] text-ink-2 shadow-card ring-1 ring-line ring-inset">
+          <Avatar name={invited.name} color={invited.avatarColor} size={28} square={invited.kind === "agent"} />
           <span className="min-w-0 flex-1">
             {invited.kind === "agent" ? (
               <>
@@ -255,52 +261,75 @@ export function NewTaskView() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="flex flex-col gap-5">
-          <Card className="p-5">
-            <Label htmlFor="brief">What do you need done?</Label>
-            <Textarea
-              id="brief"
-              value={brief}
-              onChange={(e) => setBrief(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) runWriter();
-              }}
-              placeholder="Find someone to check whether the café on 5th has a quiet corner…"
-              className="min-h-28 text-[15px]"
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_368px]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <Card>
+            <CardHeader
+              icon={<PenLine />}
+              title="What do you need done?"
+              description="Who, where, by when, and what proof you'd accept. Plain words are fine."
             />
-            {!form ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {EXAMPLES.map((ex) => (
-                  <button
-                    key={ex}
-                    type="button"
-                    onClick={() => {
-                      setBrief(ex);
-                      runWriter(ex);
-                    }}
-                    className="max-w-full truncate rounded-full bg-sunken px-3 py-1.5 text-left text-[12.5px] text-ink-2 transition-colors hover:bg-line"
-                  >
-                    {ex}
-                  </button>
-                ))}
+            <div className="px-5 pt-3.5 pb-5">
+              <Textarea
+                id="brief"
+                aria-label="What do you need done?"
+                value={brief}
+                onChange={(e) => setBrief(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) runWriter();
+                }}
+                placeholder="Find someone to check whether the café on 5th has a quiet corner…"
+                className="min-h-28 text-[15px]"
+              />
+              {!form ? (
+                <div className="mt-4">
+                  <div className="mb-1.5 text-[12px] text-faint">Or start from one of these</div>
+                  <ul className="-mx-2">
+                    {EXAMPLES.map((ex) => (
+                      <li key={ex.text}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBrief(ex.text);
+                            runWriter(ex.text);
+                          }}
+                          disabled={writing}
+                          className="group grid w-full grid-cols-[28px_minmax(0,1fr)_16px] items-center gap-3 rounded-[10px] px-2 py-2 text-left transition-colors hover:bg-sunken/70 disabled:opacity-60"
+                        >
+                          <IconTile size="sm">{ex.icon}</IconTile>
+                          <span className="truncate text-[13px] text-ink-2 group-hover:text-ink">{ex.text}</span>
+                          <ArrowRight className="size-4 text-faint opacity-0 transition-opacity group-hover:opacity-100" strokeWidth={1.9} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <span className="text-[12.5px] text-muted">
+                  {model ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <PenLine className="size-3.5 text-faint" strokeWidth={1.9} />
+                      Written by {model === "heuristic" ? "the heuristic writer (no Gemini key yet)" : model}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Kbd>⌘</Kbd>
+                      <Kbd>Enter</Kbd>
+                      <span className="ml-1">to write it</span>
+                    </span>
+                  )}
+                </span>
+                <Button variant={form ? "secondary" : "primary"} onClick={() => runWriter()} disabled={writing}>
+                  {writing ? <Loader2 className="animate-spin" /> : <PenLine />}
+                  {writing ? "Writing the task…" : form ? "Rewrite" : "Write the task"}
+                </Button>
               </div>
-            ) : null}
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <span className="text-[12.5px] text-muted">
-                {model ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <PenLine className="size-3.5 text-faint" strokeWidth={1.9} />
-                    Written by {model === "heuristic" ? "the heuristic writer (no Gemini key yet)" : model}
-                  </span>
-                ) : (
-                  "Plex adds a challenge word the worker shows in one photo."
-                )}
-              </span>
-              <Button variant={form ? "secondary" : "primary"} onClick={() => runWriter()} disabled={writing}>
-                {writing ? <Loader2 className="animate-spin" /> : <PenLine />}
-                {writing ? "Writing the task…" : form ? "Rewrite" : "Write the task"}
-              </Button>
+              {error && !form ? (
+                <p className="mt-3 flex items-start gap-2 text-[12.5px] leading-snug text-disputed" role="alert">
+                  <CircleAlert className="mt-px size-4 flex-none" strokeWidth={1.9} /> {error}
+                </p>
+              ) : null}
             </div>
           </Card>
 
@@ -308,28 +337,54 @@ export function NewTaskView() {
           {form ? <Editor form={form} set={set} onBuild={() => save("build")} building={saving === "build"} /> : null}
         </div>
 
-        <aside className="flex flex-col gap-4 lg:sticky lg:top-20">
+        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
           {form ? (
             <>
-              <TaskCard preview task={previewTask(form, payoutCents)} />
+              <div>
+                <div className="mb-2 flex items-baseline justify-between px-1">
+                  <span className="text-[13px] font-medium text-ink">Preview</span>
+                  <span className="text-[12px] text-faint">How it shows on the board</span>
+                </div>
+                <TaskCard preview task={previewTask(form, payoutCents)} />
+              </div>
               <Card className="overflow-hidden">
-                <div className="px-5 pt-4 pb-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="flex items-center gap-2 text-[13px] font-medium text-steel-700">
-                      <Lock className="size-4" strokeWidth={1.9} /> Held through PayPal
-                    </span>
-                    <Amount cents={payoutCents} size="lg" />
+                <div className="relative bg-gradient-to-b from-steel-50 to-surface px-5 pt-5 pb-4">
+                  <div className="absolute inset-x-0 top-0 h-1" style={{ background: "var(--metal)" }} aria-hidden />
+                  <div className="flex items-center gap-1.5 text-[13px] font-medium text-steel-700">
+                    <Lock className="size-4" strokeWidth={1.9} /> You fund now
                   </div>
-                  <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
-                    {autoPay.on
-                      ? <>Auto-pay holds it from your saved PayPal{autoPay.payerEmail ? <> ({autoPay.payerEmail})</> : null}, no popup. You&apos;re charged only when the proof passes; cancel and the hold is voided.</>
-                      : <>PayPal authorizes it now. You&apos;re charged only when you approve the proof; cancel and the hold is voided.</>}
+                  <div className="mt-2.5">
+                    <Amount cents={payoutCents} size="xl" className="text-steel-900" />
+                  </div>
+                  <p className="mt-2 text-[12.5px] leading-relaxed text-steel-600">
+                    {autoPay.on ? (
+                      <>
+                        Auto-pay holds it from your saved PayPal{autoPay.payerEmail ? <> ({autoPay.payerEmail})</> : null}, no popup. PayPal keeps it until the proof passes.
+                      </>
+                    ) : (
+                      <>PayPal holds it until the proof passes. Nothing is charged before then.</>
+                    )}
                   </p>
-                  <PolicyLine
-                    pot={errands?.name}
-                    outcome={policy?.outcome}
-                    ruleText={policy?.ruleText}
-                  />
+                </div>
+                <ol className="space-y-3 px-5 pt-1 pb-4">
+                  {[
+                    { icon: <Lock />, tone: "steel" as const, title: "Now", body: "PayPal authorizes the payout and holds it." },
+                    { icon: <BadgeCheck />, tone: "mint" as const, title: "When the proof passes", body: "Captured and paid to the worker by PayPal Payouts." },
+                    { icon: <RotateCcw />, tone: "neutral" as const, title: "If you cancel", body: "The hold is voided. You're never charged." },
+                  ].map((s) => (
+                    <li key={s.title} className="grid grid-cols-[28px_minmax(0,1fr)] gap-3">
+                      <IconTile tone={s.tone} size="sm">
+                        {s.icon}
+                      </IconTile>
+                      <span className="min-w-0 text-[12.5px] leading-snug">
+                        <span className="block font-medium text-ink">{s.title}</span>
+                        <span className="block text-muted">{s.body}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+                <div className="px-5 pb-4">
+                  <PolicyLine pot={errands?.name} outcome={policy?.outcome} ruleText={policy?.ruleText} />
                 </div>
                 <div className="flex flex-col gap-2 border-t border-line bg-canvas/60 px-5 py-4">
                   <Button
@@ -339,11 +394,17 @@ export function NewTaskView() {
                     disabled={!!saving || funding || payoutCents < 100 || policy?.outcome === "deny"}
                   >
                     {saving === "fund" || funding ? <Loader2 className="animate-spin" /> : null}
-                    {saving === "fund" || funding
-                      ? autoPay.on ? "Holding with auto-pay…" : "Opening PayPal…"
-                      : autoPay.on
-                        ? <>Hold <Amount cents={payoutCents} size="md" className="text-white" /> with auto-pay</>
-                        : <>Fund <Amount cents={payoutCents} size="md" className="text-white" /> with PayPal</>}
+                    {saving === "fund" || funding ? (
+                      autoPay.on ? "Holding with auto-pay…" : "Opening PayPal…"
+                    ) : autoPay.on ? (
+                      <>
+                        Hold <Amount cents={payoutCents} size="md" /> with auto-pay
+                      </>
+                    ) : (
+                      <>
+                        Fund <Amount cents={payoutCents} size="md" /> with PayPal
+                      </>
+                    )}
                   </Button>
                   <Button variant="ghost" onClick={() => save("draft")} disabled={!!saving}>
                     Save as draft
@@ -357,35 +418,45 @@ export function NewTaskView() {
               </Card>
             </>
           ) : (
-            <Card className="p-5">
-              <div className="text-[13px] font-medium text-ink">How a task works</div>
-              <ol className="mt-3 space-y-3">
-                {[
-                  ["Fund", "PayPal holds the payout. Your pot's rules are checked first."],
-                  ["Match", "People apply, AI agents bid against each other; Match ranks them by record and ask."],
-                  ["Proof", "People upload photos with the challenge word. Agents' work is scored by three blind proofer agents."],
-                  ["Pay", "You approve, PayPal captures and pays out. Both sides get the receipt."],
-                ].map(([t, d], i) => (
-                  <li key={t} className="grid grid-cols-[22px_minmax(0,1fr)] gap-3">
-                    <span className="tabular flex size-[22px] items-center justify-center rounded-full bg-sunken text-[11.5px] font-semibold text-ink-2">
-                      {i + 1}
-                    </span>
-                    <span className="text-[13px] leading-snug text-muted">
-                      <span className="font-medium text-ink">{t}.</span> {d}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-              {error ? (
-                <p className="mt-4 flex items-start gap-2 text-[12.5px] text-disputed" role="alert">
-                  <CircleAlert className="mt-px size-4 flex-none" strokeWidth={1.9} /> {error}
-                </p>
-              ) : null}
-            </Card>
+            <HowItWorks />
           )}
         </aside>
       </div>
     </div>
+  );
+}
+
+/** The four steps of a task, before there's a draft to preview. */
+function HowItWorks() {
+  const steps = [
+    { icon: <Lock />, tone: "steel" as const, title: "Fund", body: "PayPal holds the payout. Your pot's rules are checked first, in code." },
+    { icon: <UsersRound />, tone: "white" as const, title: "Match", body: "People apply and AI agents bid. Match ranks them by record and ask." },
+    { icon: <Camera />, tone: "white" as const, title: "Proof", body: "Photos with the challenge word, or agent work scored by three blind proofers." },
+    { icon: <BadgeCheck />, tone: "ink" as const, title: "Pay", body: "You approve, PayPal captures and pays out. Both sides get the receipt." },
+  ];
+  return (
+    <Card>
+      <CardHeader title="How a task works" description="The money moves only when the proof passes." />
+      <ol className="px-5 pt-4 pb-5">
+        {steps.map((s, i) => (
+          <li key={s.title} className="relative grid grid-cols-[36px_minmax(0,1fr)] gap-3.5 pb-5 last:pb-0">
+            {i < steps.length - 1 ? (
+              <span className="absolute top-10 bottom-1 left-[17.5px] w-px bg-[repeating-linear-gradient(180deg,var(--color-line-strong)_0_4px,transparent_4px_8px)]" aria-hidden />
+            ) : null}
+            <IconTile tone={s.tone} size="md">
+              {s.icon}
+            </IconTile>
+            <span className="min-w-0 pt-0.5">
+              <span className="block text-[13.5px] font-medium text-ink">
+                <span className="tabular mr-1.5 text-faint">{i + 1}</span>
+                {s.title}
+              </span>
+              <span className="mt-0.5 block text-[12.5px] leading-snug text-muted">{s.body}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </Card>
   );
 }
 
@@ -420,16 +491,23 @@ function previewTask(f: Form, cents: number): CardTask {
 
 function WriterSkeleton() {
   return (
-    <Card className="p-5">
-      <div className="flex items-center gap-2 text-[13px] text-muted">
+    <Card>
+      <div className="flex items-center gap-2 border-b border-line px-5 py-3.5 text-[13px] text-muted">
         <Loader2 className="size-4 animate-spin" strokeWidth={1.9} /> Reading your request, writing the proof spec…
       </div>
-      <div className="mt-5 space-y-3">
-        <div className="skeleton h-9 rounded-sm" />
-        <div className="skeleton h-20 rounded-sm" />
-        <div className="grid grid-cols-2 gap-3">
-          <div className="skeleton h-9 rounded-sm" />
-          <div className="skeleton h-9 rounded-sm" />
+      <div className="space-y-4 p-5">
+        <div>
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="mt-2 h-9 w-full rounded-[10px]" />
+        </div>
+        <div>
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="mt-2 h-20 w-full rounded-[10px]" />
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <Skeleton className="h-16 rounded-[12px]" />
+          <Skeleton className="h-16 rounded-[12px]" />
+          <Skeleton className="h-16 rounded-[12px]" />
         </div>
       </div>
     </Card>
@@ -441,39 +519,36 @@ function AcceptanceCriteria({ form, set }: { form: Form; set: <K extends keyof F
   const criteria = defaultCriteria(form.proofSpec);
   const agents = form.workerType !== "human";
   return (
-    <div className="rounded-md bg-canvas p-3.5 ring-1 ring-line ring-inset">
-      <div className="flex items-center gap-2 text-[13px] font-medium text-ink">
-        <ListChecks className="size-4 text-faint" strokeWidth={1.9} /> Done means
-      </div>
-      <ul className="mt-2 space-y-1.5 text-[12.5px] text-ink-2">
-        {criteria.map((c, i) => (
-          <li key={i} className="flex items-start gap-2">
-            <Check className="mt-0.5 size-3.5 flex-none text-green-600" strokeWidth={2.2} />
-            <span>
-              {criterionLabel(c, form.proofSpec)} <span className="text-faint">· checked by code</span>
-            </span>
+    <div className="rounded-[12px] bg-canvas/70 ring-1 ring-line ring-inset">
+      <div className="px-4 pt-3.5 pb-3">
+        <div className="flex items-center gap-2 text-[13px] font-medium text-ink">
+          <ListChecks className="size-4 text-faint" strokeWidth={1.9} /> Done means
+        </div>
+        <ul className="mt-2 space-y-1.5 text-[12.5px] text-ink-2">
+          {criteria.map((c, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <Check className="mt-0.5 size-3.5 flex-none text-green-700" strokeWidth={2.2} />
+              <span>
+                {criterionLabel(c, form.proofSpec)} <span className="text-faint">· checked by code</span>
+              </span>
+            </li>
+          ))}
+          <li className="flex items-start gap-2">
+            <Check className="mt-0.5 size-3.5 flex-none text-green-700" strokeWidth={2.2} />
+            <span>Three blind proofer agents pass it, by Plex&apos;s majority rule</span>
           </li>
-        ))}
-        <li className="flex items-start gap-2">
-          <Check className="mt-0.5 size-3.5 flex-none text-green-600" strokeWidth={2.2} />
-          <span>Three blind proofer agents pass it, by Plex&apos;s majority rule</span>
-        </li>
-      </ul>
+        </ul>
+      </div>
       {agents ? (
-        <label className="mt-3 flex cursor-pointer items-start gap-2.5 border-t border-line pt-3">
-          <input
-            type="checkbox"
-            checked={form.autoHire}
-            onChange={(e) => set("autoHire", e.target.checked)}
-            className="mt-0.5 size-4 accent-green-500"
-          />
+        <div className="flex items-start justify-between gap-4 border-t border-line px-4 py-3">
           <span>
             <span className="block text-[13px] font-medium text-ink">Hands-free</span>
             <span className="block text-[12px] leading-snug text-muted">
               Plex hires the best bid, the agent does the work, and PayPal pays only when every check above passes. A failed first try goes back to the agent once.
             </span>
           </span>
-        </label>
+          <Switch checked={form.autoHire} onChange={(v) => set("autoHire", v)} label="Hands-free" className="mt-0.5" />
+        </div>
       ) : null}
     </div>
   );
@@ -494,6 +569,87 @@ const WHO: { value: WorkerType; label: string; body: string; icon: React.ReactNo
   { value: "either", label: "Person or agent", body: "People apply, AI agents bid. Best ask wins.", icon: <UsersRound /> },
   { value: "agent", label: "An AI agent", body: "Agents bid; three proofers score the work.", icon: <Bot /> },
 ];
+
+/** One of a few options, as a card with its icon, label and a line of help. */
+function Choice({
+  active,
+  disabled,
+  onClick,
+  icon,
+  label,
+  body,
+}: {
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  body: string;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "relative flex flex-col items-start gap-2.5 rounded-[12px] bg-surface p-3 text-left ring-inset transition-[box-shadow,background-color] disabled:cursor-not-allowed disabled:opacity-45",
+        active ? "shadow-card ring-[1.5px] ring-ink" : "ring-1 ring-line hover:bg-canvas/60 hover:ring-line-strong",
+      )}
+    >
+      <span className="flex w-full items-center justify-between">
+        <IconTile tone={active ? "ink" : "neutral"} size="sm">
+          {icon}
+        </IconTile>
+        <span
+          className={cn(
+            "flex size-4 items-center justify-center rounded-full ring-inset",
+            active ? "bg-ink ring-0" : "ring-1 ring-line-strong",
+          )}
+          aria-hidden
+        >
+          {active ? <span className="size-1.5 rounded-full bg-white" /> : null}
+        </span>
+      </span>
+      <span>
+        <span className="block text-[13px] font-medium text-ink">{label}</span>
+        <span className="mt-0.5 block text-[12px] leading-snug text-muted">{body}</span>
+      </span>
+    </button>
+  );
+}
+
+function Section({
+  n,
+  title,
+  description,
+  aside,
+  children,
+}: {
+  n: number;
+  title: string;
+  description?: string;
+  aside?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="px-5 py-5">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <span className="tabular mt-px flex size-[22px] flex-none items-center justify-center rounded-full bg-sunken text-[11.5px] font-semibold text-ink-2 ring-1 ring-line/70 ring-inset">
+            {n}
+          </span>
+          <div>
+            <h2 className="text-[14.5px] leading-6 font-semibold tracking-[-0.012em] text-ink">{title}</h2>
+            {description ? <p className="text-[12.5px] leading-snug text-muted">{description}</p> : null}
+          </div>
+        </div>
+        {aside}
+      </div>
+      <div className="grid gap-4 sm:pl-[34px]">{children}</div>
+    </section>
+  );
+}
 
 function Editor({
   form,
@@ -537,12 +693,8 @@ function Editor({
     );
 
   return (
-    <Card className="animate-rise">
-      <div className="flex items-center justify-between gap-3 px-5 pt-4">
-        <div className="text-[15px] font-semibold tracking-[-0.01em] text-ink">Task card</div>
-        <Badge tone="outline">Edit anything</Badge>
-      </div>
-      <div className="grid gap-4 px-5 pt-4 pb-5">
+    <Card className="animate-rise divide-y divide-line">
+      <Section n={1} title="The task" description="What the worker reads. Edit anything the writer got wrong." aside={<Badge tone="outline">Draft</Badge>}>
         <div>
           <Label htmlFor="title">Title</Label>
           <Input id="title" value={form.title} onChange={(e) => set("title", e.target.value)} />
@@ -551,65 +703,43 @@ function Editor({
           <Label htmlFor="desc">Instructions</Label>
           <Textarea id="desc" value={form.description} onChange={(e) => set("description", e.target.value)} className="min-h-20" />
         </div>
-
         <div>
           <Label>Kind of work</Label>
-          <div className="flex flex-wrap gap-1.5">
-            {KINDS.map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => set("category", k)}
-                aria-pressed={form.category === k}
-                className={cn(
-                  "h-8 rounded-full px-3.5 text-[13px] font-medium transition-colors",
-                  form.category === k ? "bg-ink text-white" : "bg-surface text-ink-2 ring-1 ring-line ring-inset hover:bg-sunken",
-                )}
-              >
-                {CATEGORY_LABEL[k]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <Label>Who can take it</Label>
-          <div className="grid gap-2 sm:grid-cols-3">
-            {WHO.map((w) => {
-              const blocked = w.value !== "human" && !digital;
-              const active = (digital ? form.workerType : "human") === w.value;
-              return (
-                <button
-                  key={w.value}
-                  type="button"
-                  disabled={blocked}
-                  onClick={() => set("workerType", w.value)}
-                  aria-pressed={active}
-                  className={cn(
-                    "grid grid-cols-[18px_minmax(0,1fr)] gap-x-2.5 rounded-md px-3 py-2.5 text-left ring-1 ring-inset transition-colors disabled:cursor-not-allowed disabled:opacity-45 [&_svg]:mt-0.5 [&_svg]:size-4 [&_svg]:stroke-[1.9]",
-                    active ? "bg-surface ring-ink" : "bg-surface ring-line hover:bg-sunken",
-                  )}
-                >
-                  <span className={active ? "text-ink" : "text-faint"}>{w.icon}</span>
-                  <span>
-                    <span className="block text-[13px] font-medium text-ink">{w.label}</span>
-                    <span className="block text-[12px] leading-snug text-muted">{w.body}</span>
-                  </span>
-                </button>
-              );
+          <Segmented
+            size="sm"
+            value={form.category}
+            onChange={(k) => set("category", k)}
+            items={KINDS.map((k) => {
+              const Icon = KIND_ICON[k];
+              return { value: k, label: CATEGORY_LABEL[k], icon: <Icon /> };
             })}
-          </div>
-          {!digital ? (
-            <p className="mt-1.5 text-[12.5px] text-muted">
-              Agents can take work delivered as text, files or links with no place to be. This one needs a person.
-            </p>
-          ) : form.workerType !== "human" ? (
-            <AgentFitLine form={form} onBuild={onBuild} building={building} />
-          ) : null}
+          />
         </div>
+      </Section>
 
+      <Section n={2} title="Who can take it" description="Agents take work delivered as text, files or links with no place to be.">
+        <div className="grid gap-2 sm:grid-cols-3">
+          {WHO.map((w) => (
+            <Choice
+              key={w.value}
+              active={(digital ? form.workerType : "human") === w.value}
+              disabled={w.value !== "human" && !digital}
+              onClick={() => set("workerType", w.value)}
+              icon={w.icon}
+              label={w.label}
+              body={w.body}
+            />
+          ))}
+        </div>
+        {!digital ? (
+          <p className="-mt-1 text-[12.5px] text-muted">This one needs someone on the ground, so it&apos;s for a person.</p>
+        ) : form.workerType !== "human" ? (
+          <AgentFitLine form={form} onBuild={onBuild} building={building} />
+        ) : null}
         {digital ? <AcceptanceCriteria form={form} set={set} /> : null}
+      </Section>
 
+      <Section n={3} title={remote ? "When, and how much" : "Where, when, and how much"} description="The payout is what PayPal holds until the proof passes.">
         {!remote ? (
           <div>
             <Label htmlFor="where">Where</Label>
@@ -628,7 +758,8 @@ function Editor({
             <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-muted">
               {form.lat !== undefined && form.lng !== undefined ? (
                 <>
-                  <span className="tabular">
+                  <span className="tabular inline-flex items-center gap-1">
+                    <MapPin className="size-3.5 text-faint" strokeWidth={1.9} />
                     Pinned {form.lat.toFixed(4)}, {form.lng.toFixed(4)}
                   </span>
                   <span className="text-faint">·</span>
@@ -637,7 +768,7 @@ function Editor({
                     <select
                       value={form.radiusM}
                       onChange={(e) => set("radiusM", Number(e.target.value))}
-                      className="rounded-[6px] border border-line bg-surface px-1.5 py-0.5 text-[12.5px] text-ink"
+                      className="rounded-[8px] border border-line bg-surface px-1.5 py-0.5 text-[12.5px] text-ink"
                     >
                       {[100, 150, 300, 500, 1000, 3000].map((m) => (
                         <option key={m} value={m}>
@@ -655,7 +786,7 @@ function Editor({
           </div>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_140px]">
+        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_132px]">
           <div>
             <Label htmlFor="start">Starts</Label>
             <Input
@@ -683,21 +814,27 @@ function Editor({
                 inputMode="decimal"
                 value={form.payout}
                 onChange={(e) => set("payout", e.target.value.replace(/[^\d.]/g, ""))}
-                className="tabular pl-6"
+                className="tabular pl-6 font-semibold"
               />
             </div>
           </div>
         </div>
+      </Section>
 
+      <Section
+        n={4}
+        title="Proof"
+        description="What the worker must upload. Plex checks each item."
+        aside={<span className="tabular pt-1 text-[12px] text-faint">{form.proofSpec.length} of 6</span>}
+      >
         <div>
-          <div className="mb-1.5 flex items-center justify-between">
-            <Label className="mb-0">Proof spec</Label>
-            <span className="text-[12px] text-faint">What the worker must upload</span>
-          </div>
-          <ul className="divide-y divide-line rounded-md border border-line">
+          <ul className="divide-y divide-line overflow-hidden rounded-[12px] border border-line">
             {form.proofSpec.map((s, i) => (
-              <li key={i} className="grid grid-cols-[36px_minmax(0,1fr)_32px] items-start gap-2 p-2.5">
-                <label className="relative flex size-9 items-center justify-center rounded-sm bg-sunken text-ink-2" title="Type">
+              <li key={i} className="grid grid-cols-[36px_minmax(0,1fr)_32px] items-start gap-2.5 bg-surface p-2.5">
+                <label
+                  className="relative flex size-9 cursor-pointer items-center justify-center rounded-[10px] bg-sunken text-ink-2 ring-1 ring-line/70 ring-inset transition-colors hover:bg-line/60"
+                  title="Change the type"
+                >
                   <SpecIcon type={s.type} />
                   <select
                     value={s.type}
@@ -736,40 +873,29 @@ function Editor({
           <Button
             variant="ghost"
             size="sm"
-            className="mt-2"
+            className="mt-2 -ml-1"
             onClick={() => set("proofSpec", [...form.proofSpec, { label: "Photo", description: "What it must show", type: "photo" }])}
             disabled={form.proofSpec.length >= 6}
           >
             <Plus /> Add proof item
           </Button>
         </div>
+      </Section>
 
-        <div>
-          <Label>Verification</Label>
-          <div className="grid gap-2 sm:grid-cols-3">
-            {MODES.map((m) => (
-              <button
-                key={m.value}
-                type="button"
-                onClick={() => set("verificationMode", m.value)}
-                aria-pressed={form.verificationMode === m.value}
-                className={cn(
-                  "rounded-md border p-3 text-left transition-[border-color,box-shadow,background-color]",
-                  form.verificationMode === m.value
-                    ? "border-ink bg-surface shadow-card"
-                    : "border-line bg-surface hover:border-line-strong",
-                )}
-              >
-                <span className="flex items-center gap-2 text-[13px] font-medium text-ink [&_svg]:size-4 [&_svg]:text-faint">
-                  {m.icon}
-                  {m.label}
-                </span>
-                <span className="mt-1 block text-[12px] leading-snug text-muted">{m.body}</span>
-              </button>
-            ))}
-          </div>
+      <Section n={5} title="Verification" description="Who says the proof is good enough to pay.">
+        <div className="grid gap-2 sm:grid-cols-3">
+          {MODES.map((m) => (
+            <Choice
+              key={m.value}
+              active={form.verificationMode === m.value}
+              onClick={() => set("verificationMode", m.value)}
+              icon={m.icon}
+              label={m.label}
+              body={m.body}
+            />
+          ))}
         </div>
-      </div>
+      </Section>
     </Card>
   );
 }

@@ -7,24 +7,29 @@ import {
   Camera,
   Check,
   CircleDashed,
+  CircleHelp,
+  Clapperboard,
   Clock,
+  Database,
   FileText,
   Globe,
+  HeartHandshake,
   Link2,
   Loader2,
   Lock,
   MapPin,
+  RotateCcw,
+  ShieldCheck,
   TriangleAlert,
   Users,
   Video,
   X,
-  CircleHelp,
-  ShieldCheck,
 } from "lucide-react";
 import type { Doc } from "@/lib/convex";
 import { CATEGORY_LABEL, payoutSummary, windowLabel } from "@plex/backend/lib/taskRules";
-import { Avatar, Badge, type BadgeTone } from "@/components/ui/primitives";
+import { Avatar, Badge, IconTile, type BadgeTone } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
+import { Ring } from "@/components/ui/viz";
 import { cn, relativeTime } from "@/lib/utils";
 
 export type Task = Doc<"tasks">;
@@ -67,16 +72,96 @@ export function StatusBadge({ status, className }: { status: Status; className?:
   );
 }
 
-export function CategoryLabel({ task, className }: { task: Pick<Task, "category" | "location">; className?: string }) {
+// ── Kind of work ─────────────────────────────────────────────────────────────
+
+export const KIND_ICON = {
+  local: MapPin,
+  remote: Globe,
+  data: Database,
+  creator: Clapperboard,
+  agent: Bot,
+  impact: HeartHandshake,
+} as const satisfies Record<Task["category"], unknown>;
+
+/** The kind of work on a small tile: one glyph per category. */
+export function KindTile({
+  category,
+  size = "xs",
+  className,
+}: {
+  category: Task["category"];
+  size?: "xs" | "sm" | "md";
+  className?: string;
+}) {
+  const Icon = KIND_ICON[category];
+  return (
+    <IconTile size={size} tone="neutral" className={className}>
+      <Icon />
+    </IconTile>
+  );
+}
+
+export function CategoryLabel({
+  task,
+  className,
+  tile,
+}: {
+  task: Pick<Task, "category" | "location">;
+  className?: string;
+  /** Lead with the kind's tile instead of a place/remote glyph. */
+  tile?: boolean;
+}) {
   const local = Boolean(task.location);
   return (
     <span className={cn("inline-flex min-w-0 items-center gap-1.5 text-[12.5px] text-muted", className)}>
-      {local ? <MapPin className="size-3.5 flex-none text-faint" strokeWidth={1.9} /> : <Globe className="size-3.5 flex-none text-faint" strokeWidth={1.9} />}
-      <span className="font-medium text-ink-2">{CATEGORY_LABEL[task.category]}</span>
+      {tile ? (
+        <KindTile category={task.category} className="mr-0.5" />
+      ) : local ? (
+        <MapPin className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
+      ) : (
+        <Globe className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
+      )}
+      <span className="flex-none font-medium text-ink-2">{CATEGORY_LABEL[task.category]}</span>
       <span className="text-faint">·</span>
       <span className="truncate">{task.location ? task.location.label : "Remote"}</span>
     </span>
   );
+}
+
+/** Where the task's money is: held is steel, paid is mint. */
+export function FundingBadge({ funding, className }: { funding: Task["funding"]; className?: string }) {
+  switch (funding.state) {
+    case "authorized":
+      return (
+        <Badge tone="steel" className={className}>
+          <Lock /> Held by PayPal
+        </Badge>
+      );
+    case "captured":
+      return (
+        <Badge tone="steel" className={className}>
+          <Lock /> Captured
+        </Badge>
+      );
+    case "released":
+      return (
+        <Badge tone="green" className={className}>
+          <Check /> Paid out
+        </Badge>
+      );
+    case "refunded":
+      return (
+        <Badge tone="amber" className={className}>
+          <RotateCcw /> Returned
+        </Badge>
+      );
+    default:
+      return (
+        <Badge tone="outline" className={cn("text-muted", className)}>
+          Not funded
+        </Badge>
+      );
+  }
 }
 
 const SPEC_ICON = {
@@ -115,80 +200,125 @@ export function timeLeft(task: Pick<Task, "windowStart" | "windowEnd" | "status"
   return `Ended ${relativeTime(task.windowEnd, now)}`;
 }
 
+/** The figure a task card leads with: the fixed payout, or the most it can pay. */
+export function headlineCents(task: Pick<CardTask, "payout" | "fundingCents">) {
+  return task.payout.kind === "fixed" ? task.payout.amountCents : task.fundingCents;
+}
+
 // ── Board card ───────────────────────────────────────────────────────────────
 
 export function TaskCard({ task, preview }: { task: CardTask; preview?: boolean }) {
-  const held = task.funding.state === "authorized" || task.funding.state === "captured";
+  const open = task.status === "open";
   const body = (
     <>
-      <div className="flex items-start justify-between gap-4 px-5 pt-4">
-        <CategoryLabel task={task} className="pt-0.5" />
-        {task.status === "open" ? null : <StatusBadge status={task.status} />}
+      <div className="flex items-center justify-between gap-3 px-5 pt-4">
+        <CategoryLabel task={task} tile className="min-w-0" />
+        {open ? (
+          preview ? null : (
+            <span className="flex-none text-[12px] text-faint">{timeLeft(task)}</span>
+          )
+        ) : (
+          <StatusBadge status={task.status} className="flex-none" />
+        )}
       </div>
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 px-5 pt-2">
-        <div className="text-[16px] leading-snug font-semibold tracking-[-0.015em] text-ink text-pretty">{task.title}</div>
-        <div className="text-right">
-          <Amount cents={task.payout.kind === "fixed" ? task.payout.amountCents : task.fundingCents} size="lg" />
-          {task.payout.kind !== "fixed" ? <div className="text-[11.5px] text-muted">{payoutSummary(task.payout).split(",")[0]}</div> : null}
+
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-5 px-5 pt-3">
+        <div className="line-clamp-2 text-[15.5px] leading-[1.35] font-semibold tracking-[-0.014em] text-pretty text-ink">
+          {task.title}
+        </div>
+        <div className="-mt-0.5 text-right">
+          <Amount cents={headlineCents(task)} size="lg" className="text-[24px] leading-none" />
+          {task.payout.kind !== "fixed" ? (
+            <div className="mt-1 text-[11.5px] text-muted">{task.payout.kind === "per_unit" ? "at most" : "capped at"}</div>
+          ) : null}
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 px-5 text-[12.5px] text-muted">
+
+      <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 px-5 text-[12.5px] text-muted">
         <span className="inline-flex items-center gap-1.5">
           <Clock className="size-3.5 text-faint" strokeWidth={1.9} />
           {windowLabel(task.windowStart, task.windowEnd)}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <Camera className="size-3.5 text-faint" strokeWidth={1.9} />
+          <SpecIcon type={task.proofSpec[0]?.type ?? "photo"} className="size-3.5 text-faint" />
           {proofNeeded(task.proofSpec)}
         </span>
+        {task.payout.kind !== "fixed" ? (
+          <span className="inline-flex min-w-0 items-center gap-1.5">
+            <span className="truncate">{payoutSummary(task.payout).split(",")[0]}</span>
+          </span>
+        ) : null}
       </div>
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-line px-5 py-3">
+
+      <div className="mt-auto flex items-center justify-between gap-3 px-5 pt-4 pb-4">
         <span className="flex min-w-0 items-center gap-2 text-[12.5px] text-muted">
-          {task.poster ? <Avatar name={task.poster.name} color={task.poster.avatarColor} size={20} /> : null}
-          <span className="truncate text-ink-2">{task.poster?.name ?? "Someone"}</span>
+          {task.poster ? (
+            <Avatar name={task.poster.name} color={task.poster.avatarColor} size={22} />
+          ) : (
+            <Avatar name={preview ? "You" : "Someone"} color="var(--color-ink-2)" size={22} />
+          )}
+          <span className="truncate font-medium text-ink-2">{task.poster?.name ?? (preview ? "You" : "Someone")}</span>
           {task.agentLabel ? (
             <span className="hidden min-w-0 items-center gap-1 sm:inline-flex">
               <span className="text-faint">via</span>
-              <Bot className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
               <span className="truncate">{task.agentLabel}</span>
             </span>
           ) : null}
         </span>
-        <span className="flex flex-none items-center gap-3 text-[12.5px]">
+        <span className="flex flex-none items-center gap-2.5 text-[12px] text-muted">
           {task.workerType && task.workerType !== "human" ? (
-            <span className="inline-flex items-center gap-1 text-muted" title="AI agents can bid on this task">
+            <span className="inline-flex items-center gap-1" title="AI agents can bid on this task">
               <Bot className="size-3.5 text-faint" strokeWidth={1.9} />
-              {task.workerType === "agent" ? "Agents" : "Open to agents"}
+              <span className="hidden sm:inline">{task.workerType === "agent" ? "Agents" : "Open to agents"}</span>
             </span>
           ) : null}
-          {task.applicantCount > 0 && task.status === "open" ? (
-            <span className="inline-flex items-center gap-1 text-muted">
+          {task.applicantCount > 0 && open ? (
+            <span className="tabular inline-flex items-center gap-1" title={`${task.applicantCount} applied`}>
               <Users className="size-3.5 text-faint" strokeWidth={1.9} />
               {task.applicantCount}
             </span>
           ) : null}
-          {held ? (
-            <span className="inline-flex items-center gap-1 font-medium text-steel-600">
-              <Lock className="size-3.5" strokeWidth={1.9} />
-              Funded
-            </span>
-          ) : null}
+          <FundingBadge funding={task.funding} />
         </span>
       </div>
     </>
   );
-  const frame = "group flex flex-col rounded-lg border border-line bg-surface shadow-card";
+  const frame = "group relative flex flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-card";
   if (preview) return <div className={cn(frame, "shadow-raised")}>{body}</div>;
   return (
     <Link
       href={`/tasks/${task._id}`}
       className={cn(
         frame,
-        "transition-[box-shadow,border-color,transform] duration-200 hover:-translate-y-px hover:border-line-strong hover:shadow-raised focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:outline-none",
+        "transition-[box-shadow,border-color] duration-200 hover:border-line-strong hover:shadow-hover focus-visible:ring-[3px] focus-visible:ring-green-200 focus-visible:outline-none",
       )}
     >
       {body}
     </Link>
+  );
+}
+
+/** A board card's skeleton, at the card's real geometry. */
+export function TaskCardSkeleton() {
+  return (
+    <div className="flex h-[164px] flex-col rounded-lg border border-line bg-surface px-5 pt-4 pb-4 shadow-card">
+      <div className="flex items-center gap-2">
+        <span className="skeleton size-6 rounded-[7px]" />
+        <span className="skeleton h-3 w-40 rounded-full" />
+      </div>
+      <div className="mt-3.5 flex items-start justify-between gap-6">
+        <span className="skeleton h-4 w-3/5 rounded-full" />
+        <span className="skeleton h-6 w-14 rounded-full" />
+      </div>
+      <span className="skeleton mt-3.5 h-3 w-48 rounded-full" />
+      <div className="mt-auto flex items-center justify-between">
+        <span className="flex items-center gap-2">
+          <span className="skeleton size-[22px] rounded-full" />
+          <span className="skeleton h-3 w-24 rounded-full" />
+        </span>
+        <span className="skeleton h-[22px] w-28 rounded-full" />
+      </div>
+    </div>
   );
 }
 
@@ -256,7 +386,7 @@ export function CheckList({ rows, className }: { rows: CheckRow[]; className?: s
   );
 }
 
-function CheckMark({ status }: { status: CheckRow["status"] }) {
+export function CheckMark({ status }: { status: CheckRow["status"] }) {
   const base = "mt-px flex size-[22px] items-center justify-center rounded-full [&_svg]:size-3.5 transition-colors duration-300";
   if (status === "pending")
     return (
@@ -311,34 +441,16 @@ export function VerdictPill({ result }: { result: "pass" | "fail" | "unsure" }) 
 // ── Match score ──────────────────────────────────────────────────────────────
 
 export function MatchScore({ score }: { score?: number }) {
-  const r = 15;
-  const c = 2 * Math.PI * r;
   const pending = score === undefined;
   return (
-    <span className="relative inline-flex size-10 flex-none items-center justify-center" aria-label={pending ? "Ranking" : `Match ${score}`}>
-      <svg viewBox="0 0 40 40" className="absolute inset-0 -rotate-90">
-        <circle cx="20" cy="20" r={r} fill="none" strokeWidth="3" className="stroke-sunken" />
-        {!pending ? (
-          <circle
-            cx="20"
-            cy="20"
-            r={r}
-            fill="none"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeDasharray={c}
-            strokeDashoffset={c * (1 - score / 100)}
-            className={cn("transition-[stroke-dashoffset] duration-700", score >= 85 ? "stroke-green-500" : score >= 70 ? "stroke-green-300" : "stroke-steel-300")}
-          />
-        ) : null}
-      </svg>
-      {pending ? (
-        <Loader2 className="size-4 animate-spin text-faint" strokeWidth={1.9} />
-      ) : (
-        <span className="tabular text-[12.5px] font-semibold text-ink" style={{ textBoxTrim: "trim-both", textBoxEdge: "cap alphabetic" } as React.CSSProperties}>
-          {score}
-        </span>
-      )}
+    <span aria-label={pending ? "Ranking" : `Match ${score}`} className="inline-flex flex-none">
+      <Ring value={pending ? 0 : score / 100} size={40} stroke={3.5} tone={!pending && score >= 70 ? "brand" : "steel"}>
+        {pending ? (
+          <Loader2 className="size-4 animate-spin text-faint" strokeWidth={1.9} />
+        ) : (
+          <span className="trim-cap text-[12.5px] font-semibold text-ink">{score}</span>
+        )}
+      </Ring>
     </span>
   );
 }
@@ -349,19 +461,22 @@ export function PolicyLine({
   pot,
   outcome,
   ruleText,
+  className,
 }: {
   pot?: string;
   outcome?: "allow" | "needs_approval" | "deny";
   ruleText?: string;
+  className?: string;
 }) {
+  const frame = "flex items-start gap-2.5 rounded-[10px] px-3 py-2.5 text-[12.5px] leading-snug ring-1 ring-inset";
   if (!pot)
     return (
-      <div className="mt-3 flex items-start gap-2 rounded-sm bg-sunken px-3 py-2.5 text-[12.5px] leading-snug text-muted">
+      <div className={cn(frame, "bg-sunken/70 text-muted ring-line/70", className)}>
         <ShieldCheck className="mt-px size-4 flex-none text-faint" strokeWidth={1.9} />
         Posted directly, no pot limits apply.
       </div>
     );
-  if (!outcome) return <div className="mt-3 h-[42px] rounded-sm skeleton" />;
+  if (!outcome) return <div className={cn("skeleton h-[42px] rounded-[10px]", className)} />;
   const tone =
     outcome === "allow"
       ? "bg-green-50 text-green-800 ring-green-200/70"
@@ -369,9 +484,9 @@ export function PolicyLine({
         ? "bg-refunded-bg text-refunded ring-refunded/15"
         : "bg-disputed-bg text-disputed ring-disputed/15";
   return (
-    <div className={cn("mt-3 flex items-start gap-2 rounded-sm px-3 py-2.5 text-[12.5px] leading-snug ring-1 ring-inset", tone)}>
+    <div className={cn(frame, tone, className)}>
       {outcome === "allow" ? (
-        <Check className="mt-px size-4 flex-none" strokeWidth={2.2} />
+        <ShieldCheck className="mt-px size-4 flex-none" strokeWidth={1.9} />
       ) : (
         <TriangleAlert className="mt-px size-4 flex-none" strokeWidth={1.9} />
       )}

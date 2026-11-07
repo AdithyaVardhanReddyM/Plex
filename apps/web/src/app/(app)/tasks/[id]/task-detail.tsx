@@ -5,16 +5,38 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useAction, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Bot, CircleAlert, Clock, Hand, ListChecks, Loader2, MapPin, ShieldCheck, UserCheck, Zap } from "lucide-react";
+import {
+  ArrowLeft,
+  BadgeCheck,
+  Banknote,
+  Bot,
+  Camera,
+  Check,
+  CircleAlert,
+  Clock,
+  Hand,
+  Loader2,
+  Lock,
+  MapPin,
+  PenLine,
+  RotateCcw,
+  ShieldCheck,
+  UserCheck,
+  Wallet,
+  X,
+  Zap,
+} from "lucide-react";
 import { payoutSummary, windowLabel } from "@plex/backend/lib/taskRules";
 import { criterionLabel, defaultCriteria } from "@plex/backend/lib/hire";
 import { api } from "@/lib/convex";
 import type { Id } from "@/lib/convex";
-import { Avatar, Card, EmptyState, Skeleton } from "@/components/ui/primitives";
+import { buttonVariants } from "@/components/ui/button";
+import { Avatar, Card, CardHeader, EmptyState, IconTile, Skeleton } from "@/components/ui/primitives";
+import { TaskArt } from "@/components/art/empty-art";
 import { ReceiptCard, ReceiptRow } from "@/components/receipt/receipt";
 import { PersonaSwitch, useAs } from "@/components/tasks/persona";
 import { CategoryLabel, SpecIcon, StatusBadge, errorMessage, timeLeft } from "@/components/tasks/task-ui";
-import { cn } from "@/lib/utils";
+import { cn, formatCents, relativeTime } from "@/lib/utils";
 import { ActionPanel, Applicants, ApplyCard, ConnectionsCard, MoneyCard, PayPalDeskCard, ProofPanel } from "./panels";
 
 export type TaskPage = NonNullable<FunctionReturnType<typeof api.tasks.get>>;
@@ -24,22 +46,25 @@ export function TaskDetail({ id }: { id: string }) {
   const data = useQuery(api.tasks.get, { id: id as Id<"tasks">, as });
   const returning = useFundingReturn(id as Id<"tasks">, data);
 
-  if (data === undefined)
-    return (
-      <div>
-        <Skeleton className="h-4 w-20" />
-        <Skeleton className="mt-6 h-8 w-[28rem] max-w-full" />
-        <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <Skeleton className="h-96 w-full" />
-          <Skeleton className="h-72 w-full" />
-        </div>
-      </div>
-    );
+  if (data === undefined) return <TaskDetailSkeleton />;
   if (data === null)
     return (
-      <Card>
-        <EmptyState icon={<ListChecks />} title="Task not found" body="It may have been removed." />
-      </Card>
+      <div className="animate-rise">
+        <BackRow />
+        <Card>
+          <EmptyState
+            art={<TaskArt />}
+            title="Task not found"
+            body="It may have been removed, or the link is wrong."
+            action={
+              <Link href="/tasks" className={buttonVariants({ variant: "secondary", size: "sm" })}>
+                Back to the board
+              </Link>
+            }
+            className="py-14"
+          />
+        </Card>
+      </div>
     );
 
   const { task, role, poster } = data;
@@ -47,22 +72,19 @@ export function TaskDetail({ id }: { id: string }) {
 
   return (
     <div className="animate-rise">
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <Link href="/tasks" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted hover:text-ink">
-          <ArrowLeft className="size-4" /> Tasks
-        </Link>
-        <PersonaSwitch />
-      </div>
+      <BackRow />
 
       <header className="pb-6">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <CategoryLabel task={task} tile />
           <StatusBadge status={task.status} />
-          <CategoryLabel task={task} />
         </div>
-        <div className="mt-3 text-[26px] leading-tight font-semibold tracking-[-0.025em] text-balance text-ink">{task.title}</div>
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted">
-          {poster ? <Avatar name={poster.name} color={poster.avatarColor} size={20} /> : null}
-          <span className="text-ink-2">{isPoster ? "You" : (poster?.name ?? "Someone")}</span>
+        <h1 className="mt-3 max-w-4xl font-display text-[28px] leading-[1.15] font-bold tracking-[-0.03em] text-balance text-ink sm:text-[30px]">
+          {task.title}
+        </h1>
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted">
+          {poster ? <Avatar name={poster.name} color={poster.avatarColor} size={22} /> : null}
+          <span className="font-medium text-ink-2">{isPoster ? "You" : (poster?.name ?? "Someone")}</span>
           {task.agentLabel ? (
             <span className="inline-flex items-center gap-1">
               <span className="text-faint">via</span>
@@ -88,8 +110,10 @@ export function TaskDetail({ id }: { id: string }) {
 
       {returning}
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="flex min-w-0 flex-col gap-5">
+      <Lifecycle data={data} />
+
+      <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="flex min-w-0 flex-col gap-4">
           <ActionPanel data={data} />
           <ConnectionsCard data={data} />
           {data.proof ? <ProofPanel data={data} /> : null}
@@ -106,12 +130,226 @@ export function TaskDetail({ id }: { id: string }) {
         </div>
         <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
           <MoneyCard data={data} />
-          <PayPalDeskCard data={data} />
           <TaskReceipts receipts={data.receipts} />
+          <PayPalDeskCard data={data} />
         </aside>
       </div>
     </div>
   );
+}
+
+function BackRow() {
+  return (
+    <div className="mb-5 flex items-center justify-between gap-3">
+      <Link href="/tasks" className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted transition-colors hover:text-ink">
+        <ArrowLeft className="size-4" strokeWidth={1.9} /> Tasks
+      </Link>
+      <PersonaSwitch />
+    </div>
+  );
+}
+
+function TaskDetailSkeleton() {
+  return (
+    <div>
+      <Skeleton className="h-4 w-16" />
+      <div className="mt-8 flex items-center gap-2">
+        <Skeleton className="size-6 rounded-[7px]" />
+        <Skeleton className="h-3.5 w-48" />
+      </div>
+      <Skeleton className="mt-4 h-8 w-[30rem] max-w-full" />
+      <Skeleton className="mt-3 h-4 w-64" />
+      <Skeleton className="mt-7 h-[104px] w-full rounded-lg" />
+      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="flex flex-col gap-4">
+          <Skeleton className="h-36 w-full rounded-lg" />
+          <Skeleton className="h-80 w-full rounded-lg" />
+        </div>
+        <Skeleton className="h-72 w-full rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+// ── Lifecycle ────────────────────────────────────────────────────────────────
+
+type StepState = "done" | "held" | "current" | "todo" | "warn" | "stop";
+type Step = { key: string; label: string; sub: React.ReactNode; state: StepState; icon: React.ReactNode };
+
+const PROOF_IN = new Set(["verifying", "submitted", "approved", "paid", "rejected", "disputed"]);
+
+/**
+ * The task's life as one line: posted, funds held, assigned, proof in,
+ * verified, paid. Held is steel, done is mint, the next step is marked.
+ */
+function Lifecycle({ data }: { data: TaskPage }) {
+  const { task, assignee, proof } = data;
+  const f = task.funding;
+  const status = task.status;
+  const ended = status === "refunded" || status === "cancelled";
+  const funded = f.state !== "unfunded";
+  const assigned = Boolean(task.assigneeId);
+  const proofIn = Boolean(proof) && PROOF_IN.has(status);
+  const v = proof?.verdict;
+  const verified = status === "approved" || status === "paid" || (status === "submitted" && v?.result === "pass");
+  const paid = status === "paid";
+  const first = assignee?.name.split(" ")[0];
+
+  const steps: (Omit<Step, "state"> & { done: boolean; problem?: StepState })[] = [
+    {
+      key: "posted",
+      label: "Posted",
+      icon: <PenLine />,
+      done: true,
+      sub: new Date(task._creationTime).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    },
+    {
+      key: "held",
+      label: "Funds held",
+      icon: <Lock />,
+      done: funded && f.state !== "refunded",
+      problem: f.state === "refunded" ? "warn" : undefined,
+      sub: !funded ? "Fund to open" : f.state === "refunded" ? (f.captureId ? "Refunded" : "Hold voided") : `${formatCents(task.fundingCents)} by PayPal`,
+    },
+    {
+      key: "assigned",
+      label: "Assigned",
+      icon: <UserCheck />,
+      done: assigned,
+      sub: assigned ? (first ?? "Taken") : data.applications.length ? `${data.applications.length} applied` : "Waiting for takers",
+    },
+    {
+      key: "proof",
+      label: "Proof in",
+      icon: <Camera />,
+      done: proofIn,
+      sub: proofIn && proof ? relativeTime(proof._creationTime) : assigned ? timeLeft(task) : `${task.proofSpec.length} item${task.proofSpec.length === 1 ? "" : "s"}`,
+    },
+    {
+      key: "verified",
+      label: "Verified",
+      icon: <BadgeCheck />,
+      done: verified,
+      problem: status === "rejected" ? "warn" : status === "disputed" ? "stop" : undefined,
+      sub:
+        status === "verifying"
+          ? "Checking now"
+          : status === "rejected"
+            ? "Rejected"
+            : status === "disputed"
+              ? "Contested"
+              : v
+                ? `${v.result === "pass" ? "Pass" : v.result === "fail" ? "Failed" : "Unsure"} · ${Math.round(v.confidence * 100)}%`
+                : task.verificationMode === "auto"
+                  ? "Automatic"
+                  : task.verificationMode === "one_tap"
+                    ? "One tap"
+                    : "Manual",
+    },
+    {
+      key: "paid",
+      label: ended ? (status === "refunded" ? "Refunded" : "Cancelled") : "Paid",
+      icon: ended ? <RotateCcw /> : <Banknote />,
+      done: paid,
+      problem: ended ? "warn" : undefined,
+      sub: paid ? (first ? `to ${first}` : "Paid out") : ended ? "Nobody was paid" : status === "approved" ? "Sending now" : "On approval",
+    },
+  ];
+
+  // A step in trouble is where it stands; otherwise the first open step is next.
+  let currentSet = ended || steps.some((s) => s.problem);
+  const resolved: Step[] = steps.map((s) => {
+    let state: StepState;
+    if (s.problem) state = s.problem;
+    else if (s.done) state = s.key === "held" && !paid ? "held" : "done";
+    else if (!currentSet) {
+      state = "current";
+      currentSet = true;
+    } else state = "todo";
+    return { ...s, state };
+  });
+  const doneCount = resolved.filter((s) => s.state === "done" || s.state === "held").length;
+
+  return (
+    <Card className="relative overflow-hidden">
+      <div className="flex items-center justify-between gap-3 px-5 pt-4">
+        <div className="text-[13px] font-medium text-ink">Where it stands</div>
+        <span className="tabular text-[12px] text-faint">
+          {doneCount} of {resolved.length}
+        </span>
+      </div>
+      <ol className="relative grid gap-0 px-5 pt-3 pb-5 md:grid-cols-6">
+        {resolved.map((s, i) => {
+          const next = resolved[i + 1];
+          const lit = next && (next.state === "done" || next.state === "held" || next.state === "current" || next.state === "warn" || next.state === "stop") && (s.state === "done" || s.state === "held");
+          return (
+            <li key={s.key} className="relative flex gap-3 pb-4 last:pb-0 md:flex-col md:gap-0 md:pb-0">
+              {next ? (
+                <>
+                  {/* vertical connector (mobile) */}
+                  <span
+                    aria-hidden
+                    className={cn("absolute top-8 bottom-0 left-[13px] w-0.5 rounded-full md:hidden", lit ? "" : "bg-line")}
+                    style={lit ? { backgroundImage: s.state === "held" ? "var(--meter-steel)" : "var(--meter-brand)" } : undefined}
+                  />
+                  {/* horizontal connector */}
+                  <span
+                    aria-hidden
+                    className={cn("absolute top-[13px] right-1.5 left-9 hidden h-0.5 rounded-full md:block", lit ? "" : "bg-line")}
+                    style={lit ? { backgroundImage: s.state === "held" ? "var(--meter-steel)" : "var(--meter-brand)" } : undefined}
+                  />
+                </>
+              ) : null}
+              <StepNode state={s.state} icon={s.icon} />
+              <div className="min-w-0 pt-0.5 md:pt-2.5 md:pr-3">
+                <div
+                  className={cn(
+                    "text-[13px] leading-snug font-medium",
+                    s.state === "todo" ? "text-faint" : s.state === "warn" ? "text-refunded" : s.state === "stop" ? "text-disputed" : "text-ink",
+                  )}
+                >
+                  {s.label}
+                </div>
+                <div className={cn("mt-0.5 truncate text-[12px] leading-snug", s.state === "held" ? "text-steel-600" : "text-muted")}>
+                  {s.sub}
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </Card>
+  );
+}
+
+function StepNode({ state, icon }: { state: StepState; icon: React.ReactNode }) {
+  const base = "relative z-[1] flex size-7 flex-none items-center justify-center rounded-full [&_svg]:size-3.5 [&_svg]:stroke-[2.1]";
+  switch (state) {
+    case "done":
+      return (
+        <span className={cn(base, "bg-green-300 text-ink ring-1 ring-inset ring-green-500/30")}>
+          <Check />
+        </span>
+      );
+    case "held":
+      return (
+        <span className={cn(base, "text-steel-800 ring-1 ring-inset ring-steel-400/40")} style={{ background: "var(--metal)" }}>
+          <Lock />
+        </span>
+      );
+    case "current":
+      return (
+        <span className={cn(base, "bg-surface text-ink shadow-[0_0_0_4px_var(--color-green-50)] ring-[1.5px] ring-inset ring-ink")}>
+          {icon}
+        </span>
+      );
+    case "warn":
+      return <span className={cn(base, "bg-refunded-bg text-refunded ring-1 ring-inset ring-refunded/25")}>{icon}</span>;
+    case "stop":
+      return <span className={cn(base, "bg-disputed-bg text-disputed ring-1 ring-inset ring-disputed/25")}>{icon}</span>;
+    default:
+      return <span className={cn(base, "border border-dashed border-line-strong bg-surface text-faint")}>{icon}</span>;
+  }
 }
 
 /** Handles ?paypal=return (authorize the approved order) and ?paypal=cancel. */
@@ -177,16 +415,21 @@ function Banner({
     <div
       role="status"
       className={cn(
-        "mb-5 flex items-center gap-2.5 rounded-md px-4 py-3 text-[13.5px] ring-1 ring-inset",
+        "mb-4 flex items-center gap-2.5 rounded-[12px] px-4 py-3 text-[13.5px] ring-1 ring-inset",
         tone === "steel" && "bg-steel-50 text-steel-700 ring-steel-100",
         tone === "red" && "bg-disputed-bg text-disputed ring-disputed/15",
-        tone === "neutral" && "bg-surface text-ink-2 ring-line",
+        tone === "neutral" && "bg-surface text-ink-2 shadow-card ring-line",
       )}
     >
       <span className="flex min-w-0 flex-1 items-center gap-2.5">{children}</span>
       {onClose ? (
-        <button type="button" onClick={onClose} className="text-[13px] font-medium underline-offset-2 hover:underline">
-          Dismiss
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Dismiss"
+          className="flex size-7 flex-none items-center justify-center rounded-full transition-colors hover:bg-ink/5"
+        >
+          <X className="size-4" strokeWidth={1.9} />
         </button>
       ) : null}
     </div>
@@ -205,85 +448,95 @@ function BriefCard({ data }: { data: TaskPage }) {
   const seesCode = role === "poster" || role === "assignee";
   return (
     <Card>
-      <div className="px-5 pt-4">
-        <div className="text-[15px] font-semibold tracking-[-0.01em] text-ink">The task</div>
-        <p className="mt-2 text-[14px] leading-relaxed text-pretty text-ink-2">{task.description}</p>
+      <CardHeader title="The brief" description="What the worker sees, and what the proof must show." />
+      <div className="px-5 pt-3">
+        <p className="text-[14px] leading-relaxed text-pretty text-ink-2">{task.description}</p>
         {task.brief && task.brief !== task.description ? (
-          <p className="mt-3 border-l-2 border-line pl-3 text-[13px] leading-relaxed text-muted">
-            Asked as: “{task.brief}”
+          <p className="mt-3 border-l-2 border-line-strong/70 pl-3 text-[13px] leading-relaxed text-muted">
+            Asked as “{task.brief}”
           </p>
         ) : null}
       </div>
-      <dl className="mt-4 grid grid-cols-1 gap-px border-y border-line bg-line sm:grid-cols-2">
-        <Fact icon={<Clock />} label="Window">
+
+      <dl className="mx-5 mt-4 grid grid-cols-1 gap-px overflow-hidden rounded-[12px] border border-line bg-line sm:grid-cols-2 xl:grid-cols-3">
+        <Fact icon={<Clock />} label="Window" foot={timeLeft(task)}>
           {windowLabel(task.windowStart, task.windowEnd)}
-          <span className="block text-[12.5px] text-muted">{timeLeft(task)}</span>
         </Fact>
-        <Fact icon={<MapPin />} label="Where">
+        <Fact icon={<MapPin />} label="Where" foot={task.location?.radiusM ? `Proof within ${task.location.radiusM} m` : undefined}>
           {task.location ? task.location.label : "Remote"}
-          {task.location?.radiusM ? <span className="block text-[12.5px] text-muted">Proof within {task.location.radiusM} m</span> : null}
         </Fact>
-        <Fact icon={<ShieldCheck />} label="Payout">
+        <Fact icon={<Wallet />} label="Payout" foot="PayPal Payouts, on proof">
           {payoutSummary(task.payout)}
-          <span className="block text-[12.5px] text-muted">Paid by PayPal Payouts on proof</span>
         </Fact>
-        <Fact icon={<Mode.icon />} label="Verification">
+        <Fact icon={<Mode.icon />} label="Verification" foot={Mode.body}>
           {Mode.label}
-          <span className="block text-[12.5px] text-muted">{Mode.body}</span>
         </Fact>
-        <Fact icon={<Bot />} label="Who can take it">
+        <Fact icon={<Bot />} label="Who can take it" foot={data.digital ? "Text, files or links" : "Someone on the ground"}>
           {WHO[task.workerType ?? "human"]}
-          <span className="block text-[12.5px] text-muted">
-            {data.digital ? "Delivered as text, files or links" : "Needs someone on the ground"}
-          </span>
         </Fact>
-        <Fact icon={<UserCheck />} label="Checked by">
+        <Fact
+          icon={<ShieldCheck />}
+          label="Checked by"
+          foot={data.digital ? "Plex's rule decides" : "Photos, time, place, code"}
+        >
           {data.digital ? "Three blind proofer agents" : "The proof engine"}
-          <span className="block text-[12.5px] text-muted">{data.digital ? "Plex's rule decides the verdict" : "Photos, time, place, challenge code"}</span>
         </Fact>
       </dl>
-      <div className="px-5 pt-4 pb-5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-[13px] font-medium text-ink">Proof spec</div>
-          <span className="text-[12px] text-faint">{task.proofSpec.length} items</span>
+
+      <div className="px-5 pt-5 pb-5">
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="text-[13.5px] font-semibold text-ink">Proof spec</div>
+          <span className="tabular text-[12px] text-faint">
+            {task.proofSpec.length} item{task.proofSpec.length === 1 ? "" : "s"}
+          </span>
         </div>
-        <ol className="mt-2 divide-y divide-line">
+        <ol className="mt-1.5 divide-y divide-line">
           {task.proofSpec.map((s, i) => (
-            <li key={i} className="grid grid-cols-[32px_minmax(0,1fr)] items-start gap-3 py-2.5">
-              <span className="flex size-8 items-center justify-center rounded-sm bg-sunken text-ink-2">
+            <li key={i} className="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3 py-2.5">
+              <IconTile size="md" className="size-[34px]">
                 <SpecIcon type={s.type} />
-              </span>
+              </IconTile>
               <span className="min-w-0">
                 <span className="block text-[13.5px] font-medium text-ink">{s.label}</span>
-                <span className="block text-[12.5px] leading-snug text-muted">{s.description}</span>
+                {s.description && s.description !== s.label ? (
+                  <span className="block text-[12.5px] leading-snug text-muted">{s.description}</span>
+                ) : null}
               </span>
+              <span className="tabular text-[11.5px] text-faint capitalize">{s.type === "text" ? "note" : s.type}</span>
             </li>
           ))}
         </ol>
         {data.digital ? (
-          <div className="mt-3 rounded-md bg-canvas px-3.5 py-3 ring-1 ring-line ring-inset">
+          <div className="mt-3 rounded-[12px] bg-canvas/70 px-4 py-3.5 ring-1 ring-line ring-inset">
             <div className="flex items-center justify-between gap-3">
               <span className="text-[13px] font-medium text-ink">Done means</span>
               {task.autoHire ? <span className="text-[12px] font-medium text-green-700">Hands-free</span> : null}
             </div>
-            <ul className="mt-1.5 space-y-1 text-[12.5px] text-ink-2">
+            <ul className="mt-2 space-y-1.5 text-[12.5px] text-ink-2">
               {(task.criteria ?? defaultCriteria(task.proofSpec)).map((c, i) => (
-                <li key={i}>
-                  {criterionLabel(c, task.proofSpec)} <span className="text-faint">· checked by code</span>
+                <li key={i} className="flex items-start gap-2">
+                  <Check className="mt-0.5 size-3.5 flex-none text-green-700" strokeWidth={2.2} />
+                  <span>
+                    {criterionLabel(c, task.proofSpec)} <span className="text-faint">· checked by code</span>
+                  </span>
                 </li>
               ))}
-              <li>Three blind proofer agents pass it, by Plex&apos;s majority rule</li>
+              <li className="flex items-start gap-2">
+                <Check className="mt-0.5 size-3.5 flex-none text-green-700" strokeWidth={2.2} />
+                <span>Three blind proofer agents pass it, by Plex&apos;s majority rule</span>
+              </li>
             </ul>
           </div>
         ) : (
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-md bg-steel-50/80 px-3.5 py-3 ring-1 ring-steel-100 ring-inset">
+          <div className="relative mt-3 flex items-center justify-between gap-4 overflow-hidden rounded-[12px] bg-steel-50/80 py-3 pr-3.5 pl-4 ring-1 ring-steel-100 ring-inset">
+            <span className="absolute inset-y-0 left-0 w-1" style={{ background: "var(--metal)" }} aria-hidden />
             <span className="text-[12.5px] leading-snug text-steel-700">
-              Challenge code: shown in one photo, so proof can&apos;t be prepared in advance
+              <span className="font-medium">Challenge code.</span> Shown in one photo, so proof can&apos;t be prepared in advance.
             </span>
             <span
               className={cn(
-                "flex-none rounded-[6px] px-2 py-1 font-mono text-[13px] font-medium",
-                seesCode ? "bg-surface text-ink shadow-card" : "bg-steel-100 text-steel-500",
+                "flex-none rounded-[8px] px-2.5 py-1 font-mono text-[13px] font-semibold tracking-wide",
+                seesCode ? "bg-surface text-ink shadow-card ring-1 ring-line ring-inset" : "bg-steel-100 text-steel-500",
               )}
             >
               {seesCode ? task.challengeCode : "on accept"}
@@ -297,13 +550,14 @@ function BriefCard({ data }: { data: TaskPage }) {
 
 const WHO = { human: "A person", either: "A person or an AI agent", agent: "An AI agent" } as const;
 
-function Fact({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+function Fact({ icon, label, foot, children }: { icon: React.ReactNode; label: string; foot?: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[18px_minmax(0,1fr)] gap-x-2.5 bg-surface px-5 py-3.5">
-      <span className="mt-0.5 text-faint [&_svg]:size-4 [&_svg]:stroke-[1.9]">{icon}</span>
+    <div className="grid grid-cols-[16px_minmax(0,1fr)] gap-x-2.5 bg-surface px-4 py-3">
+      <span className="mt-px text-faint [&_svg]:size-4 [&_svg]:stroke-[1.9]">{icon}</span>
       <div className="min-w-0">
-        <dt className="text-[12px] font-medium text-faint">{label}</dt>
-        <dd className="mt-0.5 text-[13.5px] leading-snug text-ink">{children}</dd>
+        <dt className="text-[12px] text-faint">{label}</dt>
+        <dd className="mt-0.5 text-[13.5px] leading-snug font-medium text-ink">{children}</dd>
+        {foot ? <dd className="mt-0.5 text-[12px] leading-snug text-muted">{foot}</dd> : null}
       </div>
     </div>
   );
@@ -316,21 +570,23 @@ function TaskReceipts({ receipts }: { receipts: TaskPage["receipts"] }) {
   const latest = [...receipts].sort((a, b) => (rank[b.kind] ?? 0) - (rank[a.kind] ?? 0) || b.occurredAt - a.occurredAt)[0]!;
   const rest = receipts.filter((r) => r._id !== latest._id);
   return (
-    <div className="flex flex-col gap-3">
+    <section className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between px-1">
-        <div className="text-[13px] font-medium text-ink">Receipts</div>
-        <div className="text-[12px] text-faint">Every movement of this task&apos;s money</div>
+        <div className="text-[13.5px] font-semibold text-ink">Receipts</div>
+        <div className="tabular text-[12px] text-faint">
+          {receipts.length} for this task
+        </div>
       </div>
-      <Link href={`/receipts/${latest._id}`} className="block rounded-lg transition-transform hover:-translate-y-px">
+      <Link href={`/receipts/${latest._id}`} className="block rounded-lg transition-shadow hover:shadow-hover">
         <ReceiptCard receipt={latest} />
       </Link>
       {rest.length ? (
-        <Card className="px-2 py-2">
+        <Card className="p-1.5">
           {rest.map((r) => (
             <ReceiptRow key={r._id} receipt={r} href={`/receipts/${r._id}`} />
           ))}
         </Card>
       ) : null}
-    </div>
+    </section>
   );
 }

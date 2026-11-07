@@ -29,14 +29,16 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/convex";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Avatar, Badge, Card, CardHeader, Input, Label, Textarea } from "@/components/ui/primitives";
+import { Avatar, Badge, Card, CardHeader, IconTile, Input, Label, Segmented, Textarea, type TileTone } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
+import { Ring } from "@/components/ui/viz";
 import { isPosterPersona, useAs } from "@/components/tasks/persona";
 import { useAutoPay, useFund } from "@/components/tasks/use-fund";
 import { useRun } from "@/components/tasks/use-run";
 import {
   CheckList,
   Deliverable,
+  FundingBadge,
   MatchScore,
   PolicyLine,
   SpecIcon,
@@ -53,7 +55,7 @@ import type { TaskPage } from "./task-detail";
 function ErrorLine({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p className="flex items-start gap-2 text-[12.5px] leading-snug text-disputed" role="alert">
+    <p className="mt-2 flex items-start gap-2 text-[12.5px] leading-snug text-disputed" role="alert">
       <CircleAlert className="mt-px size-4 flex-none" strokeWidth={1.9} /> {message}
     </p>
   );
@@ -81,16 +83,13 @@ export function ConnectionsCard({ data }: { data: TaskPage }) {
   return (
     <Card>
       <CardHeader
-        title={
-          <span className="flex items-center gap-2">
-            <Link2 className="size-4 text-faint" strokeWidth={1.9} /> Connections
-            {live.length ? <Badge tone="green">{live.length} connected</Badge> : needed ? <Badge tone="amber">Needed</Badge> : null}
-          </span>
-        }
-        description="Lend the hired agent access to an account for this task only. Plex encrypts the token, only the agent's tool calls and the proof check use it, and it's deleted when the task is paid or refunded."
+        icon={<Link2 />}
+        title="Connections"
+        description="Lend the hired agent one account for this task only. The token is encrypted, used only by the agent's tool calls and the proof check, and deleted when the task is paid or refunded."
+        action={live.length ? <Badge tone="green">{live.length} connected</Badge> : needed ? <Badge tone="amber">Needed</Badge> : null}
       />
       {conn.rows.length ? (
-        <ul className="divide-y divide-line border-t border-line">
+        <ul className="mt-3 divide-y divide-line border-t border-line">
           {conn.rows.map((r) => (
             <li key={r._id} className={cn("flex items-center justify-between gap-3 px-5 py-3", r.wiped && "opacity-60")}>
               <div className="min-w-0">
@@ -112,29 +111,18 @@ export function ConnectionsCard({ data }: { data: TaskPage }) {
         </ul>
       ) : null}
       {conn.canEdit && live.length < 3 ? (
-        <div className="grid gap-3 border-t border-line px-5 pt-4 pb-5">
+        <div className="mt-3 grid gap-3.5 border-t border-line bg-canvas/40 px-5 pt-4 pb-5">
           {!conn.ready ? <p className="text-[12.5px] text-disputed">This deployment has no CONNECTIONS_KEY, so it can&apos;t store tokens.</p> : null}
-          <div className="inline-flex self-start rounded-sm bg-sunken p-0.5" role="group" aria-label="Connection type">
-            {(
-              [
-                ["github", "GitHub"],
-                ["mcp", "Any MCP server"],
-              ] as const
-            ).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setKind(value)}
-                aria-pressed={kind === value}
-                className={cn(
-                  "inline-flex h-7 items-center rounded-[6px] px-3 text-[13px] font-medium transition-colors",
-                  kind === value ? "bg-surface text-ink shadow-card" : "text-muted hover:text-ink",
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            size="sm"
+            value={kind}
+            onChange={setKind}
+            className="self-start"
+            items={[
+              { value: "github", label: "GitHub" },
+              { value: "mcp", label: "Any MCP server" },
+            ]}
+          />
           {kind === "mcp" ? (
             <>
               <RegistrySearch task={task} onPick={(u) => setUrl(u)} />
@@ -165,7 +153,7 @@ export function ConnectionsCard({ data }: { data: TaskPage }) {
           <div className="flex items-center justify-between gap-3">
             <ErrorLine message={errorFor("connect")} />
             <Button
-              variant="brand"
+              variant="primary"
               size="sm"
               className="ml-auto"
               disabled={!!busy || !conn.ready || (kind === "github" ? token.trim().length < 20 : url.trim().length < 10)}
@@ -194,6 +182,15 @@ export function ConnectionsCard({ data }: { data: TaskPage }) {
   );
 }
 
+const PANEL_TILE: Record<"neutral" | "green" | "steel" | "amber" | "red", TileTone> = {
+  neutral: "neutral",
+  green: "mint",
+  steel: "steel",
+  amber: "amber",
+  red: "red",
+};
+
+/** The "what happens next" card: one state, one sentence, the actions in a well below. */
 function Panel({
   tone = "neutral",
   icon,
@@ -207,23 +204,18 @@ function Panel({
   body?: React.ReactNode;
   children?: React.ReactNode;
 }) {
-  const chip = {
-    neutral: "bg-sunken text-ink-2",
-    green: "bg-green-50 text-green-700",
-    steel: "bg-steel-50 text-steel-600",
-    amber: "bg-refunded-bg text-refunded",
-    red: "bg-disputed-bg text-disputed",
-  }[tone];
   return (
     <Card className="overflow-hidden">
-      <div className="grid grid-cols-[36px_minmax(0,1fr)] gap-x-3.5 px-5 py-4">
-        <span className={cn("flex size-9 items-center justify-center rounded-md [&_svg]:size-[18px]", chip)}>{icon}</span>
-        <div className="min-w-0 self-center">
-          <div className="text-[15px] leading-snug font-semibold tracking-[-0.01em] text-ink">{title}</div>
-          {body ? <div className="mt-1 text-[13px] leading-relaxed text-muted">{body}</div> : null}
+      <div className="flex items-start gap-3.5 px-5 py-4">
+        <IconTile tone={PANEL_TILE[tone]} size="lg">
+          {icon}
+        </IconTile>
+        <div className="min-w-0 flex-1 self-center">
+          <div className="text-[15.5px] leading-snug font-semibold tracking-[-0.014em] text-ink">{title}</div>
+          {body ? <div className="mt-1 text-[13px] leading-relaxed text-pretty text-muted">{body}</div> : null}
         </div>
       </div>
-      {children ? <div className="border-t border-line bg-canvas/60 px-5 py-4">{children}</div> : null}
+      {children ? <div className="border-t border-line bg-canvas/50 px-5 py-4">{children}</div> : null}
     </Card>
   );
 }
@@ -250,7 +242,7 @@ export function ActionPanel({ data }: { data: TaskPage }) {
   const posterFirst = poster?.name.split(" ")[0] ?? "the poster";
   const payTo = (
     <>
-      Approve and pay <Amount cents={payoutFor(data)} size="md" className="text-white" />
+      Approve and pay <Amount cents={payoutFor(data)} size="md" />
     </>
   );
 
@@ -270,7 +262,7 @@ export function ActionPanel({ data }: { data: TaskPage }) {
           }
         >
           <PolicyLine pot={data.policy?.potName} outcome={data.policy?.outcome} ruleText={data.policy?.ruleText} />
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+          <div className="mt-3.5 flex flex-wrap items-center gap-2">
             <Button
               variant="brand"
               onClick={() => fund(task._id)}
@@ -280,16 +272,14 @@ export function ActionPanel({ data }: { data: TaskPage }) {
               {funding
                 ? autoPay.on ? "Holding with auto-pay…" : "Opening PayPal…"
                 : autoPay.on
-                  ? <>Hold <Amount cents={task.fundingCents} size="md" className="text-white" /> with auto-pay</>
-                  : <>Fund <Amount cents={task.fundingCents} size="md" className="text-white" /> with PayPal</>}
+                  ? <>Hold <Amount cents={task.fundingCents} size="md" /> with auto-pay</>
+                  : <>Fund <Amount cents={task.fundingCents} size="md" /> with PayPal</>}
             </Button>
             <Button variant="ghost" onClick={() => run("cancel", () => cancelDraft({ id: task._id, as }))} disabled={!!busy}>
               Delete draft
             </Button>
           </div>
-          <div className="mt-3">
-            <ErrorLine message={fundError ?? errorFor("cancel")} />
-          </div>
+          <ErrorLine message={fundError ?? errorFor("cancel")} />
         </Panel>
       );
 
@@ -312,14 +302,12 @@ export function ActionPanel({ data }: { data: TaskPage }) {
           >
             {data.digital ? <AgentBidding data={data} /> : null}
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="text-[12.5px] text-muted">Changed your mind? Cancelling voids the hold; you&apos;re never charged.</span>
+              <span className="text-[12.5px] text-muted">Changed your mind? Cancelling voids the hold, so you&apos;re never charged.</span>
               <Button variant="danger" size="sm" onClick={() => run("refund", () => refund({ taskId: task._id, as }))} disabled={!!busy}>
                 {busy === "refund" ? <Loader2 className="animate-spin" /> : <RotateCcw />} Cancel task
               </Button>
             </div>
-            <div className="mt-2">
-              <ErrorLine message={errorFor("refund")} />
-            </div>
+            <ErrorLine message={errorFor("refund")} />
           </Panel>
         );
       return null;
@@ -333,7 +321,7 @@ export function ActionPanel({ data }: { data: TaskPage }) {
             title="You're on it"
             body={
               <>
-                Write <span className="rounded-[5px] bg-surface px-1.5 py-0.5 font-mono text-[12.5px] font-medium text-ink shadow-card">{task.challengeCode}</span> on paper and show it in one photo. Upload before the window ends.
+                Write <span className="rounded-[6px] bg-surface px-1.5 py-0.5 font-mono text-[12.5px] font-semibold text-ink shadow-card ring-1 ring-line ring-inset">{task.challengeCode}</span> on paper and show it in one photo. Upload before the window ends.
               </>
             }
           >
@@ -433,9 +421,7 @@ export function ActionPanel({ data }: { data: TaskPage }) {
               </Button>
             </div>
           )}
-          <div className="mt-2">
-            <ErrorLine message={errorFor("release") ?? errorFor("reject")} />
-          </div>
+          <ErrorLine message={errorFor("release") ?? errorFor("reject")} />
         </Panel>
       );
     }
@@ -454,7 +440,7 @@ export function ActionPanel({ data }: { data: TaskPage }) {
           title={
             <>
               {isPoster ? `Paid ${assignee?.name ?? "the worker"}` : role === "assignee" ? "You were paid" : "Paid"}{" "}
-              <Amount cents={payout?.amountCents ?? payoutFor(data)} size="md" className="text-green-700" />
+              <Amount cents={payout?.amountCents ?? payoutFor(data)} size="md" className="text-[15.5px] text-green-800" />
             </>
           }
           body={
@@ -485,9 +471,7 @@ export function ActionPanel({ data }: { data: TaskPage }) {
                 Approve anyway
               </Button>
             </div>
-            <div className="mt-2">
-              <ErrorLine message={errorFor("refund") ?? errorFor("release")} />
-            </div>
+            <ErrorLine message={errorFor("refund") ?? errorFor("release")} />
           </Panel>
         );
       if (role === "assignee")
@@ -526,12 +510,16 @@ export function ActionPanel({ data }: { data: TaskPage }) {
           icon={<Scale />}
           title={isPoster ? `${workerFirst} contested your rejection` : "Contested: waiting for a decision"}
           body={
-            <span className="block">
-              <span className="block text-ink-2">“{proof?.contestNote}”</span>
-            </span>
+            proof?.contestNote?.trim() ? (
+              <span className="block text-ink-2">“{proof.contestNote}”</span>
+            ) : isPoster ? (
+              "The money stays held while you decide. The mediator reads both sides first."
+            ) : (
+              "The money stays held until the poster decides."
+            )
           }
         >
-          <div className="rounded-md bg-surface p-3.5 ring-1 ring-line ring-inset">
+          <div className="rounded-[12px] bg-surface p-3.5 shadow-card ring-1 ring-line ring-inset">
             <div className="flex items-center justify-between gap-3">
               <span className="flex items-center gap-2 text-[12.5px] font-medium text-ink">
                 <Bot className="size-4 text-faint" strokeWidth={1.9} /> Mediator
@@ -557,9 +545,7 @@ export function ActionPanel({ data }: { data: TaskPage }) {
               </Button>
             </div>
           ) : null}
-          <div className="mt-2">
-            <ErrorLine message={errorFor("release") ?? errorFor("refund")} />
-          </div>
+          <ErrorLine message={errorFor("release") ?? errorFor("refund")} />
         </Panel>
       );
     }
@@ -599,7 +585,7 @@ function AgentBidding({ data }: { data: TaskPage }) {
   // Nobody on Plex can do it: offer to create an agent for it.
   if (!human && !agentBids && fit && fit.digital && !names.length)
     return (
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md bg-refunded-bg px-3.5 py-3 ring-1 ring-refunded/15 ring-inset">
+      <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-refunded-bg px-3.5 py-3 ring-1 ring-refunded/15 ring-inset">
         <span className="flex min-w-0 items-start gap-2 text-[12.5px] leading-snug text-ink-2">
           <Bot className="mt-px size-4 flex-none text-faint" strokeWidth={1.9} />
           <span>
@@ -612,7 +598,7 @@ function AgentBidding({ data }: { data: TaskPage }) {
       </div>
     );
   return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md bg-surface px-3.5 py-3 ring-1 ring-line ring-inset">
+    <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-surface px-3.5 py-3 shadow-card ring-1 ring-line ring-inset">
       <span className="flex min-w-0 items-center gap-2 text-[12.5px] leading-snug text-ink-2">
         <Bot className="size-4 flex-none text-faint" strokeWidth={1.9} />
         {human
@@ -659,37 +645,40 @@ function BidTrail({ bids }: { bids: NonNullable<TaskPage["applications"][number]
 function Scorecards({ cards }: { cards: NonNullable<NonNullable<TaskPage["proof"]>["scorecards"]> }) {
   const dims = ["completeness", "accuracy", "method", "quality"] as const;
   return (
-    <div className="mt-4 border-t border-line px-5 pt-4">
+    <div className="border-t border-line px-5 pt-4 pb-4">
       <div className="flex items-baseline justify-between gap-3">
-        <div className="text-[13px] font-medium text-ink">Proofer scorecards</div>
-        <div className="text-[12px] text-faint">Scored blind · 1 to 5</div>
+        <div className="text-[13.5px] font-semibold text-ink">Proofer scorecards</div>
+        <div className="text-[12px] text-faint">Scored blind, 1 to 5</div>
       </div>
-      <div className="mt-2 overflow-x-auto">
-        <table className="w-full min-w-[520px] text-[12.5px]">
-          <thead>
+      <div className="mt-2.5 overflow-x-auto rounded-[12px] border border-line">
+        <table className="w-full min-w-[540px] text-[12.5px]">
+          <thead className="bg-canvas/70">
             <tr className="text-left text-faint">
-              <th className="py-1.5 pr-3 font-medium">Proofer</th>
+              <th className="px-3 py-2 font-medium">Proofer</th>
               {dims.map((d) => (
-                <th key={d} className="py-1.5 pr-3 font-medium capitalize">
+                <th key={d} className="px-2 py-2 font-medium capitalize">
                   {d}
                 </th>
               ))}
-              <th className="py-1.5 font-medium">Vote</th>
+              <th className="px-3 py-2 text-right font-medium">Vote</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
             {cards.map((c) => (
               <tr key={c.proofer} className="align-top">
-                <td className="py-2 pr-3">
-                  <span className="font-medium text-ink">{c.proofer}</span>
-                  <span className="mt-0.5 block max-w-[220px] text-muted">{c.note}</span>
+                <td className="px-3 py-2.5">
+                  <span className="flex items-center gap-2 font-medium text-ink">
+                    <Avatar name={c.proofer} size={20} square color="var(--color-steel-500)" />
+                    {c.proofer}
+                  </span>
+                  <span className="mt-1 block max-w-[240px] leading-snug text-muted">{c.note}</span>
                 </td>
                 {dims.map((d) => (
-                  <td key={d} className="tabular py-2 pr-3 text-ink">
-                    {c[d]}
+                  <td key={d} className="px-2 py-2.5">
+                    <ScorePips value={c[d]} />
                   </td>
                 ))}
-                <td className="py-2">
+                <td className="px-3 py-2.5 text-right">
                   <VerdictPill result={c.verdict} />
                 </td>
               </tr>
@@ -698,6 +687,20 @@ function Scorecards({ cards }: { cards: NonNullable<NonNullable<TaskPage["proof"
         </table>
       </div>
     </div>
+  );
+}
+
+/** A 1–5 score as its figure and five small pips. */
+function ScorePips({ value }: { value: number }) {
+  return (
+    <span className="inline-flex items-center gap-1.5" aria-label={`${value} of 5`}>
+      <span className="tabular w-2.5 font-medium text-ink">{value}</span>
+      <span className="flex gap-[3px]" aria-hidden>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <span key={i} className={cn("h-2.5 w-1 rounded-full", i < value ? (value >= 4 ? "bg-green-500" : value >= 3 ? "bg-steel-400" : "bg-refunded") : "bg-sunken")} />
+        ))}
+      </span>
+    </span>
   );
 }
 
@@ -751,9 +754,14 @@ export function ProofPanel({ data }: { data: TaskPage }) {
   const checking = proof.status === "checking";
   const rows = checking || !proof.verdict ? (proof.progress ?? []) : verdictRows(proof.verdict.checks);
   const v = proof.verdict;
+  const passed = rows.filter((r) => r.status === "pass").length;
+  const media = task.proofSpec.map((s, i) => ({ s, i, it: proof.items.find((x) => x.specIndex === i) }));
+  const tiles = media.filter(({ s, it }) => s.type === "photo" || s.type === "video" || (s.type === "file" && isImageSpec(s) && Boolean(it?.imageUrl)));
+  const others = media.filter((m) => !tiles.includes(m));
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardHeader
+        icon={<Camera />}
         title="Proof"
         description={
           <>
@@ -761,61 +769,27 @@ export function ProofPanel({ data }: { data: TaskPage }) {
             {data.proofCount > 1 ? ` · attempt ${data.proofCount}` : ""}
           </>
         }
-        action={v && !checking ? <VerdictPill result={v.result} /> : <Badge tone="steel"><Loader2 className="animate-spin" /> Checking</Badge>}
+        action={
+          v && !checking ? (
+            <VerdictPill result={v.result} />
+          ) : (
+            <Badge tone="steel">
+              <Loader2 className="animate-spin" /> Checking
+            </Badge>
+          )
+        }
       />
-      <div className="mt-4 grid grid-cols-2 gap-2 px-5 sm:grid-cols-3">
-        {task.proofSpec.map((s, i) => {
-          const it = proof.items.find((x) => x.specIndex === i);
-          if (s.type === "text" || s.type === "link")
-            return (
-              <div key={i} className="col-span-2 rounded-md bg-sunken p-3 sm:col-span-3">
-                <div className="flex items-center gap-1.5 text-[12px] font-medium text-faint">
-                  <SpecIcon type={s.type} className="size-3.5" /> {s.label}
-                </div>
-                <div className="mt-1 max-h-72 overflow-y-auto text-[13.5px] leading-relaxed break-words text-ink-2">
-                  {s.type === "link" && it?.url ? (
-                    <a href={it.url} target="_blank" rel="noreferrer" className="text-green-700 underline-offset-2 hover:underline">
-                      {it.url}
-                    </a>
-                  ) : it?.text ? (
-                    <Deliverable text={it.text} />
-                  ) : (
-                    "—"
-                  )}
-                </div>
-              </div>
-            );
-          if (s.type === "file" && isImageSpec(s) && it?.imageUrl)
-            return (
-              <figure key={i} className="col-span-2 sm:col-span-1">
-                <a href={it.imageUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md bg-surface ring-1 ring-line ring-inset">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={it.imageUrl} alt={s.label} className="aspect-square size-full object-contain" />
-                </a>
-                <figcaption className="mt-1.5 text-[12px] font-medium text-ink-2">{s.label}</figcaption>
-              </figure>
-            );
-          if (s.type === "file")
-            return (
-              <div key={i} className="col-span-2 flex items-center justify-between gap-3 rounded-md bg-sunken p-3 sm:col-span-3">
-                <span className="flex items-center gap-1.5 text-[13px] font-medium text-ink-2">
-                  <SpecIcon type="file" className="size-4 text-faint" /> {s.label}
-                </span>
-                {it?.imageUrl ? (
-                  <a href={it.imageUrl} target="_blank" rel="noreferrer" className="text-[13px] font-medium text-green-700 underline-offset-2 hover:underline">
-                    Open file
-                  </a>
-                ) : (
-                  <span className="text-[12.5px] text-faint">{it ? "Seeded, no file" : "Missing"}</span>
-                )}
-              </div>
-            );
-          return (
+
+      {tiles.length ? (
+        <div className="mt-4 grid grid-cols-2 gap-3 px-5 sm:grid-cols-3">
+          {tiles.map(({ s, i, it }) => (
             <figure key={i} className="min-w-0">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-sunken ring-1 ring-line ring-inset">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-[12px] bg-sunken ring-1 ring-line ring-inset">
                 {it?.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={it.imageUrl} alt={s.label} className="size-full object-cover" />
+                  <a href={it.imageUrl} target="_blank" rel="noreferrer" className="block size-full">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={it.imageUrl} alt={s.label} className={cn("size-full", s.type === "file" ? "bg-surface object-contain" : "object-cover")} />
+                  </a>
                 ) : (
                   <div className="flex size-full flex-col items-center justify-center gap-1.5 text-faint">
                     <SpecIcon type={s.type} className="size-5" />
@@ -828,27 +802,93 @@ export function ProofPanel({ data }: { data: TaskPage }) {
                 {it?.capturedAt ? <span className="tabular flex-none text-faint">{shortDate(it.capturedAt).split(", ").pop()}</span> : null}
               </figcaption>
             </figure>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      ) : null}
+
+      {others.length ? (
+        <div className={cn("grid gap-3 px-5", tiles.length ? "mt-3" : "mt-4")}>
+          {others.map(({ s, i, it }) =>
+            s.type === "text" || s.type === "link" ? (
+              <div key={i} className="rounded-[12px] bg-canvas/70 px-4 py-3 ring-1 ring-line ring-inset">
+                <div className="flex items-center gap-1.5 text-[12px] font-medium text-faint">
+                  <SpecIcon type={s.type} className="size-3.5" /> {s.label}
+                </div>
+                <div className="mt-1.5 max-h-72 overflow-y-auto text-[13.5px] leading-relaxed break-words text-ink-2">
+                  {s.type === "link" && it?.url ? (
+                    <a href={it.url} target="_blank" rel="noreferrer" className="text-green-700 underline-offset-2 hover:underline">
+                      {it.url}
+                    </a>
+                  ) : it?.text ? (
+                    <Deliverable text={it.text} />
+                  ) : (
+                    "—"
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div key={i} className="flex items-center justify-between gap-3 rounded-[12px] bg-canvas/70 px-4 py-3 ring-1 ring-line ring-inset">
+                <span className="flex items-center gap-2 text-[13px] font-medium text-ink-2">
+                  <SpecIcon type="file" className="size-4 text-faint" /> {s.label}
+                </span>
+                {it?.imageUrl ? (
+                  <a href={it.imageUrl} target="_blank" rel="noreferrer" className="text-[13px] font-medium text-green-700 underline-offset-2 hover:underline">
+                    Open file
+                  </a>
+                ) : (
+                  <span className="text-[12.5px] text-faint">{it ? "Seeded, no file" : "Missing"}</span>
+                )}
+              </div>
+            ),
+          )}
+        </div>
+      ) : null}
+
       {proof.note ? (
         <p className="mx-5 mt-4 flex gap-2 text-[13px] leading-relaxed text-ink-2">
           <MessageSquareQuote className="mt-0.5 size-4 flex-none text-faint" strokeWidth={1.9} /> {proof.note}
         </p>
       ) : null}
-      <div className="mt-4 border-t border-line px-5 pt-1 pb-3">
-        <CheckList rows={rows} />
+
+      <div className="mt-4 border-t border-line px-5 pt-3 pb-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="text-[13.5px] font-semibold text-ink">Checks</div>
+          {rows.length ? (
+            <span className="tabular text-[12px] text-faint">
+              {passed} of {rows.length} passed
+            </span>
+          ) : null}
+        </div>
+        <CheckList rows={rows} className="mt-1" />
       </div>
       {proof.scorecards?.length && !checking ? <Scorecards cards={proof.scorecards} /> : null}
-      {v && !checking ? (
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line bg-canvas/60 px-5 py-3 text-[12.5px] text-muted">
-          <span className="min-w-0 flex-1 basis-64 text-ink-2">{v.summary}</span>
-          <span className="tabular flex-none">
-            {Math.round(v.confidence * 100)}% confident · {v.model === "heuristic" ? "Heuristic" : v.model}
-          </span>
-        </div>
-      ) : null}
+      {v && !checking ? <VerdictStrip verdict={v} /> : null}
     </Card>
+  );
+}
+
+/** The verdict as the card's foot: confidence ring, the one-line summary, and who decided. */
+function VerdictStrip({ verdict: v }: { verdict: NonNullable<NonNullable<TaskPage["proof"]>["verdict"]> }) {
+  const tone =
+    v.result === "pass"
+      ? "bg-green-50/70 ring-green-100"
+      : v.result === "fail"
+        ? "bg-disputed-bg/70 ring-disputed/10"
+        : "bg-refunded-bg/70 ring-refunded/10";
+  return (
+    <div className={cn("flex items-center gap-4 border-t border-line px-5 py-4 ring-inset", tone)}>
+      <Ring value={v.confidence} size={46} stroke={4} tone={v.result === "pass" ? "brand" : "steel"}>
+        <span className="tabular trim-cap text-[12px] font-semibold text-ink">{Math.round(v.confidence * 100)}</span>
+      </Ring>
+      <div className="min-w-0 flex-1">
+        <div className="text-[13.5px] font-semibold text-ink">
+          {v.result === "pass" ? "Verdict: pass" : v.result === "fail" ? "Verdict: fail" : "Verdict: needs a human"}
+          <span className="font-normal text-muted"> · {Math.round(v.confidence * 100)}% confident</span>
+        </div>
+        <p className="mt-0.5 text-[12.5px] leading-snug text-pretty text-ink-2">{v.summary}</p>
+      </div>
+      <span className="hidden flex-none text-[11.5px] text-faint sm:block">{v.model === "heuristic" ? "Heuristic" : v.model}</span>
+    </div>
   );
 }
 
@@ -865,7 +905,15 @@ export function Applicants({ data }: { data: TaskPage }) {
   return (
     <Card>
       <CardHeader
-        title="Applicants"
+        icon={<Users />}
+        title={
+          <span className="flex items-center gap-2">
+            Applicants
+            {applications.length ? (
+              <span className="tabular rounded-full bg-sunken px-1.5 text-[11.5px] leading-[18px] font-medium text-ink-2">{applications.length}</span>
+            ) : null}
+          </span>
+        }
         description="Ranked by Match: distance, rating, proof record and the ask against your budget."
         action={
           applications.length && canDecide ? (
@@ -876,26 +924,30 @@ export function Applicants({ data }: { data: TaskPage }) {
         }
       />
       {applications.length === 0 ? (
-        <div className="px-5 pt-3 pb-5 text-[13px] text-muted">
+        <div className="mx-5 mt-4 mb-5 flex items-center gap-3 rounded-[12px] border border-dashed border-line-strong/80 px-4 py-4 text-[13px] text-muted">
+          <Hourglass className="size-4 flex-none text-faint" strokeWidth={1.9} />
           {task.status === "draft" ? "People can apply once it's funded." : "No one yet. Applications appear here, ranked as they arrive."}
         </div>
       ) : (
         <ul className="mt-3 divide-y divide-line border-t border-line">
           {applications.map((a, i) => {
             const diff = a.askCents - task.fundingCents;
+            const best = i === 0 && a.matchScore !== undefined && canDecide;
             return (
               <li key={a._id} className={cn("px-5 py-4", a.status === "declined" && "opacity-55")}>
                 <div className="grid grid-cols-[40px_minmax(0,1fr)] gap-x-3.5 sm:grid-cols-[40px_minmax(0,1fr)_auto]">
                   <MatchScore score={a.matchScore} />
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      {a.applicant ? <Avatar name={a.applicant.name} color={a.applicant.avatarColor} size={22} /> : null}
+                      {a.applicant ? (
+                        <Avatar name={a.applicant.name} color={a.applicant.avatarColor} size={22} square={a.applicant.kind === "agent"} />
+                      ) : null}
                       {a.applicant ? (
                         <Link href={`/hire/${a.applicant.handle}`} className="text-[14px] font-medium text-ink underline-offset-2 hover:underline">
                           {a.applicant.name}
                         </Link>
                       ) : null}
-                      {i === 0 && a.matchScore !== undefined && canDecide ? <Badge tone="green">Best match</Badge> : null}
+                      {best ? <Badge tone="green">Best match</Badge> : null}
                       {a.applicant?.kind === "agent" ? (
                         <Badge tone="steel">
                           <Bot /> {a.applicant.agent?.house ? "Plex agent" : "AI agent"}
@@ -905,27 +957,38 @@ export function Applicants({ data }: { data: TaskPage }) {
                           <Bot /> Their agent
                         </Badge>
                       ) : null}
-                      {a.status === "accepted" ? <Badge tone="steel"><Check /> Accepted</Badge> : null}
+                      {a.status === "accepted" ? (
+                        <Badge tone="steel">
+                          <Check /> Accepted
+                        </Badge>
+                      ) : null}
                     </div>
                     <div className="mt-1 text-[12.5px] leading-snug text-muted">
                       {a.matchReason ?? <span className="text-faint">Match is ranking…</span>}
                     </div>
-                    {a.message ? <p className="mt-2 text-[13px] leading-relaxed text-ink-2">“{a.message}”</p> : null}
+                    {a.message ? (
+                      <p className="mt-2 rounded-[10px] bg-canvas/70 px-3 py-2 text-[13px] leading-relaxed text-ink-2 ring-1 ring-line/70 ring-inset">“{a.message}”</p>
+                    ) : null}
                     {a.bids?.length ? <BidTrail bids={a.bids} /> : null}
                   </div>
                   <div className="col-span-2 mt-3 flex items-center justify-between gap-3 sm:col-span-1 sm:mt-0 sm:flex-col sm:items-end sm:justify-start">
                     <div className="sm:text-right">
-                      <Amount cents={a.askCents} size="md" />
+                      <Amount cents={a.askCents} size="md" className="text-[16px]" />
                       <div className={cn("text-[11.5px]", diff > 0 ? "text-refunded" : "text-faint")}>
                         {diff === 0 ? "posted price" : diff > 0 ? `+${formatCents(diff)} over budget` : `${formatCents(-diff)} under`}
                       </div>
                     </div>
                     {canDecide && a.status === "pending" ? (
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-1.5 sm:mt-1">
                         <Button variant="ghost" size="sm" onClick={() => run(`no-${a._id}`, () => decide({ applicationId: a._id, accept: false, as }))} disabled={!!busy}>
                           Decline
                         </Button>
-                        <Button size="sm" onClick={() => run(`yes-${a._id}`, () => decide({ applicationId: a._id, accept: true, as }))} disabled={!!busy}>
+                        <Button
+                          variant={best ? "primary" : "secondary"}
+                          size="sm"
+                          onClick={() => run(`yes-${a._id}`, () => decide({ applicationId: a._id, accept: true, as }))}
+                          disabled={!!busy}
+                        >
                           {busy === `yes-${a._id}` ? <Loader2 className="animate-spin" /> : null} Accept
                         </Button>
                       </div>
@@ -986,15 +1049,13 @@ export function ApplyCard({ data }: { data: TaskPage }) {
     );
 
   if (!me) return null;
+  const poster = isPosterPersona(me);
   return (
     <Card>
       <CardHeader
+        icon={<Send />}
         title="Take this task"
-        description={
-          isPosterPersona(me)
-            ? "Switch “Acting as” to a demo worker to apply."
-            : `Applying as ${me.name}. Match ranks you against the others.`
-        }
+        description={poster ? "Switch “Acting as” to a demo worker to apply." : `Applying as ${me.name}. Match ranks you against the others.`}
       />
       <div className="grid gap-3 px-5 pt-4 pb-5">
         <div className="grid gap-3 sm:grid-cols-[140px_minmax(0,1fr)]">
@@ -1010,11 +1071,14 @@ export function ApplyCard({ data }: { data: TaskPage }) {
             <Input id="msg" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="I'm two blocks away and can be there by 3." />
           </div>
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[12.5px] text-muted">Posted at {formatCents(task.fundingCents)}, held by PayPal.</span>
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <span className="flex items-center gap-1.5 text-[12.5px] text-muted">
+            <Lock className="size-3.5 text-steel-500" strokeWidth={1.9} />
+            Posted at {formatCents(task.fundingCents)}, held by PayPal.
+          </span>
           <Button
             onClick={() => run("apply", () => apply({ taskId: task._id, askCents: Math.round(Number(ask) * 100), message, as }))}
-            disabled={!!busy || isPosterPersona(me) || !Number(ask)}
+            disabled={!!busy || poster || !Number(ask)}
           >
             {busy === "apply" ? <Loader2 className="animate-spin" /> : <ArrowRight />} Apply
           </Button>
@@ -1038,37 +1102,71 @@ export function MoneyCard({ data }: { data: TaskPage }) {
   const f = task.funding;
   const order = { unfunded: -1, authorized: 0, captured: 1, released: 2, refunded: -2 }[f.state];
   const refunded = f.state === "refunded";
+  const released = f.state === "released";
+  const held = f.state === "authorized" || f.state === "captured";
   const headline =
     f.state === "unfunded"
       ? "Not funded yet"
       : refunded
         ? f.captureId
-          ? "Refunded"
+          ? "Refunded to you"
           : "Hold voided"
-        : f.state === "released"
+        : released
           ? "Paid out"
           : "Held until proof passes";
+  const note =
+    f.state === "unfunded"
+      ? "Fund it and PayPal authorizes the payout. Nothing is charged until the proof passes."
+      : refunded
+        ? "Nobody was paid. The receipt shows where the money went."
+        : released
+          ? "Captured from the hold and sent through PayPal Payouts."
+          : "PayPal holds it. It pays out only when the work is verified, and goes back if it isn't.";
   return (
     <Card className="overflow-hidden">
-      <div className="h-1 w-full" style={{ background: "var(--metal)" }} aria-hidden />
-      <div className="px-5 pt-4 pb-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className={cn("flex items-center gap-1.5 text-[13px] font-medium", f.state === "released" ? "text-green-700" : refunded ? "text-refunded" : "text-steel-700")}>
-              {f.state === "released" ? <Check className="size-4" strokeWidth={2} /> : refunded ? <RotateCcw className="size-4" strokeWidth={1.9} /> : <Lock className="size-4" strokeWidth={1.9} />}
-              {headline}
-            </div>
-            <div className="mt-2">
-              <Amount cents={task.fundingCents} size="xl" className={cn(refunded && "text-muted line-through decoration-1")} />
-            </div>
+      <div
+        className={cn(
+          "relative px-5 pt-5 pb-4",
+          held && "bg-gradient-to-b from-steel-50 to-surface",
+          released && "bg-gradient-to-b from-green-50/80 to-surface",
+        )}
+      >
+        <div className="absolute inset-x-0 top-0 h-1" style={{ background: released ? "var(--meter-brand)" : "var(--metal)" }} aria-hidden />
+        <div className="flex items-center justify-between gap-3">
+          <div
+            className={cn(
+              "flex items-center gap-1.5 text-[13px] font-medium",
+              released ? "text-green-800" : refunded ? "text-refunded" : f.state === "unfunded" ? "text-muted" : "text-steel-700",
+            )}
+          >
+            {released ? (
+              <Check className="size-4" strokeWidth={2} />
+            ) : refunded ? (
+              <RotateCcw className="size-4" strokeWidth={1.9} />
+            ) : (
+              <Lock className="size-4" strokeWidth={1.9} />
+            )}
+            {headline}
           </div>
+          <FundingBadge funding={f} />
         </div>
-        <ol className="mt-5 grid grid-cols-3 gap-2">
+        <div className="mt-3">
+          <Amount
+            cents={task.fundingCents}
+            size="xl"
+            className={cn(refunded && "text-muted line-through decoration-1", held && "text-steel-900")}
+          />
+        </div>
+        <p className={cn("mt-2 text-[12.5px] leading-relaxed", held ? "text-steel-600" : "text-muted")}>{note}</p>
+        <ol className="mt-4 grid grid-cols-3 gap-2">
           {STEPS.map((s, i) => {
             const done = !refunded && order >= i;
             return (
               <li key={s.key} className="min-w-0">
-                <div className={cn("h-1 rounded-full transition-colors duration-500", done ? (i === 2 ? "bg-green-500" : "bg-steel-400") : "bg-sunken")} />
+                <div
+                  className={cn("h-1.5 rounded-full transition-colors duration-500", done ? "" : "bg-sunken")}
+                  style={done ? { backgroundImage: i === 2 ? "var(--meter-brand)" : "var(--meter-steel)" } : undefined}
+                />
                 <div className={cn("mt-2 text-[12.5px] font-medium", done ? "text-ink" : "text-faint")}>{s.label}</div>
                 <div className="truncate text-[11.5px] text-faint">{s.sub}</div>
               </li>
@@ -1077,22 +1175,23 @@ export function MoneyCard({ data }: { data: TaskPage }) {
         </ol>
       </div>
       {f.orderId ? (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-dashed border-line bg-canvas/60 px-5 py-3">
+        <dl className="grid gap-1 border-t border-dashed border-line bg-canvas/60 px-5 py-3">
           {(
             [
-              ["order", f.orderId],
-              ["authorization", f.authorizationId],
-              ["capture", f.captureId],
+              ["Order", f.orderId],
+              ["Authorization", f.authorizationId],
+              ["Capture", f.captureId],
             ] as const
           )
             .filter(([, v]) => v)
             .map(([k, v]) => (
-              <span key={k} className="min-w-0 truncate text-[11.5px] text-faint">
-                PayPal {k} <span className="font-mono text-muted">{v}</span>
-              </span>
+              <div key={k} className="grid grid-cols-[118px_minmax(0,1fr)] items-baseline gap-2 text-[11.5px]">
+                <dt className="text-faint">PayPal {k.toLowerCase()}</dt>
+                <dd className="truncate font-mono text-muted">{v}</dd>
+              </div>
             ))}
-          {f.via === "autopay" ? <span className="text-[11.5px] text-faint">held by auto-pay (PayPal Vault), no popup</span> : null}
-        </div>
+          {f.via === "autopay" ? <div className="mt-0.5 text-[11.5px] text-faint">Held by auto-pay (PayPal Vault), no popup</div> : null}
+        </dl>
       ) : null}
     </Card>
   );
@@ -1121,7 +1220,7 @@ function RegistrySearch({ task, onPick }: { task: TaskPage["task"]; onPick: (url
   }
 
   return (
-    <div className="rounded-md bg-canvas px-3.5 py-3 ring-1 ring-line ring-inset">
+    <div className="rounded-[12px] bg-surface px-3.5 py-3 shadow-card ring-1 ring-line ring-inset">
       <div className="text-[12.5px] font-medium text-ink">Find a server in the MCP Registry</div>
       <p className="mt-0.5 text-[12px] leading-snug text-faint">Prefer Official servers: a third-party server sees everything the agent sends it, including your token.</p>
       {suggested.length ? (
@@ -1186,54 +1285,67 @@ export function PayPalDeskCard({ data }: { data: TaskPage }) {
   if (task.funding.state === "unfunded" || (role !== "poster" && role !== "assignee")) return null;
   return (
     <Card className="overflow-hidden">
-      <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[13px] font-medium text-ink">
-            <Landmark className="size-4 text-faint" strokeWidth={1.9} /> PayPal desk
-            {c ? c.match ? <Badge tone="green">Matches PayPal</Badge> : <Badge tone="red">Check this</Badge> : null}
-          </div>
-          <p className="mt-0.5 text-[12px] leading-snug text-faint">
-            An agent reads PayPal&apos;s own records with the PayPal Agent Toolkit. Code compares them with the receipts.
-          </p>
-        </div>
-        <Button variant="ghost" size="sm" onClick={() => run("desk", () => check({ taskId: task._id, as }))} disabled={!!busy}>
-          {busy === "desk" ? <Loader2 className="animate-spin" /> : <RefreshCw />} {c ? "Re-check" : "Check"}
-        </Button>
-      </div>
+      <CardHeader
+        icon={<Landmark />}
+        title="PayPal desk"
+        description="An agent reads PayPal's own records. Code compares them with the receipts."
+        action={
+          <Button variant="ghost" size="sm" onClick={() => run("desk", () => check({ taskId: task._id, as }))} disabled={!!busy}>
+            {busy === "desk" ? <Loader2 className="animate-spin" /> : <RefreshCw />} {c ? "Re-check" : "Check"}
+          </Button>
+        }
+      />
       {c ? (
-        <div className="border-t border-line px-5 py-3">
-          <p className="text-[13px] leading-relaxed text-ink-2">{c.summary}</p>
+        <div className="px-5 pt-3 pb-4">
+          <div className="flex items-start gap-2.5">
+            {c.match ? (
+              <Badge tone="green" className="flex-none">
+                <Check /> Matches PayPal
+              </Badge>
+            ) : (
+              <Badge tone="red" className="flex-none">
+                <CircleAlert /> Check this
+              </Badge>
+            )}
+          </div>
+          <p className="mt-2 text-[13px] leading-relaxed text-ink-2">{c.summary}</p>
           {c.facts.length ? (
-            <dl className="mt-3 grid gap-1.5">
+            <dl className="mt-3 divide-y divide-line rounded-[12px] border border-line">
               {c.facts.map((f) => (
-                <div key={f.label} className="grid grid-cols-[92px_minmax(0,1fr)_16px] items-start gap-2 text-[12.5px]">
+                <div key={f.label} className="grid grid-cols-[96px_minmax(0,1fr)_16px] items-start gap-2 px-3 py-2 text-[12.5px]">
                   <dt className="text-faint">{f.label}</dt>
                   <dd className="min-w-0 break-words text-ink-2">{f.value}</dd>
-                  {f.ok === undefined ? <span /> : f.ok ? <Check className="size-3.5 text-green-600" strokeWidth={2.2} /> : <CircleAlert className="size-3.5 text-disputed" strokeWidth={2} />}
+                  {f.ok === undefined ? (
+                    <span />
+                  ) : f.ok ? (
+                    <Check className="mt-px size-3.5 text-green-700" strokeWidth={2.2} />
+                  ) : (
+                    <CircleAlert className="mt-px size-3.5 text-disputed" strokeWidth={2} />
+                  )}
                 </div>
               ))}
             </dl>
           ) : null}
           {c.dispute ? (
-            <div className={cn("mt-3 rounded-md px-3.5 py-3 ring-1 ring-inset", c.dispute.action === "contest" ? "bg-steel-50 ring-steel-200" : "bg-refunded-bg ring-refunded/15")}>
+            <div className={cn("mt-3 rounded-[12px] px-3.5 py-3 ring-1 ring-inset", c.dispute.action === "contest" ? "bg-steel-50 ring-steel-200" : "bg-refunded-bg ring-refunded/15")}>
               <div className="text-[12.5px] font-medium text-ink">
                 Dispute {c.dispute.amount} · {c.dispute.reason} · Plex will {c.dispute.action === "contest" ? "contest it with the proof" : "accept it and refund"}
               </div>
               <p className="mt-1 text-[12.5px] leading-snug text-muted">{c.dispute.why}</p>
             </div>
           ) : null}
-          <div className="mt-3 text-[11.5px] text-faint">
+          <div className="mt-3 text-[11.5px] leading-snug text-faint">
             {c.tools.length ? `Toolkit calls: ${c.tools.join(" → ")} · ` : ""}
             {c.model === "heuristic" ? "No model, code only" : c.model} · {relativeTime(c.at)}
           </div>
         </div>
       ) : (
-        <div className="border-t border-line px-5 py-3 text-[12.5px] text-muted">
+        <div className="px-5 pt-3 pb-4 text-[12.5px] text-muted">
           {busy === "desk" ? "Reading PayPal's records…" : "Runs on its own after money moves, or tap Check."}
         </div>
       )}
       {errorFor("desk") ? (
-        <div className="border-t border-line px-5 py-2">
+        <div className="border-t border-line px-5 pb-3">
           <ErrorLine message={errorFor("desk")} />
         </div>
       ) : null}
