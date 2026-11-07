@@ -4,6 +4,7 @@ import type { Id, TableNames } from "./_generated/dataModel";
 import { advanceReceipt, writeReceipt } from "./lib/receipts";
 import { seedLedgerHistory } from "./lib/ledgerSeed";
 import { seedHireWorld } from "./lib/hireSeed";
+import schema from "./schema";
 
 /**
  * The demo world (docs/Plex-Project-Plan.md §9). All brands, people and the
@@ -885,5 +886,24 @@ export const claimDemo = internalMutation({
     await ctx.db.delete(mine._id);
     await ctx.db.patch(adi._id, { clerkId });
     return `Signed-in user ${handle} now acts as Adi.`;
+  },
+});
+
+/**
+ * Start from an empty world: deletes every row in every table (not just the
+ * seeded ones), so the next sign-in creates a fresh, empty account. Run:
+ * `pnpm --filter @plex/backend exec convex run seed:clear`. `pnpm seed` brings
+ * the demo world back.
+ */
+export const clear = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const counts: Record<string, number> = {};
+    for (const table of Object.keys(schema.tables) as TableNames[]) {
+      const docs = await ctx.db.query(table).collect();
+      for (const doc of docs) await ctx.db.delete(doc._id);
+      if (docs.length) counts[table] = docs.length;
+    }
+    return counts;
   },
 });
