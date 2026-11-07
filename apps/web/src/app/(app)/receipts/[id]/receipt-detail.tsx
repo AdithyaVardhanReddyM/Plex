@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   ArrowUpRight,
-  Bot,
+  Cpu,
   Check,
   ChevronRight,
   Fingerprint,
@@ -321,7 +321,7 @@ function BelongsTo({ receipt }: { receipt: Receipt }) {
           <ContextRow
             icon={
               <IconTile tone="steel" size="md" className="size-[34px]">
-                <Bot />
+                <Cpu />
               </IconTile>
             }
             eyebrow="Agent"

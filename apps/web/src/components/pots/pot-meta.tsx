@@ -27,21 +27,21 @@ const ICONS: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement> & 
 };
 
 /** Pot colors map onto the two brand scales only: green and steel. */
-export const POT_TINT: Record<string, { bar: string; chip: string; meter: "brand" | "steel" }> = {
-  green: { bar: "bg-green-500", chip: "bg-green-50 text-green-700 ring-green-100", meter: "brand" },
-  blue: { bar: "bg-steel-500", chip: "bg-steel-50 text-steel-600 ring-steel-100", meter: "steel" },
-  teal: { bar: "bg-green-400", chip: "bg-green-50 text-green-700 ring-green-100", meter: "brand" },
-  steel: { bar: "bg-steel-400", chip: "bg-steel-50 text-steel-600 ring-steel-100", meter: "steel" },
+export const POT_TINT: Record<string, { bar: string; chip: string; icon: string; meter: "brand" | "steel" }> = {
+  green: { bar: "bg-green-500", chip: "bg-green-50 text-green-700 ring-green-100", icon: "text-green-700", meter: "brand" },
+  blue: { bar: "bg-steel-500", chip: "bg-steel-50 text-steel-600 ring-steel-100", icon: "text-steel-600", meter: "steel" },
+  teal: { bar: "bg-green-400", chip: "bg-green-50 text-green-700 ring-green-100", icon: "text-green-700", meter: "brand" },
+  steel: { bar: "bg-steel-400", chip: "bg-steel-50 text-steel-600 ring-steel-100", icon: "text-steel-600", meter: "steel" },
 };
 
 export function PotIcon({ pot, size = 24, className }: { pot: Pick<Doc<"pots">, "icon" | "color">; size?: number; className?: string }) {
   const Icon = ICONS[pot.icon] ?? PiggyBank;
   return (
     <span
-      className={cn("flex flex-none items-center justify-center ring-1 ring-inset", POT_TINT[pot.color]?.chip, className)}
-      style={{ width: size, height: size, borderRadius: Math.round(size * 0.3) }}
+      className={cn("flex flex-none items-center justify-center", POT_TINT[pot.color]?.icon, className)}
+      style={{ width: size, height: size }}
     >
-      <Icon className={size >= 32 ? "size-4" : "size-3.5"} strokeWidth={1.9} />
+      <Icon style={{ width: Math.round(size * 0.72), height: Math.round(size * 0.72) }} strokeWidth={1.8} />
     </span>
   );
 }

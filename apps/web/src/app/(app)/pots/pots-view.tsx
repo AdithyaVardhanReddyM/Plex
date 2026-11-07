@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { useMemo, useState } from "react";
 import {
-  Bot,
+  Cpu,
   Check,
   ChevronRight,
   CircleAlert,
@@ -481,7 +481,7 @@ function TryIt({ pot, draft, paused, trial }: { pot: Pot; draft: Proposal | null
       <div className="p-5 pt-4">
         <Label htmlFor="try-purchase">A purchase</Label>
         <div className="relative">
-          <Bot className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" strokeWidth={1.9} />
+          <Cpu className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" strokeWidth={1.9} />
           <Input id="try-purchase" value={input} onChange={(e) => setInput(e.target.value)} placeholder={SAMPLE} className="pl-9" />
         </div>
         <div className="mt-3 flex items-center justify-between gap-3">
@@ -577,7 +577,7 @@ function Approvals({ pending, pots }: { pending: Doc<"approvals">[] | undefined;
                 return (
                   <div key={a._id} className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-raised">
                     <div className="flex items-center gap-2 border-b border-line bg-canvas/70 px-4 py-2.5 text-[12px] font-medium text-muted">
-                      <Bot className="size-3.5 flex-none" strokeWidth={2} />
+                      <Cpu className="size-3.5 flex-none" strokeWidth={2} />
                       <span className="truncate">{a.agentLabel} wants to buy</span>
                       <span className="ml-auto flex-none text-faint">{relativeTime(a._creationTime)}</span>
                     </div>

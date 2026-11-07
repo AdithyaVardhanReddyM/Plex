@@ -6,7 +6,7 @@ import { useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
-  Bot,
+  Cpu,
   Camera,
   Check,
   CircleAlert,
@@ -335,7 +335,7 @@ export function ActionPanel({ data }: { data: TaskPage }) {
       return (
         <Panel
           tone="steel"
-          icon={assignee?.kind === "agent" ? <Bot /> : <Clock />}
+          icon={assignee?.kind === "agent" ? <Cpu /> : <Clock />}
           title={isPoster ? (assignee?.kind === "agent" ? `${workerFirst} is working on it` : `Waiting for ${workerFirst}'s proof`) : `${workerFirst} is on it`}
           body={
             isPoster
@@ -524,7 +524,7 @@ export function ActionPanel({ data }: { data: TaskPage }) {
           <div className="rounded-[12px] bg-surface p-3.5 shadow-card ring-1 ring-line ring-inset">
             <div className="flex items-center justify-between gap-3">
               <span className="flex items-center gap-2 text-[12.5px] font-medium text-ink">
-                <Bot className="size-4 text-faint" strokeWidth={1.9} /> Mediator
+                <Cpu className="size-4 text-faint" strokeWidth={1.9} /> Mediator
                 {m ? <span className="font-normal text-faint">· {m.model === "heuristic" ? "heuristic" : m.model}</span> : null}
               </span>
               {m ? (
@@ -589,7 +589,7 @@ function AgentBidding({ data }: { data: TaskPage }) {
     return (
       <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-refunded-bg px-3.5 py-3 ring-1 ring-refunded/15 ring-inset">
         <span className="flex min-w-0 items-start gap-2 text-[12.5px] leading-snug text-ink-2">
-          <Bot className="mt-px size-4 flex-none text-faint" strokeWidth={1.9} />
+          <Cpu className="mt-px size-4 flex-none text-faint" strokeWidth={1.9} />
           <span>
             <span className="font-medium text-ink">No agent on Plex can do this yet.</span> Create one for it: Plex&apos;s builder drafts the skills and tools, you check them, and it bids right away.
           </span>
@@ -602,7 +602,7 @@ function AgentBidding({ data }: { data: TaskPage }) {
   return (
     <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-surface px-3.5 py-3 shadow-card ring-1 ring-line ring-inset">
       <span className="flex min-w-0 items-center gap-2 text-[12.5px] leading-snug text-ink-2">
-        <Bot className="size-4 flex-none text-faint" strokeWidth={1.9} />
+        <Cpu className="size-4 flex-none text-faint" strokeWidth={1.9} />
         {human
           ? "This is digital work, so an AI agent could do it too."
           : fit && !fit.digital
@@ -619,7 +619,7 @@ function AgentBidding({ data }: { data: TaskPage }) {
         onClick={() => run("agents", () => (human ? openToAgents({ taskId: task._id, as }) : invite({ taskId: task._id, as })))}
         disabled={!!busy}
       >
-        {busy === "agents" ? <Loader2 className="animate-spin" /> : <Bot />}
+        {busy === "agents" ? <Loader2 className="animate-spin" /> : <Cpu />}
         {human ? "Open to agents" : agentBids ? "Ask again" : "Ask agents to bid"}
       </Button>
       <ErrorLine message={errorFor("agents")} />
@@ -964,11 +964,11 @@ export function Applicants({ data }: { data: TaskPage }) {
                       {best ? <Badge tone="green">Best match</Badge> : null}
                       {a.applicant?.kind === "agent" ? (
                         <Badge tone="steel">
-                          <Bot /> {a.applicant.agent?.custom ? "Custom agent" : a.applicant.agent?.house ? "Plex agent" : "AI agent"}
+                          <Cpu /> {a.applicant.agent?.custom ? "Custom agent" : a.applicant.agent?.house ? "Plex agent" : "AI agent"}
                         </Badge>
                       ) : a.viaAgent ? (
                         <Badge tone="outline">
-                          <Bot /> Their agent
+                          <Cpu /> Their agent
                         </Badge>
                       ) : null}
                       {a.status === "accepted" ? (

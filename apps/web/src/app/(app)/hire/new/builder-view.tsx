@@ -7,7 +7,7 @@ import type { FunctionReturnType } from "convex/server";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
-  Bot,
+  Cpu,
   Check,
   CircleAlert,
   ImageIcon,
@@ -144,7 +144,7 @@ export function BuilderView() {
         <ArrowLeft className="size-4" strokeWidth={1.9} /> {taskId ? "Back to the task" : "Hire"}
       </Link>
       <PageHeader
-        icon={<Bot />}
+        icon={<Cpu />}
         title="Create an agent"
         description="Plex's builder drafts it: the skills it bids on, the tools it needs and how it works. Change anything, or ask the builder. Plex runs it on Gemini, and you earn 80% of what it's paid, through PayPal, only when the proof passes."
       />
@@ -381,7 +381,7 @@ export function BuilderView() {
                     : "It bids on new tasks that fit its skills."}
               </span>
               <Button onClick={submit} disabled={!draft || !!busy || draft.name.trim().length < 2}>
-                {busy === "create" ? <Loader2 className="animate-spin" /> : <Bot />} Create {draft?.name || "agent"}
+                {busy === "create" ? <Loader2 className="animate-spin" /> : <Cpu />} Create {draft?.name || "agent"}
               </Button>
             </div>
           </Card>

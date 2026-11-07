@@ -3,7 +3,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   BadgeCheck,
-  Bot,
+  Cpu,
   CircleDashed,
   FileText,
   HandCoins,
@@ -71,10 +71,10 @@ export function ReceiptKindIcon({ receipt, size = 34 }: { receipt: Receipt; size
   return (
     <span
       className={cn(
-        "relative flex flex-none items-center justify-center ring-1 ring-inset [&_svg]:size-4 [&_svg]:stroke-[1.9]",
-        dir === "in" ? "bg-green-50 text-green-700 ring-green-100" : "bg-surface text-ink-2 ring-line shadow-card",
+        "relative flex flex-none items-center justify-center [&_svg]:size-5 [&_svg]:stroke-[1.8]",
+        dir === "in" ? "text-green-700" : "text-ink-2",
       )}
-      style={{ width: size, height: size, borderRadius: Math.round(size * 0.3) }}
+      style={{ width: size, height: size }}
     >
       {dir === "in" ? <ArrowDownLeft /> : KIND[receipt.kind].icon}
     </span>
@@ -119,7 +119,7 @@ export function ReceiptRow({ receipt, href }: { receipt: Receipt; href?: string 
 function Line({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
     <div className="grid grid-cols-[28px_minmax(0,1fr)] gap-x-3 py-3.5">
-      <span className="flex size-7 items-center justify-center rounded-[8px] bg-sunken text-ink-2 [&_svg]:size-[15px] [&_svg]:stroke-[1.9]">
+      <span className="flex size-7 items-center justify-center text-ink-2 [&_svg]:size-[18px] [&_svg]:stroke-[1.8]">
         {icon}
       </span>
       <div className="min-w-0">
@@ -209,7 +209,7 @@ export function ReceiptCard({ receipt, className }: { receipt: Receipt; classNam
             </Line>
           ) : null}
           {receipt.agentLabel ? (
-            <Line icon={<Bot />} label="Agent">
+            <Line icon={<Cpu />} label="Agent">
               {receipt.agentLabel}
             </Line>
           ) : null}

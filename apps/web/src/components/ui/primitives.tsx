@@ -56,19 +56,22 @@ export function CardHeader({
 
 // ── Icon tile ────────────────────────────────────────────────────────────────
 
-const tileTones = {
-  neutral: "bg-sunken text-ink-2 ring-line/70",
-  mint: "bg-green-50 text-green-700 ring-green-100",
-  steel: "bg-steel-50 text-steel-600 ring-steel-100",
-  ink: "bg-ink text-green-300 ring-ink",
-  white: "bg-surface text-ink-2 ring-line shadow-card",
-  amber: "bg-refunded-bg text-refunded ring-refunded/15",
-  red: "bg-disputed-bg text-disputed ring-disputed/15",
+const iconTones = {
+  neutral: "text-ink-2",
+  mint: "text-green-700",
+  steel: "text-steel-600",
+  ink: "text-ink",
+  white: "text-ink-2",
+  amber: "text-refunded",
+  red: "text-disputed",
 } as const;
 
-export type TileTone = keyof typeof tileTones;
+export type TileTone = keyof typeof iconTones;
 
-/** A Lucide icon on a soft tile. One shape everywhere: the squircle-ish 30% radius. */
+/**
+ * A Lucide icon in its tone. Icons stand on their own: no tile, circle or chip
+ * behind them. The size keeps the old tile's footprint so layouts stay put.
+ */
 export function IconTile({
   tone = "neutral",
   size = "md",
@@ -81,16 +84,16 @@ export function IconTile({
   children: React.ReactNode;
 }) {
   const sizes = {
-    xs: "size-6 rounded-[7px] [&_svg]:size-3.5",
-    sm: "size-7 rounded-[8px] [&_svg]:size-[15px]",
-    md: "size-9 rounded-[10px] [&_svg]:size-4",
-    lg: "size-11 rounded-[12px] [&_svg]:size-5",
+    xs: "size-6 [&_svg]:size-4",
+    sm: "size-7 [&_svg]:size-[18px]",
+    md: "size-9 [&_svg]:size-5",
+    lg: "size-11 [&_svg]:size-6",
   };
   return (
     <span
       className={cn(
-        "flex flex-none items-center justify-center ring-1 ring-inset [&_svg]:stroke-[1.9]",
-        tileTones[tone],
+        "flex flex-none items-center justify-center [&_svg]:stroke-[1.8]",
+        iconTones[tone],
         sizes[size],
         className,
       )}
@@ -134,32 +137,24 @@ export function Badge({
   );
 }
 
-/** A small status light. `live` pulses, for things that are running now. */
-export function StatusDot({
-  tone = "green",
-  live,
-  className,
-}: {
+/** Retired: status is said in words and color, never with a dot. Renders nothing. */
+export function StatusDot(props: {
   tone?: "green" | "steel" | "amber" | "red" | "faint";
   live?: boolean;
   className?: string;
 }) {
-  const tones = {
-    green: "bg-green-500",
-    steel: "bg-steel-500",
-    amber: "bg-refunded",
-    red: "bg-disputed",
-    faint: "bg-faint",
-  };
-  return (
-    <span
-      className={cn("inline-block size-1.5 flex-none rounded-full", tones[tone], live && "animate-pulse-dot", className)}
-      aria-hidden
-    />
-  );
+  void props;
+  return null;
 }
 
 // ── Avatar ───────────────────────────────────────────────────────────────────
+
+const DICEBEAR_GROUNDS = "c6fce5,cdeee9,e1e9f3,c9e6ff,fff1c9";
+
+/** A person's face: DiceBear's "Dylan" style (CC BY 4.0), the same face every time for the same name. */
+export function faceUrl(seed: string) {
+  return `https://api.dicebear.com/9.x/dylan/svg?seed=${encodeURIComponent(seed || "Plex")}&backgroundColor=${DICEBEAR_GROUNDS}`;
+}
 
 export function Avatar({
   name,
@@ -177,11 +172,13 @@ export function Avatar({
   square?: boolean;
   className?: string;
 }) {
+  // People get a DiceBear face; agents, brands and organizations keep their initials on their color.
+  const image = square ? src : faceUrl(name);
   const style: React.CSSProperties = {
     width: size,
     height: size,
     fontSize: Math.max(10, Math.round(size * 0.38)),
-    background: src ? undefined : color ?? "var(--color-steel-500)",
+    background: image ? undefined : color ?? "var(--color-steel-500)",
     borderRadius: square ? Math.round(size * 0.3) : 9999,
   };
   return (
@@ -194,9 +191,9 @@ export function Avatar({
       style={style}
       aria-hidden
     >
-      {src ? (
+      {image ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" className="size-full object-cover" />
+        <img src={image} alt="" className="size-full object-cover" loading="lazy" />
       ) : (
         <span style={{ textBoxTrim: "trim-both", textBoxEdge: "cap alphabetic" } as React.CSSProperties}>
           {initials(name)}
@@ -442,11 +439,7 @@ export function EmptyState({
       {art ? (
         <div className="mb-4">{art}</div>
       ) : icon ? (
-        <div className="relative mb-4 flex size-14 items-center justify-center">
-          <span className="absolute inset-0 rounded-full border border-dashed border-line-strong/80" />
-          <span className="absolute inset-[7px] rounded-full bg-gradient-to-b from-green-50 to-surface ring-1 ring-inset ring-green-100" />
-          <span className="relative text-green-700 [&_svg]:size-[18px] [&_svg]:stroke-[1.9]">{icon}</span>
-        </div>
+        <div className="mb-3 text-green-700 [&_svg]:size-7 [&_svg]:stroke-[1.6]">{icon}</div>
       ) : null}
       <div className="text-[15px] font-semibold tracking-[-0.01em] text-ink">{title}</div>
       {body ? <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-muted">{body}</p> : null}
@@ -474,7 +467,7 @@ export function PageHeader({
     <div className="flex flex-col gap-5 pb-8 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex min-w-0 items-start gap-4">
         {icon ? (
-          <IconTile tone="ink" size="lg" className="mt-1.5 hidden size-12 rounded-[14px] sm:flex [&_svg]:size-5">
+          <IconTile tone="ink" size="lg" className="mt-2 hidden sm:flex [&_svg]:size-8 [&_svg]:stroke-[1.6]">
             {icon}
           </IconTile>
         ) : null}

@@ -6,7 +6,7 @@ import type { ColDef, GridApi, GridReadyEvent, IRowNode, RowClickedEvent } from 
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  Bot,
+  Cpu,
   CornerDownRight,
   FileText,
   HandCoins,
@@ -122,7 +122,7 @@ function AgentCell({ data }: CellProps) {
   return (
     <div className="flex h-full items-center">
       <span className={cn("inline-flex min-w-0 items-center gap-1.5 text-[12.5px]", agent ? "font-medium text-ink-2" : "text-muted")}>
-        {agent ? <Bot size={14} strokeWidth={1.9} className="flex-none text-steel-500" /> : <User size={14} strokeWidth={1.9} className="flex-none text-faint" />}
+        {agent ? <Cpu size={14} strokeWidth={1.9} className="flex-none text-steel-500" /> : <User size={14} strokeWidth={1.9} className="flex-none text-faint" />}
         <span className="truncate">{agent ?? "You"}</span>
       </span>
     </div>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useMemo, useState } from "react";
-import { ArrowRight, Bot, CircleCheck, Hourglass, Inbox, LayoutGrid, ListChecks, Lock, Plus, UserRound } from "lucide-react";
+import { ArrowRight, Cpu, CircleCheck, Hourglass, Inbox, LayoutGrid, ListChecks, Lock, Plus, UserRound } from "lucide-react";
 import { CATEGORY_LABEL } from "@plex/backend/lib/taskRules";
 import { api } from "@/lib/convex";
 import { buttonVariants } from "@/components/ui/button";
@@ -188,7 +188,7 @@ function Board() {
             items={[
               { value: "any", label: "Anyone" },
               { value: "human", label: "People", icon: <UserRound /> },
-              { value: "agent", label: "Agents", icon: <Bot /> },
+              { value: "agent", label: "Agents", icon: <Cpu /> },
             ]}
           />
           <Segmented

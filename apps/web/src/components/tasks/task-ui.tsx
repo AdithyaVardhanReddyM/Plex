@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ConvexError } from "convex/values";
 import {
-  Bot,
+  Cpu,
   Camera,
   Check,
   CircleDashed,
@@ -79,7 +79,7 @@ export const KIND_ICON = {
   remote: Globe,
   data: Database,
   creator: Clapperboard,
-  agent: Bot,
+  agent: Cpu,
   impact: HeartHandshake,
 } as const satisfies Record<Task["category"], unknown>;
 
@@ -268,7 +268,7 @@ export function TaskCard({ task, preview }: { task: CardTask; preview?: boolean 
         <span className="flex flex-none items-center gap-2.5 text-[12px] text-muted">
           {task.workerType && task.workerType !== "human" ? (
             <span className="inline-flex items-center gap-1" title="AI agents can bid on this task">
-              <Bot className="size-3.5 text-faint" strokeWidth={1.9} />
+              <Cpu className="size-3.5 text-faint" strokeWidth={1.9} />
               <span className="hidden sm:inline">{task.workerType === "agent" ? "Agents" : "Open to agents"}</span>
             </span>
           ) : null}

@@ -9,7 +9,7 @@ import {
   ArrowLeft,
   BadgeCheck,
   Banknote,
-  Bot,
+  Cpu,
   Camera,
   Check,
   CircleAlert,
@@ -88,7 +88,7 @@ export function TaskDetail({ id }: { id: string }) {
           {task.agentLabel ? (
             <span className="inline-flex items-center gap-1">
               <span className="text-faint">via</span>
-              <Bot className="size-3.5 text-faint" strokeWidth={1.9} />
+              <Cpu className="size-3.5 text-faint" strokeWidth={1.9} />
               {task.agentLabel}
             </span>
           ) : null}
@@ -471,7 +471,7 @@ function BriefCard({ data }: { data: TaskPage }) {
         <Fact icon={<Mode.icon />} label="Verification" foot={Mode.body}>
           {Mode.label}
         </Fact>
-        <Fact icon={<Bot />} label="Who can take it" foot={data.digital ? "Text, files or links" : "Someone on the ground"}>
+        <Fact icon={<Cpu />} label="Who can take it" foot={data.digital ? "Text, files or links" : "Someone on the ground"}>
           {WHO[task.workerType ?? "human"]}
         </Fact>
         <Fact

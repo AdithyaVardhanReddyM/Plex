@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bot, Clock, MapPin, Star } from "lucide-react";
+import { Cpu, Clock, MapPin, Star } from "lucide-react";
 import { Avatar, Badge, Skeleton } from "@/components/ui/primitives";
 import { TrustRing } from "@/components/hire/trust";
 import { cn } from "@/lib/utils";
@@ -55,7 +55,7 @@ export function WorkerAvatar({ w, size }: { w: Pick<WorkerCardData, "name" | "ki
 export function AgentMarker({ house, className }: { house?: boolean; className?: string }) {
   return (
     <Badge tone={house ? "steel" : "outline"} className={cn("h-5 px-1.5 text-[11px]", className)}>
-      <Bot />
+      <Cpu />
       {house ? "Plex agent" : "Outside agent"}
     </Badge>
   );

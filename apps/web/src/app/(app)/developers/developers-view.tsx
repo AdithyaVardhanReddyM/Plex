@@ -5,7 +5,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
-  Bot,
+  Cpu,
   ChevronDown,
   CodeXml,
   KeyRound,
@@ -310,7 +310,7 @@ function Keys() {
               onChange={setRole}
               items={[
                 { value: "poster", label: "Poster key", icon: <Wallet /> },
-                { value: "worker", label: "Worker key", icon: <Bot /> },
+                { value: "worker", label: "Worker key", icon: <Cpu /> },
               ]}
             />
           </div>
@@ -407,7 +407,7 @@ function Keys() {
                 </div>
                 <div className={cn(k.revoked && "opacity-55")}>
                   <Badge tone={k.role === "poster" ? "steel" : "green"}>
-                    {k.role === "poster" ? <Wallet /> : <Bot />}
+                    {k.role === "poster" ? <Wallet /> : <Cpu />}
                     {k.role === "poster" ? "Poster" : "Worker"}
                   </Badge>
                 </div>
@@ -565,7 +565,7 @@ function McpCard({ base }: { base: string }) {
   return (
     <Card className="overflow-hidden">
       <CardHeader
-        icon={<Bot />}
+        icon={<Cpu />}
         title="Plex + PayPal for Claude"
         description="Two MCP servers for Claude Desktop."
       />

@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Bot, Lock, ReceiptText, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Cpu, Lock, ReceiptText, ShieldCheck } from "lucide-react";
 import { Card, IconTile, Skeleton, type TileTone } from "@/components/ui/primitives";
 import type { Receipt } from "@/components/receipt/receipt";
 import { cn, formatCents } from "@/lib/utils";
@@ -38,7 +38,7 @@ export function MoneyFlow({
 
   const stages: Stage[] = [
     {
-      icon: <Bot />,
+      icon: <Cpu />,
       tone: "white",
       label: "An agent asks",
       value: String(fromAgents.length),
@@ -76,7 +76,6 @@ export function MoneyFlow({
 
   return (
     <Card className={cn("relative flex flex-col overflow-hidden", className)}>
-      <div className="dot-ground pointer-events-none absolute inset-0 [mask-image:linear-gradient(180deg,transparent,black_55%,transparent)] opacity-60" aria-hidden />
       <div className="relative flex flex-col gap-1 px-6 pt-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="font-display text-[16px] font-bold tracking-[-0.02em] text-ink">How every dollar moved this week</div>
@@ -92,20 +91,13 @@ export function MoneyFlow({
                 className="absolute top-[22px] left-[calc(50%+30px)] hidden h-px w-[calc(100%-60px)] md:block"
                 aria-hidden
               >
-                <div className="h-px w-full bg-[repeating-linear-gradient(90deg,var(--color-line-strong)_0_4px,transparent_4px_8px)]" />
-                <span
-                  className="absolute top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-green-500 shadow-[0_0_0_3px_rgb(13_206_218/0.18)]"
-                  style={{ animation: `flow 2.8s ${i * 0.55}s var(--ease-out-soft) infinite` }}
-                />
+                <div className="h-[1.5px] w-full rounded-full bg-[linear-gradient(90deg,var(--color-line-strong),var(--color-green-300))]" />
               </div>
             ) : null}
             <div className="relative flex-none">
               <IconTile tone={s.tone} size="lg" className={cn("size-11", s.tone === "ink" && "shadow-raised")}>
                 {s.icon}
               </IconTile>
-              <span className="tabular absolute -top-1.5 -right-1.5 flex size-[18px] items-center justify-center rounded-full border border-line bg-surface text-[10px] font-semibold text-muted">
-                {i + 1}
-              </span>
             </div>
             <div className="ml-4 min-w-0 md:mt-3 md:ml-0">
               <div className="text-[12.5px] font-medium text-muted">{s.label}</div>

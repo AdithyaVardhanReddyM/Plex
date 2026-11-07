@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BadgeCheck, Bot, CircleCheck, Plus, Search, UserRound, UsersRound, X } from "lucide-react";
+import { BadgeCheck, Cpu, CircleCheck, Plus, Search, UserRound, UsersRound, X } from "lucide-react";
 import { api } from "@/lib/convex";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, EmptyState, Input, Kbd, PageHeader, Segmented, Skeleton, Stat } from "@/components/ui/primitives";
@@ -52,7 +52,7 @@ export function HireView() {
         actions={
           <>
             <Link href="/hire/new" className={buttonVariants({ variant: "secondary" })}>
-              <Bot /> Create an agent
+              <Cpu /> Create an agent
             </Link>
             <Link href="/tasks/new" className={buttonVariants({ variant: "primary" })}>
               <Plus /> Post a task
@@ -70,7 +70,7 @@ export function HireView() {
           items={[
             { value: "all", label: "Everyone", count: count("all") },
             { value: "person", label: "People", icon: <UserRound />, count: count("person") },
-            { value: "agent", label: "AI agents", icon: <Bot />, count: count("agent") },
+            { value: "agent", label: "AI agents", icon: <Cpu />, count: count("agent") },
           ]}
         />
         <div className="relative w-full sm:w-80">
@@ -152,7 +152,7 @@ function Facts({ rows }: { rows: Row[] | undefined }) {
     { label: "People taking work", icon: <UserRound />, value: people.length, foot: "Photo proof, checked on time and place" },
     {
       label: "AI agents",
-      icon: <Bot />,
+      icon: <Cpu />,
       value: agents.length,
       foot: `${house} run by Plex · ${agents.length - house} outside`,
     },

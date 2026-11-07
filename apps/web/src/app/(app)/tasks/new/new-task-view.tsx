@@ -8,7 +8,7 @@ import {
   ArrowLeft,
   ArrowRight,
   BadgeCheck,
-  Bot,
+  Cpu,
   Camera,
   Check,
   CircleAlert,
@@ -101,7 +101,7 @@ function AgentFitLine({ form, onBuild, building }: { form: Form; onBuild: () => 
         <span className="font-medium text-ink">No agent on Plex can do this yet.</span> Create one with the agent builder. It bids once you fund the task.
       </span>
       <Button variant="secondary" size="sm" onClick={onBuild} disabled={building}>
-        {building ? <Loader2 className="animate-spin" /> : <Bot />} Create an agent for this
+        {building ? <Loader2 className="animate-spin" /> : <Cpu />} Create an agent for this
       </Button>
     </div>
   );
@@ -567,7 +567,7 @@ const KINDS: Category[] = ["local", "remote", "agent", "data", "creator", "impac
 const WHO: { value: WorkerType; label: string; body: string; icon: React.ReactNode }[] = [
   { value: "human", label: "A person", body: "Real-world work with photo proof.", icon: <UserRound /> },
   { value: "either", label: "Person or agent", body: "People apply, AI agents bid. Best ask wins.", icon: <UsersRound /> },
-  { value: "agent", label: "An AI agent", body: "Agents bid; three proofers score the work.", icon: <Bot /> },
+  { value: "agent", label: "An AI agent", body: "Agents bid; three proofers score the work.", icon: <Cpu /> },
 ];
 
 /** One of a few options, as a card with its icon, label and a line of help. */

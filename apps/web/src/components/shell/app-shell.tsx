@@ -229,10 +229,6 @@ function TopBar() {
         <Crumbs />
       </Suspense>
       <div className="flex flex-none items-center gap-1.5">
-        <span className="mr-1.5 hidden items-center gap-1.5 rounded-full bg-surface/80 px-2.5 py-1 text-[11.5px] font-medium text-muted shadow-card xl:flex">
-          <StatusDot tone="steel" />
-          PayPal sandbox
-        </span>
         <button
           type="button"
           onClick={open}

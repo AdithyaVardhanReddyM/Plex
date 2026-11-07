@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { ArrowUpRight, Bot, HandCoins, HeartHandshake, Layers, Lock, ReceiptText, Search } from "lucide-react";
+import { ArrowUpRight, Cpu, HandCoins, HeartHandshake, Layers, Lock, ReceiptText, Search } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { direction } from "@plex/backend/lib/ledgerSpec";
 import { api } from "@/lib/convex";
@@ -19,7 +19,7 @@ import { cn, formatCents } from "@/lib/utils";
 const FILTERS = [
   { key: "all", label: "All", icon: <Layers /> },
   { key: "held", label: "Held", icon: <Lock /> },
-  { key: "agents", label: "By agents", icon: <Bot /> },
+  { key: "agents", label: "By agents", icon: <Cpu /> },
   { key: "tasks", label: "Tasks", icon: <HandCoins /> },
   { key: "giving", label: "Giving", icon: <HeartHandshake /> },
 ] as const;

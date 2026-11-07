@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
-  Bot,
+  Cpu,
   Check,
   Clock,
   ListChecks,
@@ -146,7 +146,7 @@ function WeekCard({
       <div className="@container spotlight flex min-h-[340px] flex-col rounded-xl p-6 sm:p-7">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
-            <Bot className="size-4 text-green-300" strokeWidth={1.9} />
+            <Cpu className="size-4 text-green-300" strokeWidth={1.9} />
             Moved by your agents
           </div>
           <span className="rounded-full bg-white/[0.08] px-2.5 py-1 text-[11.5px] font-medium text-white/60 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]">
@@ -241,7 +241,7 @@ function ApprovalsCard({
         ) : first ? (
           <div className="flex flex-1 flex-col overflow-hidden rounded-[16px] bg-canvas/70 ring-1 ring-inset ring-line">
             <div className="flex items-center gap-2 px-4 pt-3.5 text-[12px] font-medium text-muted">
-              <Bot className="size-3.5" strokeWidth={2} />
+              <Cpu className="size-3.5" strokeWidth={2} />
               <span className="truncate">{first.agentLabel} wants to buy</span>
               <span className="ml-auto flex-none text-faint">{relativeTime(first._creationTime)}</span>
             </div>
