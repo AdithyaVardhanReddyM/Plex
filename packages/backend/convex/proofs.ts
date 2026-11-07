@@ -5,7 +5,9 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireActor } from "./lib/actor";
 import { aiConfigured, generateStructured, HEURISTIC, type AiImage } from "./lib/ai";
-import { canTake, cardMean, consensus, criterionLabel, defaultCriteria, imageSize, isDigitalTask, linksIn, type Scorecard } from "./lib/hire";
+import { canTake, cardMean, consensus, criterionLabel, defaultCriteria, imageSize, isDigitalTask, linkGoesWhereAsked, linksIn, type Scorecard } from "./lib/hire";
+import { githubPr } from "./lib/connect";
+import { unseal } from "./lib/secrets";
 import { advanceReceipt } from "./lib/receipts";
 import { distanceM, formatDistance } from "./lib/taskRules";
 
@@ -202,9 +204,17 @@ export const setProgress = internalMutation({
   handler: async (ctx, { proofId, check, status, detail }) => {
     const p = await ctx.db.get(proofId);
     if (!p) return;
-    await ctx.db.patch(proofId, {
-      progress: (p.progress ?? []).map((row) => (row.check === check ? { check, status, detail } : row)),
-    });
+    const rows = p.progress ?? [];
+    // Checks found along the way (GitHub's record of a pull request) join the list where they happen.
+    const progress = rows.some((row) => row.check === check)
+      ? rows.map((row) => (row.check === check ? { check, status, detail } : row))
+      : (() => {
+          const at = rows.findIndex((row) => row.status === "pending");
+          const next = [...rows];
+          next.splice(at === -1 ? rows.length : at, 0, { check, status, detail });
+          return next;
+        })();
+    await ctx.db.patch(proofId, { progress });
   },
 });
 
@@ -444,6 +454,55 @@ const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…"
 
 // ── Digital work: blind proofers ─────────────────────────────────────────────
 
+/**
+ * A pull request link, checked with GitHub's API (the poster's connected token
+ * when there is one): it exists, it's merged when the task says merge, and its
+ * checks passed when the task says so. Facts from GitHub, decided in code.
+ */
+async function checkGithubPr(
+  ctx: ActionCtx,
+  task: Doc<"tasks">,
+  spec: Doc<"tasks">["proofSpec"][number],
+  pr: { owner: string; repo: string; number: number },
+  put: (check: string, status: CheckStatus, detail: string) => Promise<void>,
+  parts: string[],
+) {
+  const rows = await ctx.runQuery(internal.connections.forTask, { taskId: task._id });
+  const sealed = rows.find((r) => r.kind === "github" && r.tokenEnc)?.tokenEnc;
+  const token = sealed ? await unseal(sealed).catch(() => undefined) : undefined;
+  const headers: Record<string, string> = { Accept: "application/vnd.github+json", "User-Agent": "Plex", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+  const api = `https://api.github.com/repos/${pr.owner}/${pr.repo}`;
+  const res = await fetch(`${api}/pulls/${pr.number}`, { headers });
+  if (!res.ok) {
+    await put(`GitHub: ${pr.owner}/${pr.repo}#${pr.number}`, "fail", `GitHub answered ${res.status}: no such pull request, or no access`);
+    return;
+  }
+  const p = (await res.json()) as { state: string; merged: boolean; merged_at?: string; merged_by?: { login: string }; head: { sha: string }; title: string };
+  const asked = `${task.title} ${task.description} ${spec.label} ${spec.description}`;
+  const facts: string[] = [`PR #${pr.number} “${p.title}” is ${p.merged ? "merged" : p.state}`];
+  if (/merge/i.test(asked)) {
+    await put(
+      "GitHub: merged",
+      p.merged ? "pass" : "fail",
+      p.merged ? `Merged${p.merged_by ? ` by ${p.merged_by.login}` : ""}${p.merged_at ? ` at ${new Date(p.merged_at).toUTCString().slice(5, 22)} UTC` : ""}` : `Not merged (it's ${p.state})`,
+    );
+    if (p.merged) facts.push(`merged by ${p.merged_by?.login ?? "someone"}`);
+  } else await put("GitHub: pull request", "pass", facts[0]!);
+  if (/check|\bci\b|tests? pass|green/i.test(asked)) {
+    const cr = await fetch(`${api}/commits/${p.head.sha}/check-runs?per_page=100`, { headers });
+    const runs = cr.ok ? ((await cr.json()) as { check_runs: { name: string; status: string; conclusion: string | null }[] }).check_runs : [];
+    const bad = runs.filter((r) => r.status !== "completed" || !["success", "neutral", "skipped"].includes(r.conclusion ?? ""));
+    await put(
+      "GitHub: checks passed",
+      !cr.ok ? "unsure" : bad.length ? "fail" : "pass",
+      !cr.ok ? `GitHub answered ${cr.status}` : !runs.length ? "No checks ran on it" : bad.length ? `${bad.length} of ${runs.length} not green: ${bad[0]!.name}` : `${runs.length} of ${runs.length} passed`,
+    );
+    facts.push(cr.ok ? `${runs.length - bad.length} of ${runs.length} checks green` : "checks unreadable");
+  }
+  // The proofers see GitHub's facts, not just the agent's words.
+  parts.push(`GitHub's own record: ${facts.join(", ")}.`);
+}
+
 const scorecardSchema = z.object({
   completeness: z.number().int().min(1).max(5).describe("Every item in the spec is there and finished"),
   accuracy: z.number().int().min(1).max(5).describe("Facts and figures are right, nothing invented"),
@@ -479,8 +538,21 @@ async function checkDigital(
       await put(spec.label, it?.text ? "pass" : "fail", it?.text ? `${it.text.split(/\s+/).length} words delivered` : "Left empty");
       if (it?.text) parts.push(`## ${spec.label}\n${it.text}`);
     } else if (spec.type === "link") {
-      await put(spec.label, it?.url ? "pass" : "fail", it?.url ? `Link given: ${clip(it.url, 48)}` : "No link");
-      if (it?.url) parts.push(`## ${spec.label}\nLink: ${it.url}`);
+      // A link must go where the spec says (a GitHub PR is on github.com), not to a page Plex hosts.
+      const where = it?.url ? linkGoesWhereAsked(spec, it.url) : null;
+      await put(
+        spec.label,
+        !it?.url || (where && !where.ok) ? "fail" : "pass",
+        !it?.url
+          ? "No link"
+          : where && !where.ok
+            ? `Link goes to ${where.host}, not ${where.want.join(" or ")}`
+            : `Link given: ${clip(it.url, 48)}`,
+      );
+      if (it?.url) parts.push(`## ${spec.label}\nLink: ${it.url}${it.text ? `\n${it.text}` : ""}`);
+      // A GitHub pull request: ask GitHub itself, don't trust the description.
+      const pr = it?.url ? githubPr(it.url) : null;
+      if (pr) await checkGithubPr(ctx, task, spec, pr, put, parts);
     } else {
       let detail = "Missing";
       if (it?.storageId) {

@@ -339,6 +339,8 @@ export const write = action({
         "The proof spec lists exactly what evidence proves the work: usually 1-3 photos with what each must show for work in the world, or text, file and link deliverables for digital work.",
         "Digital work (research, writing, data, design) gets text, file or link items only, so an AI agent can do it; then workerType is 'either'.",
         "A logo, icon or other image is a 'file' item labeled for what it is (e.g. 'Logo'), described with its subject, colors and any exact text.",
+        "Proof of online work (a screenshot, a page, a pull request, a merge) is a 'file' or 'link' item, never a 'photo': photos are for work in the world.",
+        "Acting inside someone's account on another service (merging code, posting, sending) is still digital work: an AI agent can do it once the poster connects that account to the task.",
         "Every task also asks the worker to show a challenge code in one photo; do not add it to the spec yourself.",
         "Pick 'one_tap' verification unless the poster asks for automatic or manual review.",
         "Pay fairly: about $15-25 for a short local errand, more for long or skilled work. Respect any budget the poster names.",
@@ -347,9 +349,21 @@ export const write = action({
       prompt: `Current time: ${now.toISOString()}.\nPoster's request: "${trimmed}"`,
       fallback: () => heuristicDraft(trimmed),
     });
-    return { draft: result.object, model: result.model };
+    return { draft: onlineProofAsFiles(result.object), model: result.model };
   },
 });
+
+/** A screenshot of something online is a file, not a photo of the world: that keeps remote work open to agents. */
+function onlineProofAsFiles(d: TaskDraft): TaskDraft {
+  if (d.locationLabel) return d;
+  const proofSpec = d.proofSpec.map((s) =>
+    s.type === "photo" && /screenshot|screen ?shot|screen capture|on github|web ?page|website|online|in the app/i.test(`${s.label} ${s.description}`)
+      ? { ...s, type: "file" as const }
+      : s,
+  );
+  const digital = proofSpec.every((s) => s.type === "text" || s.type === "link" || s.type === "file");
+  return { ...d, proofSpec, workerType: digital && d.workerType === "human" ? "either" : d.workerType };
+}
 
 /** Deterministic Task Writer, used when there is no Gemini key. */
 export function heuristicDraft(brief: string): TaskDraft {

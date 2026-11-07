@@ -481,6 +481,8 @@ export const recordPayout = internalMutation({
     await ctx.db.patch(taskId, { status: "paid", funding: { ...task.funding, state: "released" } });
     // The PayPal desk reads PayPal's records once the payout has settled.
     await ctx.scheduler.runAfter(20_000, internal.paypalDesk.checkInternal, { taskId });
+    // The job is done: any account tokens the poster lent it are deleted.
+    await ctx.scheduler.runAfter(0, internal.connections.wipe, { taskId });
     const receipt = await fundingReceipt(ctx, task);
     if (receipt && receipt.state !== "released")
       await advanceReceipt(ctx, receipt._id, "released", `Released to ${worker?.name ?? "the worker"}`);
@@ -688,6 +690,7 @@ export const recordRefund = internalMutation({
           : "Cancelled by the poster";
     await ctx.db.patch(taskId, { status: "refunded", funding: { ...task.funding, state: "refunded" } });
     if (mode !== "seeded") await ctx.scheduler.runAfter(5_000, internal.paypalDesk.checkInternal, { taskId });
+    await ctx.scheduler.runAfter(0, internal.connections.wipe, { taskId });
     const receipt = await fundingReceipt(ctx, task);
     const label =
       mode === "void"
