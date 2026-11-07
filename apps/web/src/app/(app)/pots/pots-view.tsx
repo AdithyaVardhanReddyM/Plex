@@ -13,6 +13,7 @@ import {
   FlaskConical,
   Pause,
   PencilLine,
+  Trash2,
   PiggyBank,
   Plus,
   ShieldCheck,
@@ -59,7 +60,8 @@ export function PotsView() {
   // Open on the pot with something waiting (the demo's desk chair), else the
   // first, and stay there when that approval is decided.
   if (picked === null && pots?.length && pending !== undefined) setPicked(pending[0]?.potId ?? pots[0]!._id);
-  const selectedId = picked;
+  // Fall back to the first pot when the picked one is deleted.
+  const selectedId = picked && pots?.some((p) => p._id === picked) ? picked : (pots?.[0]?._id ?? null);
   const selected = pots?.find((p) => p._id === selectedId);
   const paused = Boolean(viewer?.agentsPaused);
   const trial = useTrial(selected, proposal);
@@ -398,9 +400,11 @@ function RulesCard({
 }) {
   const propose = useAction(api.pots.proposeRules);
   const save = useMutation(api.pots.saveRules);
+  const removePot = useMutation(api.pots.remove);
+  const [confirming, setConfirming] = useState(false);
   const [editing, setEditing] = useState(!pot.rulesText && pot.rules.length === 0);
   const [text, setText] = useState(pot.rulesText);
-  const [busy, setBusy] = useState<"read" | "save" | null>(null);
+  const [busy, setBusy] = useState<"read" | "save" | "delete" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const read = async () => {
@@ -449,11 +453,56 @@ function RulesCard({
             <div className="text-[13px] leading-snug text-faint">Your words on top. Below, the rules Plex actually enforces.</div>
           </div>
         </div>
-        {editing ? null : (
-          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
-            <PencilLine strokeWidth={1.9} />
-            Edit
-          </Button>
+        {confirming ? (
+          <div className="flex flex-none items-center gap-2">
+            <span className="hidden text-[13px] text-ink-2 sm:inline">Delete {pot.name}? Its receipts stay.</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setConfirming(false);
+                setError(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              disabled={busy !== null}
+              onClick={async () => {
+                setBusy("delete");
+                setError(null);
+                try {
+                  await removePot({ potId: pot._id });
+                } catch (e) {
+                  setError(e instanceof ConvexError ? String(e.data) : "Couldn't delete the pot.");
+                  setConfirming(false);
+                  setBusy(null);
+                }
+              }}
+            >
+              {busy === "delete" ? "Deleting…" : "Delete pot"}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-none items-center gap-1.5">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Delete the ${pot.name} pot`}
+              title="Delete pot"
+              onClick={() => setConfirming(true)}
+            >
+              <Trash2 strokeWidth={1.9} />
+            </Button>
+            {editing ? null : (
+              <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+                <PencilLine strokeWidth={1.9} />
+                Edit
+              </Button>
+            )}
+          </div>
         )}
       </div>
 

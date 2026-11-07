@@ -151,6 +151,35 @@ export const create = mutation({
   },
 });
 
+/**
+ * Delete a pot. History stays: receipts and tasks keep their pot id (every
+ * reader already handles a missing pot), and agent keys tied to it are untied,
+ * so they can't spend until they get a new pot. Refused while an approval is
+ * still waiting on it, so nothing is left undecided.
+ */
+export const remove = mutation({
+  args: { potId: v.id("pots") },
+  handler: async (ctx, { potId }) => {
+    const { user } = await requireViewer(ctx);
+    const pot = await ctx.db.get(potId);
+    if (!pot || pot.ownerId !== user._id) throw new ConvexError("Pot not found.");
+    const waiting = await ctx.db
+      .query("approvals")
+      .withIndex("by_owner_status", (q) => q.eq("ownerId", user._id).eq("status", "pending"))
+      .collect();
+    const mine = waiting.filter((a) => a.potId === potId).length;
+    if (mine)
+      throw new ConvexError(`Decide the ${mine === 1 ? "approval" : `${mine} approvals`} waiting on ${pot.name} first.`);
+    const agents = await ctx.db
+      .query("agents")
+      .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
+      .collect();
+    for (const a of agents) if (a.potId === potId) await ctx.db.patch(a._id, { potId: undefined });
+    await ctx.db.delete(potId);
+    return null;
+  },
+});
+
 /** Save the rules the user confirmed, with their own words beside them. */
 export const saveRules = mutation({
   args: { potId: v.id("pots"), rulesText: v.string(), rules: v.array(policyRule) },
