@@ -20,6 +20,7 @@ import { formatCents } from "./lib/money";
 import { evaluate } from "./lib/policy";
 import { advanceReceipt, writeReceipt } from "./lib/receipts";
 import { fundingCents, isSeedId } from "./lib/taskRules";
+import { isDigitalTask } from "./lib/hire";
 import { errandsPot } from "./tasks";
 
 /**
@@ -84,9 +85,10 @@ async function fundingReceipt(ctx: MutationCtx, task: Doc<"tasks">) {
 
 /** Checks the poster's pot with the policy engine and writes the pending receipt. */
 export const beginFunding = internalMutation({
-  args: { taskId: v.id("tasks"), as: v.optional(v.string()), hour: v.number() },
-  handler: async (ctx, { taskId, as, hour }) => {
-    const { user } = await requireActor(ctx, as);
+  args: { taskId: v.id("tasks"), as: v.optional(v.string()), hour: v.number(), posterId: v.optional(v.id("users")) },
+  handler: async (ctx, { taskId, as, hour, posterId }) => {
+    // posterId: an API key's owner, already authenticated by the HTTP layer.
+    const user = posterId ? (await ctx.db.get(posterId))! : (await requireActor(ctx, as)).user;
     const task = await ctx.db.get(taskId);
     if (!task || task.posterId !== user._id) fail("Only the poster can fund this task.");
     const t = task!;
@@ -160,35 +162,47 @@ export const attachOrder = internalMutation({
 /** Step 1: policy check, receipt, PayPal order (AUTHORIZE). Returns the approval URL. */
 export const startFunding = action({
   args: { taskId: v.id("tasks"), origin: v.string(), hour: v.number(), as: v.optional(v.string()) },
-  handler: async (ctx, { taskId, origin, hour, as }): Promise<{ approveUrl: string; orderId: string }> => {
-    if (!/^https?:\/\/[^/]+$/.test(origin)) fail("Bad return origin");
-    const { amountCents, title, currency } = await ctx.runMutation(internal.taskMoney.beginFunding, {
-      taskId,
-      as,
-      hour,
-    });
-    const pp = paypal();
-    try {
-      const order = await createOrder(pp, {
-        amountCents,
-        currency,
-        intent: "AUTHORIZE",
-        description: `Plex task: ${title}`,
-        referenceId: taskId,
-        returnUrl: `${origin}/tasks/${taskId}?paypal=return`,
-        cancelUrl: `${origin}/tasks/${taskId}?paypal=cancel`,
-        idempotencyKey: `fund-${taskId}-${Date.now()}`,
-      });
-      const approveUrl = approvalUrl(order);
-      if (!approveUrl) fail("PayPal didn't return an approval link.");
-      await ctx.runMutation(internal.taskMoney.attachOrder, { taskId, orderId: order.id });
-      return { approveUrl: approveUrl!, orderId: order.id };
-    } catch (err) {
-      if (err instanceof ConvexError) throw err;
-      throw new ConvexError(paypalMessage(err));
-    }
-  },
+  handler: (ctx, { taskId, origin, hour, as }) => openFundingOrder(ctx, { taskId, origin, hour, as }),
 });
+
+/** The same, for a task an agent posted with its API key. */
+export const startFundingFor = internalAction({
+  args: { taskId: v.id("tasks"), origin: v.string(), hour: v.number(), posterId: v.id("users") },
+  handler: (ctx, { taskId, origin, hour, posterId }) => openFundingOrder(ctx, { taskId, origin, hour, posterId }),
+});
+
+async function openFundingOrder(
+  ctx: ActionCtx,
+  { taskId, origin, hour, as, posterId }: { taskId: Id<"tasks">; origin: string; hour: number; as?: string; posterId?: Id<"users"> },
+): Promise<{ approveUrl: string; orderId: string }> {
+  if (!/^https?:\/\/[^/]+$/.test(origin)) fail("Bad return origin");
+  const { amountCents, title, currency } = await ctx.runMutation(internal.taskMoney.beginFunding, {
+    taskId,
+    as,
+    hour,
+    posterId,
+  });
+  const pp = paypal();
+  try {
+    const order = await createOrder(pp, {
+      amountCents,
+      currency,
+      intent: "AUTHORIZE",
+      description: `Plex task: ${title}`,
+      referenceId: taskId,
+      returnUrl: `${origin}/tasks/${taskId}?paypal=return`,
+      cancelUrl: `${origin}/tasks/${taskId}?paypal=cancel`,
+      idempotencyKey: `fund-${taskId}-${Date.now()}`,
+    });
+    const approveUrl = approvalUrl(order);
+    if (!approveUrl) fail("PayPal didn't return an approval link.");
+    await ctx.runMutation(internal.taskMoney.attachOrder, { taskId, orderId: order.id });
+    return { approveUrl: approveUrl!, orderId: order.id };
+  } catch (err) {
+    if (err instanceof ConvexError) throw err;
+    throw new ConvexError(paypalMessage(err));
+  }
+}
 
 export const markAuthorized = internalMutation({
   args: { taskId: v.id("tasks"), orderId: v.string(), authorizationId: v.string(), payerEmail: v.optional(v.string()) },
@@ -208,6 +222,12 @@ export const markAuthorized = internalMutation({
         `Authorized${payerEmail ? ` from ${payerEmail}` : ""}; you're only charged when proof passes`,
         { paypal: { orderId, authorizationId } },
       );
+    // Open to agents: the house agents start bidding (an invited one bids alone).
+    if ((task.workerType ?? "human") !== "human" && isDigitalTask(task)) {
+      const invited = task.invitedId ? await ctx.db.get(task.invitedId) : null;
+      if (!invited || invited.kind === "agent")
+        await ctx.scheduler.runAfter(2000, internal.houseAgents.runBidding, { taskId, only: invited?._id });
+    }
     return true;
   },
 });
@@ -258,12 +278,14 @@ async function authorizeAndRecord(
 // ── Release: capture + payout ────────────────────────────────────────────────
 
 export const beginRelease = internalMutation({
-  args: { taskId: v.id("tasks"), as: v.optional(v.string()), auto: v.optional(v.boolean()) },
-  handler: async (ctx, { taskId, as, auto }) => {
+  args: { taskId: v.id("tasks"), as: v.optional(v.string()), auto: v.optional(v.boolean()), posterId: v.optional(v.id("users")) },
+  handler: async (ctx, { taskId, as, auto, posterId }) => {
     const task = await ctx.db.get(taskId);
     if (!task) fail("Task not found");
     const t = task!;
-    if (!auto) {
+    if (posterId) {
+      if (t.posterId !== posterId) fail("Only the poster can release payment.");
+    } else if (!auto) {
       const { user } = await requireActor(ctx, as);
       if (t.posterId !== user._id) fail("Only the poster can release payment.");
     }
@@ -430,8 +452,8 @@ type ReleasePlan = {
   title: string;
 };
 
-async function runRelease(ctx: ActionCtx, taskId: Id<"tasks">, as: string | undefined, auto: boolean) {
-  const r: ReleasePlan = await ctx.runMutation(internal.taskMoney.beginRelease, { taskId, as, auto });
+async function runRelease(ctx: ActionCtx, taskId: Id<"tasks">, as: string | undefined, auto: boolean, posterId?: Id<"users">) {
+  const r: ReleasePlan = await ctx.runMutation(internal.taskMoney.beginRelease, { taskId, as, auto, posterId });
   const pp = paypal();
 
   // 1. Capture what we owe (partial capture releases the rest of the hold).
@@ -506,6 +528,14 @@ export const autoRelease = internalAction({
   args: { taskId: v.id("tasks") },
   handler: async (ctx, { taskId }) => {
     await runRelease(ctx, taskId, undefined, true);
+  },
+});
+
+/** The poster's agent approves through the API. */
+export const releaseFor = internalAction({
+  args: { taskId: v.id("tasks"), posterId: v.id("users") },
+  handler: async (ctx, { taskId, posterId }) => {
+    await runRelease(ctx, taskId, undefined, false, posterId);
   },
 });
 

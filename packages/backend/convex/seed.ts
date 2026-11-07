@@ -3,6 +3,7 @@ import { internalMutation, type MutationCtx } from "./_generated/server";
 import type { Id, TableNames } from "./_generated/dataModel";
 import { advanceReceipt, writeReceipt } from "./lib/receipts";
 import { seedLedgerHistory } from "./lib/ledgerSeed";
+import { seedHireWorld } from "./lib/hireSeed";
 import { nextRunAt, type RoutineTrigger } from "./lib/schedule";
 
 /**
@@ -16,6 +17,7 @@ const TABLES: TableNames[] = [
   "proofs", "causes", "donations", "campaigns", "campaignEntries", "splits", "webhookEvents",
   "ledgerAsks", "ledgerWidgets", "ledgerActions",
   "routines", "routineRuns", "asks", "memories", "bills", "subscriptions", "agentActivity", "insights",
+  "reviews",
 ];
 
 const HOUR = 3_600_000;
@@ -858,6 +860,7 @@ export const run = internalMutation({
 
     await seedLedgerHistory(ctx);
     await seedMacWorld(ctx, { adi, now });
+    await seedHireWorld(ctx, { adi, now });
 
     return `Seeded the demo world: Adi, ${donors.length} donors, 6 tasks, ${coffees.length + 14} receipts.`;
   },

@@ -19,7 +19,8 @@ export async function getActor(
   if (!viewer) return null;
   if (!as || !viewer.isGuest || as === viewer.user.handle) return viewer;
   const persona = await userByHandle(ctx, as);
-  if (!persona || !persona.isDemo || persona.kind === "brand") return viewer;
+  // Brands don't take tasks, and agents act on their own (houseAgents, the API).
+  if (!persona || !persona.isDemo || persona.kind === "brand" || persona.kind === "agent") return viewer;
   return { user: persona, isGuest: true };
 }
 
