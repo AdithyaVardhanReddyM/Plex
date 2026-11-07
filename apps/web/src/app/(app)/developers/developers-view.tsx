@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useAction, useMutation, useQuery } from "convex/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bot, Check, Copy, KeyRound, Loader2, ShieldCheck, Wallet } from "lucide-react";
 import { api } from "@/lib/convex";
 import type { Id } from "@/lib/convex";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, CardHeader, EmptyState, Input, Label, PageHeader, Skeleton } from "@/components/ui/primitives";
 import { errorMessage } from "@/components/tasks/task-ui";
-import { cn, relativeTime } from "@/lib/utils";
+import { cn, formatCents, relativeTime } from "@/lib/utils";
 
 /** The Convex HTTP site that serves /api/v1: `.convex.cloud` → `.convex.site`, local 3210 → 3211. */
 function apiBase() {
@@ -28,6 +28,7 @@ export function DevelopersView() {
       />
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="flex min-w-0 flex-col gap-5">
+          <AutoPay />
           <Keys />
           <Reference base={base} />
         </div>
@@ -41,7 +42,7 @@ export function DevelopersView() {
               <li>Spend past its pot&apos;s rules. <span className="text-ink-2">evaluate()</span> runs on every task, the same code the web uses.</li>
               <li>Move money without a receipt. Every hold, capture and payout writes one.</li>
               <li>Pay before proof passes. PayPal holds the money; proofers and the poster decide.</li>
-              <li>Skip the owner. The first PayPal approval of each task is theirs.</li>
+              <li>Go past your auto-pay limits. Over a limit or a pot rule, the owner approves at PayPal instead.</li>
             </ul>
             <p className="mt-3 text-[12px] text-faint">
               Keys are stored as SHA-256 hashes and shown once. The Pause switch stops every key at once. <Link href="/llms.txt" className="underline-offset-2 hover:underline">llms.txt</Link>
@@ -223,7 +224,7 @@ const ENDPOINTS: { method: "GET" | "POST"; path: string; who: string; body?: str
   { method: "GET", path: "/me", who: "Any", does: "The key's agent, its pot, balance and rules" },
   { method: "GET", path: "/tasks?who=agent", who: "Any", does: "Open tasks, with what to deliver and what each pays" },
   { method: "POST", path: "/tasks", who: "Poster", body: '{ "brief": "Compare three standing desks under $400, with sources", "payoutCents": 2000 }', does: "The Task Writer turns the brief into a task; the pot's rules are checked in code" },
-  { method: "POST", path: "/tasks/:id/fund", who: "Poster", does: "PayPal order (AUTHORIZE). Returns the link the owner approves once" },
+  { method: "POST", path: "/tasks/:id/fund", who: "Poster", does: "PayPal holds the payout (AUTHORIZE). With auto-pay on it's held from the saved wallet at once (state: authorized); otherwise returns the link the owner approves" },
   { method: "GET", path: "/tasks/:id", who: "Any", does: "Status, bids, proofer scorecards, receipts with PayPal ids" },
   { method: "POST", path: "/tasks/:id/accept", who: "Poster", body: '{ "applicationId": "…" }', does: "Accept a bid (the best Match if omitted)" },
   { method: "POST", path: "/tasks/:id/approve", who: "Poster", does: "Capture the held money and pay out through PayPal Payouts" },
@@ -264,7 +265,16 @@ function Reference({ base }: { base: string }) {
 
 function McpCard({ base }: { base: string }) {
   const config = JSON.stringify(
-    { mcpServers: { plex: { command: "node", args: ["<path to Plex>/apps/mcp/dist/index.js"], env: { PLEX_API_URL: base, PLEX_API_KEY: "plx_live_…" } } } },
+    {
+      mcpServers: {
+        plex: { command: "node", args: ["<path to Plex>/apps/mcp/dist/index.js"], env: { PLEX_API_URL: base, PLEX_API_KEY: "plx_live_…" } },
+        paypal: {
+          command: "npx",
+          args: ["-y", "@paypal/mcp", "--tools=all"],
+          env: { PAYPAL_ACCESS_TOKEN: "<sandbox token>", PAYPAL_ENVIRONMENT: "SANDBOX" },
+        },
+      },
+    },
     null,
     2,
   );
@@ -272,13 +282,143 @@ function McpCard({ base }: { base: string }) {
     <Card className="overflow-hidden">
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em] text-ink">
-          <Bot className="size-4 text-faint" strokeWidth={1.9} /> Plex for Claude (MCP)
+          <Bot className="size-4 text-faint" strokeWidth={1.9} /> Plex + PayPal for Claude (MCP)
         </div>
         <p className="mt-1 text-[12.5px] leading-snug text-muted">
-          Add this to Claude Desktop&apos;s config. Claude can then post tasks, fund them, accept bids and approve proof, all inside the key&apos;s pot.
+          Add both to Claude Desktop&apos;s config. With Plex, Claude posts tasks, funds them, accepts bids and approves proof inside the key&apos;s pot. With PayPal&apos;s own MCP server it can look up the orders, disputes and invoices behind every receipt.
         </p>
       </div>
       <pre className="overflow-x-auto border-t border-line bg-sunken px-5 py-3 font-mono text-[11.5px] leading-relaxed text-ink-2">{config}</pre>
+      <p className="border-t border-line px-5 py-3 text-[12px] leading-snug text-faint">
+        The PayPal token comes from your sandbox app&apos;s client id and secret (<code className="font-mono">scripts/refresh-paypal-token.sh</code> writes a fresh one).
+      </p>
+    </Card>
+  );
+}
+
+/** Auto-pay: save a PayPal wallet once with PayPal Vault, so tasks are held without a popup. */
+function AutoPay() {
+  const a = useQuery(api.autopay.mine, {});
+  const start = useAction(api.autopay.start);
+  const finish = useAction(api.autopay.finish);
+  const turnOff = useAction(api.autopay.turnOff);
+  const setLimits = useMutation(api.autopay.setLimits);
+  const [busy, setBusy] = useState<string>();
+  const [error, setError] = useState<string>();
+  const [per, setPer] = useState<string>();
+  const [daily, setDaily] = useState<string>();
+
+  async function run(name: string, fn: () => Promise<unknown>) {
+    setBusy(name);
+    setError(undefined);
+    try {
+      await fn();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(undefined);
+    }
+  }
+
+  // Back from PayPal: turn the approved setup token into the saved wallet.
+  const returned = useRef(false);
+  useEffect(() => {
+    if (returned.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const flag = params.get("autopay");
+    if (!flag) return;
+    returned.current = true;
+    window.history.replaceState(null, "", window.location.pathname);
+    if (flag === "return")
+      queueMicrotask(() =>
+        run("finish", async () => {
+          const r = await finish({});
+          if (r.status === "not_approved") throw new Error("PayPal didn't confirm the approval. Try again.");
+        }),
+      );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const active = a?.status === "active";
+  const perValue = per ?? (a ? String(a.limitCents / 100) : "");
+  const dailyValue = daily ?? (a ? String(a.dailyLimitCents / 100) : "");
+
+  return (
+    <Card>
+      <CardHeader
+        title={
+          <span className="flex items-center gap-2">
+            Auto-pay {active ? <Badge tone="green">On</Badge> : <Badge tone="neutral">Off</Badge>}
+          </span>
+        }
+        description="Save your PayPal once with PayPal Vault. Tasks you or your agents post are then held without a checkout popup, and still charged only when the proof passes."
+      />
+      <div className="grid gap-3 px-5 pt-4 pb-5">
+        {a === undefined ? (
+          <Skeleton className="h-10 w-full" />
+        ) : a === null ? (
+          <span className="text-[12.5px] text-muted">Sign in to turn on auto-pay.</span>
+        ) : active ? (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-green-50 px-3.5 py-3 ring-1 ring-green-200 ring-inset">
+              <span className="flex items-center gap-2 text-[13px] text-green-800">
+                <Wallet className="size-4" strokeWidth={1.9} /> Saved PayPal{a.payerEmail ? <>: <span className="font-medium">{a.payerEmail}</span></> : null}
+              </span>
+              <span className="text-[12.5px] text-green-800">
+                {formatCents(a.usedTodayCents)} of {formatCents(a.dailyLimitCents)} held today{a.lastUsedAt ? ` · last used ${relativeTime(a.lastUsedAt)}` : ""}
+              </span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+              <div>
+                <Label htmlFor="ap-per">Up to, per task ($)</Label>
+                <Input id="ap-per" inputMode="decimal" value={perValue} onChange={(e) => setPer(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="ap-daily">Up to, per day ($)</Label>
+                <Input id="ap-daily" inputMode="decimal" value={dailyValue} onChange={(e) => setDaily(e.target.value)} />
+              </div>
+              <Button
+                variant="secondary"
+                disabled={!!busy || (per === undefined && daily === undefined)}
+                onClick={() =>
+                  run("limits", async () => {
+                    await setLimits({ limitCents: Math.round(Number(perValue) * 100), dailyLimitCents: Math.round(Number(dailyValue) * 100) });
+                    setPer(undefined);
+                    setDaily(undefined);
+                  })
+                }
+              >
+                {busy === "limits" ? <Loader2 className="animate-spin" /> : null} Save limits
+              </Button>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-[12.5px] text-muted">Over a limit, or over a pot rule, you approve at PayPal as before.</span>
+              <Button variant="danger" size="sm" disabled={!!busy} onClick={() => run("off", () => turnOff({}))}>
+                {busy === "off" ? <Loader2 className="animate-spin" /> : null} Turn off and remove
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="text-[12.5px] text-muted">
+              {busy === "finish" ? "Saving your PayPal…" : `One approval at PayPal, no charge. Default limits: ${formatCents(a.limitCents)} a task, ${formatCents(a.dailyLimitCents)} a day.`}
+            </span>
+            <Button
+              variant="brand"
+              disabled={!!busy}
+              onClick={() =>
+                run("start", async () => {
+                  const r = await start({ origin: window.location.origin });
+                  window.location.assign(r.approveUrl);
+                })
+              }
+            >
+              {busy ? <Loader2 className="animate-spin" /> : <Wallet />} Turn on with PayPal
+            </Button>
+          </div>
+        )}
+        {error ? <p className="text-[12.5px] text-disputed">{error}</p> : null}
+      </div>
     </Card>
   );
 }

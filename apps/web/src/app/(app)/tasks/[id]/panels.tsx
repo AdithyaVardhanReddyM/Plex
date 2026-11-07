@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import {
   ArrowRight,
@@ -12,6 +12,7 @@ import {
   CircleAlert,
   Clock,
   Hourglass,
+  Landmark,
   Loader2,
   Lock,
   MessageSquareQuote,
@@ -22,13 +23,14 @@ import {
   Star,
   Upload,
   Users,
+  Wand2,
 } from "lucide-react";
 import { api } from "@/lib/convex";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Avatar, Badge, Card, CardHeader, Input, Label, Textarea } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
 import { isPosterPersona, useAs } from "@/components/tasks/persona";
-import { useFund } from "@/components/tasks/use-fund";
+import { useAutoPay, useFund } from "@/components/tasks/use-fund";
 import { useRun } from "@/components/tasks/use-run";
 import {
   CheckList,
@@ -97,6 +99,7 @@ export function ActionPanel({ data }: { data: TaskPage }) {
   const reject = useMutation(api.proofs.reject);
   const contest = useMutation(api.proofs.contest);
   const { fund, busy: funding, error: fundError } = useFund();
+  const autoPay = useAutoPay(data.task.fundingCents, data.policy?.outcome);
   const { run, busy, errorFor } = useRun();
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
@@ -120,7 +123,11 @@ export function ActionPanel({ data }: { data: TaskPage }) {
           tone="steel"
           icon={<Lock />}
           title="Fund it to open the task"
-          body="PayPal authorizes the payout now and Plex holds it. You're charged only when you approve the proof."
+          body={
+            autoPay.on
+              ? `Auto-pay holds the payout from your saved PayPal${autoPay.payerEmail ? ` (${autoPay.payerEmail})` : ""}, no popup. You're charged only when the proof passes.`
+              : "PayPal authorizes the payout now and Plex holds it. You're charged only when you approve the proof."
+          }
         >
           <PolicyLine pot={data.policy?.potName} outcome={data.policy?.outcome} ruleText={data.policy?.ruleText} />
           <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -130,7 +137,11 @@ export function ActionPanel({ data }: { data: TaskPage }) {
               disabled={funding || data.policy?.outcome === "deny"}
             >
               {funding ? <Loader2 className="animate-spin" /> : null}
-              {funding ? "Opening PayPal…" : <>Fund <Amount cents={task.fundingCents} size="md" className="text-white" /> with PayPal</>}
+              {funding
+                ? autoPay.on ? "Holding with auto-pay…" : "Opening PayPal…"
+                : autoPay.on
+                  ? <>Hold <Amount cents={task.fundingCents} size="md" className="text-white" /> with auto-pay</>
+                  : <>Fund <Amount cents={task.fundingCents} size="md" className="text-white" /> with PayPal</>}
             </Button>
             <Button variant="ghost" onClick={() => run("cancel", () => cancelDraft({ id: task._id, as }))} disabled={!!busy}>
               Delete draft
@@ -443,6 +454,23 @@ function AgentBidding({ data }: { data: TaskPage }) {
   const { task } = data;
   const human = (task.workerType ?? "human") === "human";
   const agentBids = data.applications.filter((a) => a.applicant?.kind === "agent").length;
+  const fit = useQuery(api.agentBuilder.fit, { taskId: task._id });
+  const names = fit?.fits.map((f) => f.name) ?? [];
+  // Nobody on Plex can do it: offer to create an agent for it.
+  if (!human && !agentBids && fit && fit.digital && !names.length)
+    return (
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md bg-refunded-bg px-3.5 py-3 ring-1 ring-refunded/15 ring-inset">
+        <span className="flex min-w-0 items-start gap-2 text-[12.5px] leading-snug text-ink-2">
+          <Bot className="mt-px size-4 flex-none text-faint" strokeWidth={1.9} />
+          <span>
+            <span className="font-medium text-ink">No agent on Plex can do this yet.</span> Create one for it: Plex&apos;s builder drafts the skills and tools, you check them, and it bids right away.
+          </span>
+        </span>
+        <Link href={`/hire/new?task=${task._id}`} className={buttonVariants({ variant: "brand", size: "sm" })}>
+          <Wand2 /> Create an agent for this
+        </Link>
+      </div>
+    );
   return (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md bg-surface px-3.5 py-3 ring-1 ring-line ring-inset">
       <span className="flex min-w-0 items-center gap-2 text-[12.5px] leading-snug text-ink-2">
@@ -451,7 +479,9 @@ function AgentBidding({ data }: { data: TaskPage }) {
           ? "This is digital work, so an AI agent could do it too."
           : agentBids
             ? `${agentBids} agent${agentBids > 1 ? "s" : ""} bid. Prices stay between each agent's floor and what you hold.`
-            : "Scout, Quill and Tally bid when it fits their specialties."}
+            : names.length
+              ? `${names.slice(0, 3).join(", ")} can do this and bid when asked.`
+              : "Agents bid when it fits their skills."}
       </span>
       <Button
         variant="secondary"
@@ -919,6 +949,75 @@ export function MoneyCard({ data }: { data: TaskPage }) {
                 PayPal {k} <span className="font-mono text-muted">{v}</span>
               </span>
             ))}
+          {f.via === "autopay" ? <span className="text-[11.5px] text-faint">held by auto-pay (PayPal Vault), no popup</span> : null}
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+/**
+ * The PayPal desk: an agent with the PayPal Agent Toolkit reads PayPal's own
+ * records for this task; code compares them with the receipts.
+ */
+export function PayPalDeskCard({ data }: { data: TaskPage }) {
+  const as = useAs();
+  const check = useAction(api.paypalDesk.check);
+  const { run, busy, errorFor } = useRun();
+  const { task, role } = data;
+  const c = task.paypalCheck;
+  if (task.funding.state === "unfunded" || (role !== "poster" && role !== "assignee")) return null;
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-[13px] font-medium text-ink">
+            <Landmark className="size-4 text-faint" strokeWidth={1.9} /> PayPal desk
+            {c ? c.match ? <Badge tone="green">Matches PayPal</Badge> : <Badge tone="red">Check this</Badge> : null}
+          </div>
+          <p className="mt-0.5 text-[12px] leading-snug text-faint">
+            An agent reads PayPal&apos;s own records with the PayPal Agent Toolkit. Code compares them with the receipts.
+          </p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => run("desk", () => check({ taskId: task._id, as }))} disabled={!!busy}>
+          {busy === "desk" ? <Loader2 className="animate-spin" /> : <RefreshCw />} {c ? "Re-check" : "Check"}
+        </Button>
+      </div>
+      {c ? (
+        <div className="border-t border-line px-5 py-3">
+          <p className="text-[13px] leading-relaxed text-ink-2">{c.summary}</p>
+          {c.facts.length ? (
+            <dl className="mt-3 grid gap-1.5">
+              {c.facts.map((f) => (
+                <div key={f.label} className="grid grid-cols-[92px_minmax(0,1fr)_16px] items-start gap-2 text-[12.5px]">
+                  <dt className="text-faint">{f.label}</dt>
+                  <dd className="min-w-0 break-words text-ink-2">{f.value}</dd>
+                  {f.ok === undefined ? <span /> : f.ok ? <Check className="size-3.5 text-green-600" strokeWidth={2.2} /> : <CircleAlert className="size-3.5 text-disputed" strokeWidth={2} />}
+                </div>
+              ))}
+            </dl>
+          ) : null}
+          {c.dispute ? (
+            <div className={cn("mt-3 rounded-md px-3.5 py-3 ring-1 ring-inset", c.dispute.action === "contest" ? "bg-steel-50 ring-steel-200" : "bg-refunded-bg ring-refunded/15")}>
+              <div className="text-[12.5px] font-medium text-ink">
+                Dispute {c.dispute.amount} · {c.dispute.reason} · Plex will {c.dispute.action === "contest" ? "contest it with the proof" : "accept it and refund"}
+              </div>
+              <p className="mt-1 text-[12.5px] leading-snug text-muted">{c.dispute.why}</p>
+            </div>
+          ) : null}
+          <div className="mt-3 text-[11.5px] text-faint">
+            {c.tools.length ? `Toolkit calls: ${c.tools.join(" → ")} · ` : ""}
+            {c.model === "heuristic" ? "No model, code only" : c.model} · {relativeTime(c.at)}
+          </div>
+        </div>
+      ) : (
+        <div className="border-t border-line px-5 py-3 text-[12.5px] text-muted">
+          {busy === "desk" ? "Reading PayPal's records…" : "Runs on its own after money moves, or tap Check."}
+        </div>
+      )}
+      {errorFor("desk") ? (
+        <div className="border-t border-line px-5 py-2">
+          <ErrorLine message={errorFor("desk")} />
         </div>
       ) : null}
     </Card>

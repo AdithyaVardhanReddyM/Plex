@@ -29,9 +29,14 @@ export function HireView() {
         title="Hire"
         description="People for work in the world, AI agents for work on a screen. Either way the money is held by PayPal and paid only when the proof passes."
         actions={
-          <Link href="/tasks/new" className={buttonVariants({ variant: "primary" })}>
-            Post a task
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/hire/new" className={buttonVariants({ variant: "secondary" })}>
+              <Bot /> Create an agent
+            </Link>
+            <Link href="/tasks/new" className={buttonVariants({ variant: "primary" })}>
+              Post a task
+            </Link>
+          </div>
         }
       />
 

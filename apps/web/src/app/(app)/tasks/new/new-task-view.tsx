@@ -32,7 +32,7 @@ import { Avatar, Badge, Card, Input, Label, PageHeader, Textarea } from "@/compo
 import { Amount } from "@/components/ui/money";
 import { PersonaSwitch, useAs } from "@/components/tasks/persona";
 import { PolicyLine, SpecIcon, TaskCard, errorMessage, type CardTask } from "@/components/tasks/task-ui";
-import { useFund } from "@/components/tasks/use-fund";
+import { useAutoPay, useFund } from "@/components/tasks/use-fund";
 import { cn } from "@/lib/utils";
 
 const HOUR = 3_600_000;
@@ -67,6 +67,31 @@ interface Form {
 }
 
 const REMOTE_KINDS: Category[] = ["remote", "data", "creator", "agent"];
+
+/** Can any agent on Plex do this? If not, the poster creates one after funding. */
+function AgentFitLine({ form }: { form: Form }) {
+  const fit = useQuery(api.agentBuilder.fit, {
+    draft: {
+      title: form.title,
+      description: form.description,
+      tags: form.tags,
+      category: form.category,
+      proofSpec: form.proofSpec.map((s) => ({ label: s.label, description: s.description, type: s.type })),
+      remote: true,
+    },
+  });
+  if (!fit) return null;
+  const names = fit.fits.map((f) => f.name);
+  return names.length ? (
+    <p className="mt-1.5 flex items-center gap-1.5 text-[12.5px] text-green-700">
+      <Check className="size-3.5" strokeWidth={2.2} /> {names.slice(0, 3).join(", ")} can do this. They bid once it&apos;s funded.
+    </p>
+  ) : (
+    <p className="mt-1.5 text-[12.5px] leading-snug text-refunded">
+      No agent on Plex can do this yet. Fund it, and you can create one for it in a minute with the agent builder.
+    </p>
+  );
+}
 
 function toLocalInput(ms: number) {
   const d = new Date(ms);
@@ -126,6 +151,7 @@ export function NewTaskView() {
     api.pots.check,
     errands && payoutCents > 0 ? { potId: errands._id, amountCents: payoutCents, category: "Errands", hour } : "skip",
   );
+  const autoPay = useAutoPay(payoutCents, policy?.outcome);
 
   async function runWriter(text = brief) {
     if (text.trim().length < 8) {
@@ -178,8 +204,9 @@ export function NewTaskView() {
         invitedHandle: invited ? invitedHandle : undefined,
         autoHire: digitalForm(form) && form.workerType !== "human" && form.autoHire,
       });
-      if (andFund) await fund(id);
-      else router.push(`/tasks/${id}`);
+      if (andFund) {
+        if (await fund(id)) router.push(`/tasks/${id}`);
+      } else router.push(`/tasks/${id}`);
     } catch (err) {
       setError(errorMessage(err));
       setSaving(null);
@@ -285,7 +312,9 @@ export function NewTaskView() {
                     <Amount cents={payoutCents} size="lg" />
                   </div>
                   <p className="mt-2 text-[12.5px] leading-relaxed text-muted">
-                    PayPal authorizes it now. You&apos;re charged only when you approve the proof; cancel and the hold is voided.
+                    {autoPay.on
+                      ? <>Auto-pay holds it from your saved PayPal{autoPay.payerEmail ? <> ({autoPay.payerEmail})</> : null}, no popup. You&apos;re charged only when the proof passes; cancel and the hold is voided.</>
+                      : <>PayPal authorizes it now. You&apos;re charged only when you approve the proof; cancel and the hold is voided.</>}
                   </p>
                   <PolicyLine
                     pot={errands?.name}
@@ -301,7 +330,11 @@ export function NewTaskView() {
                     disabled={!!saving || funding || payoutCents < 100 || policy?.outcome === "deny"}
                   >
                     {saving === "fund" || funding ? <Loader2 className="animate-spin" /> : null}
-                    {saving === "fund" || funding ? "Opening PayPal…" : <>Fund <Amount cents={payoutCents} size="md" className="text-white" /> with PayPal</>}
+                    {saving === "fund" || funding
+                      ? autoPay.on ? "Holding with auto-pay…" : "Opening PayPal…"
+                      : autoPay.on
+                        ? <>Hold <Amount cents={payoutCents} size="md" className="text-white" /> with auto-pay</>
+                        : <>Fund <Amount cents={payoutCents} size="md" className="text-white" /> with PayPal</>}
                   </Button>
                   <Button variant="ghost" onClick={() => save(false)} disabled={!!saving}>
                     Save as draft
@@ -551,6 +584,8 @@ function Editor({ form, set }: { form: Form; set: <K extends keyof Form>(k: K, v
             <p className="mt-1.5 text-[12.5px] text-muted">
               Agents can take work delivered as text, files or links with no place to be. This one needs a person.
             </p>
+          ) : form.workerType !== "human" ? (
+            <AgentFitLine form={form} />
           ) : null}
         </div>
 
