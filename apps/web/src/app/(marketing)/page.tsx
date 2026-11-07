@@ -90,7 +90,7 @@ export default function Landing() {
           <SectionHead
             eyebrow="Four surfaces, one ledger"
             title="Spend, hire, give, and see where it all went."
-            body="Every surface writes to the same receipts, so a coffee your agent bought and a cleanup shift you funded read the same way."
+            body="Every surface writes to the same receipts, so an errand your agent paid for and a cleanup shift you funded read the same way."
           />
           <div className="mt-10">
             <Bento />

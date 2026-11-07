@@ -9,7 +9,7 @@ import { LedgerPicture, TasksPicture } from "./bento-pictures";
  *
  * | Tile         | Span | Kind      | The one thing                               |
  * | Tasks        | 2/3  | Hero UI   | Proof checks pass, the held $12 is paid out |
- * | Plex for Mac | 1/3  | Statement | Your words become a rule the code enforces  |
+ * | Pots         | 1/3  | Statement | Your words become a rule the code enforces  |
  * | Causes       | 1/3  | Stat      | $45 pays one cleanup shift, on proof        |
  * | Ledger       | 2/3  | Diagram   | Where the month went, pot by pot            |
  *
@@ -29,8 +29,8 @@ export function Bento() {
           <TasksPicture />
         </Picture>
       </Tile>
-      <Tile title="Plex for Mac." body="A voice agent in your notch that shops and pays, inside limits you write in plain English.">
-        <MacPicture />
+      <Tile title="Pots and limits." body="Write what your agents may spend in plain English, pot by pot. Over a limit, they ask you first.">
+        <RulePicture />
       </Tile>
       <Tile title="Plex Causes." body="Fund a task, not a black hole. Donations pay local people for work they prove.">
         <CausesPicture />
@@ -76,9 +76,9 @@ function Picture({ children }: { children: React.ReactNode }) {
   return useHydrated() ? <>{children}</> : <div className="h-[260px] bg-canvas" />;
 }
 
-// ── Plex for Mac: your words become a rule ──────────────────────────────────
+// ── Pots: your words become a rule ──────────────────────────────────────────
 
-function MacPicture() {
+function RulePicture() {
   return (
     <div className="flex flex-1 flex-col justify-end px-6 pb-6">
       <blockquote className="text-[22px] font-medium leading-snug tracking-[-0.015em] text-ink">

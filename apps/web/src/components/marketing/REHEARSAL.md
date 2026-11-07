@@ -8,23 +8,29 @@ vendored in `stage/kit/` (lint-ignored, unedited).
 Gold: `payout-flow` (cursorless story, a panel that slides aside as a
 satellite arrives, a connector, a note that lands). Kept its stage size
 (640 × 420), 40px gutter, timing curves, the slide-aside and the staggered
-satellite. Changed the content to Plex: the Plex for Mac panel (Adi's words,
-three steps) and a Receipt card with the foil edge, in Plex's tokens.
+satellite. Content (redone 7 Nov 2026, when Plex for Mac was removed): an
+agent run, Claude via Plex MCP, and a Receipt card with the foil edge, in
+Plex's tokens.
 
 Beats, played once as it scrolls into view (about 12s), with Replay:
 
-1. Adi's request is on screen from the first frame.
-2. Found the usual order at Kettle Corner, $18.40.
-3. Checking the Food pot, then "Food: up to $40 a day" and Allowed; the
-   gauge fills from $13 to $31.40 of $40.
-4. Paying with PayPal. The panel slides aside and the Receipt arrives
+1. Adi's request to the agent is on screen from the first frame.
+2. Posted a task: menu and storefront photos, $18.
+3. Checking the Errands pot, then "Errands: $50 per task" and Allowed; the
+   gauge fills from $63 to $81 of $200 this month.
+4. Holding with PayPal. The panel slides aside and the Receipt arrives
    (Pending, Authorizing).
-5. Payoff: Paid. Both sides settle together: the step ticks, the Receipt
-   turns Paid with the capture id, the connector draws, and "Filed to your
-   Ledger" lands. That frame is the poster (reduced motion, thumbnails).
+5. Payoff: Held. Both sides settle together: the step ticks, the Receipt
+   turns Held (steel, Plex's color for money waiting on proof) with the
+   authorization id, the steel connector draws, and "Paid out only when the
+   proof passes" lands. That frame is the poster (reduced motion, thumbnails).
 
-Compact (below 600px): 358 × 640, the Receipt lands under the run with a
-vertical connector; type stays at design size.
+The story stops at the hold on purpose: the bento's Tasks tile shows the
+release (proof passes, payout), so the two don't repeat each other.
+
+Compact (below 600px): 358 × 664, the Receipt lands under the run with a
+vertical connector; type stays at design size. (Grew from 640 when the Why
+line wrapped to two lines and pushed the note past the stage.)
 
 ## Bento: `bento.tsx`, `bento-pictures.tsx`
 
@@ -33,7 +39,7 @@ Planned with `references/bento.md`:
 | Tile | Span | Kind | The one thing |
 |---|---|---|---|
 | Plex Tasks | 2/3 | Hero UI (one component) | Proof checks pass; the payout card straddles the task |
-| Plex for Mac | 1/3 | Statement | "Never buy subscriptions without asking." becomes `block_category` |
+| Pots and limits | 1/3 | Statement | "Never buy subscriptions without asking." becomes `block_category` |
 | Plex Causes | 1/3 | Stat | $45 pays one cleanup shift, on proof |
 | Plex Ledger | 2/3 | Diagram | Spent by pot, under Adi's question |
 
@@ -43,6 +49,12 @@ Stages at the tile's real width (748; `fill` only if a tile is wider) with a
 358 compact design.
 
 ## Gate
+
+7 Nov 2026 redo, in the playground: hero `--states --gate` at 1280 and 390,
+the 14-second timeline `--gate`, and the poster `--reduced --still --gate` at
+both widths all end `rehearsal passed`; bento `--still --gate` at 1280 and
+390 passed (390 notes a 1.09 scale from the playground slot, not a gate line).
+Checked by eye on the real page at the pane's width. Earlier rounds:
 
 Filmed in the Stageshow playground from the same code (`examples/plex-hero`
 and `examples/plex-bento`, copied from this folder by a sync script with only
@@ -93,5 +105,5 @@ under the hero; it plays the 12-second story from the start each time.
 
 - Real-device touch and Safari; frames were Chromium only.
 - Live frame pacing on a slow machine (the virtual clock proves geometry).
-- The Mac and Causes tiles are page type, not stages, so film does not
+- The Pots and Causes tiles are page type, not stages, so film does not
   judge them; they were checked by eye at 1440 and 390.

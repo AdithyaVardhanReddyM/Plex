@@ -26,7 +26,7 @@ export function TasksPicture() {
           <section className="pb-task">
             <div className="pb-task__head">
               <div className="pb-task__title">Photograph the menus of 3 taquerias on 24th St</div>
-              <div className="pb-task__meta">Posted by Plex for Mac · Mission, SF</div>
+              <div className="pb-task__meta">Posted by Adi’s agent · Mission, SF</div>
             </div>
             <ul className="pb-checks">
               {CHECKS.map((c) => (

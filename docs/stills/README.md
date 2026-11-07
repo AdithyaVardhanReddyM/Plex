@@ -4,7 +4,7 @@
 
 | File | What it shows |
 |---|---|
-| `landing-hero.png` | The landing hero's poster frame: Plex for Mac buys within the Food pot, and the Receipt lands |
+| `landing-hero.png` | The landing hero's poster frame: Claude, over Plex MCP, hires someone inside the Errands rule, and the held Receipt lands |
 | `bento-tasks.png`, `bento-ledger.png` | Two landing bento pictures |
 | `app-home.png` | Home: what agents moved, what's held, an approval waiting |
 | `app-tasks.png` | The Tasks board |

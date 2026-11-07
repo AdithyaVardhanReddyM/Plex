@@ -12,39 +12,40 @@ import { Connector } from './stage/kit/motion/Connector'
 import { States } from './stage/kit/motion/States'
 import { useHydrated } from '@/components/client-only'
 import { useState } from 'react'
-import { Bot, RotateCcw, ShieldCheck, ShoppingBag } from 'lucide-react'
+import { Bot, ClipboardCheck, RotateCcw, ShieldCheck } from 'lucide-react'
 import './hero-demo.css'
 
 // Plex's landing hero (built and filmed in the Stageshow playground as
-// examples/plex-hero; see REHEARSAL.md beside this file): an agent pays inside a limit, and the payment comes
-// with a Receipt. Cursorless, played once as it scrolls into view (after
+// examples/plex-hero; see REHEARSAL.md beside this file): an agent hires
+// someone inside a limit, PayPal holds the money, and the hold comes with a
+// Receipt. Cursorless, played once as it scrolls into view (after
 // payout-flow): the agent run works through three steps, then slides aside
 // as the Receipt arrives carrying the user's words, the rule and PayPal's id.
 
-type S = { step: number; paid: boolean }
-const START: S = { step: 0, paid: false }
-const POSTER: S = { step: 7, paid: true }
+type S = { step: number; held: boolean }
+const START: S = { step: 0, held: false }
+const POSTER: S = { step: 7, held: true }
 
-const WHY = 'Reorder the team’s usual from Kettle Corner.'
+const WHY = 'Find someone to photograph the menu at Kettle Corner today.'
 
 const script = async (a: Act<S>) => {
   await a.wait(700)
   a.mark('found')
-  a.put({ step: 1 }) // the order is found
+  a.put({ step: 1 }) // the task is posted
   await a.wait(1300)
   a.mark('rule')
-  a.put({ step: 2 }) // checking the Food rule
+  a.put({ step: 2 }) // checking the Errands rule
   await a.wait(1100)
   a.put({ step: 3 }) // inside the limit: allowed
   await a.wait(1300)
   a.mark('pay')
-  a.put({ step: 4 }) // paying with PayPal
+  a.put({ step: 4 }) // holding with PayPal
   await a.wait(900)
   a.mark('receipt')
   a.put({ step: 5 }) // the run slides aside, the Receipt arrives
   await a.wait(1500)
-  a.mark('paid')
-  a.put({ paid: true, step: 6 }) // captured: both sides settle, the line draws
+  a.mark('held')
+  a.put({ held: true, step: 6 }) // authorized: both sides settle, the line draws
   await a.wait(1400)
   a.put({ step: 7 }) // the note lands
 }
@@ -54,7 +55,7 @@ export function HeroDemo() {
     <Stage<S>
       width={640}
       height={420}
-      compact={{ below: 600, width: 358, height: 640 }}
+      compact={{ below: 600, width: 358, height: 664 }}
       initial={START}
       poster={POSTER}
       play="once"
@@ -69,15 +70,16 @@ export function HeroDemo() {
           <>
             <div className="ph-wash" />
 
-            {/* Plex for Mac lives in the notch: its panel, not a full window */}
+            {/* The agent's run, as Plex sees it: an agent over MCP, not a full window */}
             <section className="ph-run" data-aside={s.step >= 5 || undefined}>
               <div className="ph-run__head">
                 <span className="ph-run__icon">
                   <Bot size={14} strokeWidth={1.9} />
                 </span>
-                <span className="ph-run__name">Plex for Mac</span>
-                <span className="ph-run__status" data-done={s.paid || undefined}>
-                  <States align="end" value={s.paid ? 'done' : 'working'} states={{ working: 'Working', done: 'Done' }} />
+                <span className="ph-run__name">Claude</span>
+                <span className="ph-run__via">via Plex MCP</span>
+                <span className="ph-run__status" data-done={s.held || undefined}>
+                  <States align="end" value={s.held ? 'done' : 'working'} states={{ working: 'Working', done: 'Done' }} />
                 </span>
               </div>
               <div className="ph-run__body">
@@ -94,10 +96,10 @@ export function HeroDemo() {
                   <li className="ph-step">
                     <Check on={s.step >= 1} size={16} />
                     <div className="ph-step__main">
-                      <div className="ph-step__title">Found the usual order</div>
-                      <div className="ph-step__sub">2 oat flat whites, banana bread</div>
+                      <div className="ph-step__title">Posted a task</div>
+                      <div className="ph-step__sub">Menu and storefront photos, by 6pm</div>
                     </div>
-                    <span className="ph-step__meta">$18.40</span>
+                    <span className="ph-step__meta">$18</span>
                   </li>
                   </Collapse>
 
@@ -106,13 +108,13 @@ export function HeroDemo() {
                     <Check on={s.step >= 3} pending={s.step === 2} size={16} />
                     <div className="ph-step__main">
                       <div className="ph-step__title">
-                        <States align="start" value={s.step >= 3 ? 'ok' : 'checking'} states={{ checking: 'Checking the Food pot', ok: 'Food: up to $40 a day' }} />
+                        <States align="start" value={s.step >= 3 ? 'ok' : 'checking'} states={{ checking: 'Checking the Errands pot', ok: 'Errands: $50 per task' }} />
                       </div>
                       <div className="ph-step__sub">
-                        <States align="start" value={s.step >= 3 ? 'after' : 'before'} states={{ before: '$13 of $40 spent today', after: '$31.40 of $40 spent today' }} />
+                        <States align="start" value={s.step >= 3 ? 'after' : 'before'} states={{ before: '$63 of $200 this month', after: '$81 of $200 this month' }} />
                       </div>
                       <span className="ph-gauge">
-                        <span className="ph-gauge__fill" style={{ width: s.step >= 3 ? '78.5%' : '32.5%' }} />
+                        <span className="ph-gauge__fill" style={{ width: s.step >= 3 ? '40.5%' : '31.5%' }} />
                       </span>
                     </div>
                     <span className="ph-allowed" data-in={s.step >= 3 || undefined}>
@@ -126,16 +128,16 @@ export function HeroDemo() {
 
                   <Collapse open={s.step >= 4} reveal="drop">
                   <li className="ph-step" data-target="pay-row">
-                    <Check on={s.paid} pending={s.step >= 4 && !s.paid} size={16} />
+                    <Check on={s.held} pending={s.step >= 4 && !s.held} size={16} />
                     <div className="ph-step__main">
                       <div className="ph-step__title">
-                        <States align="start" value={s.paid ? 'paid' : 'paying'} states={{ paying: 'Paying with PayPal', paid: 'Paid with PayPal' }} />
+                        <States align="start" value={s.held ? 'held' : 'holding'} states={{ holding: 'Holding with PayPal', held: 'Held with PayPal' }} />
                       </div>
-                      <div className="ph-step__sub ph-mono" data-in={s.paid || undefined}>
-                        Capture 7XK29481LM
+                      <div className="ph-step__sub ph-mono" data-in={s.held || undefined}>
+                        Authorization 3KF05293L7
                       </div>
                     </div>
-                    <span className="ph-step__meta">$18.40</span>
+                    <span className="ph-step__meta">$18</span>
                   </li>
                   </Collapse>
                 </ol>
@@ -153,25 +155,25 @@ export function HeroDemo() {
               </div>
             </section>
 
-            {/* The Receipt: arrives with the payment, carrying the why, the rule and PayPal's id */}
+            {/* The Receipt: arrives with the hold, carrying the why, the rule and PayPal's id */}
             <section className="ph-receipt" data-target="receipt" data-in={s.step >= 5 || undefined}>
               <div className="ph-foil" />
               <div className="ph-receipt__in">
                 <div className="ph-receipt__head" style={{ ['--i' as string]: 0 }}>
                   <span className="ph-receipt__kind">
                     <span className="ph-ico ph-ico--14">
-                      <ShoppingBag size={14} strokeWidth={1.9} />
+                      <ClipboardCheck size={14} strokeWidth={1.9} />
                     </span>
                     Receipt
                   </span>
-                  <span className="ph-state" data-paid={s.paid || undefined}>
-                    <States value={s.paid ? 'paid' : 'pending'} states={{ pending: 'Pending', paid: 'Paid' }} />
+                  <span className="ph-state" data-held={s.held || undefined}>
+                    <States value={s.held ? 'held' : 'pending'} states={{ pending: 'Pending', held: 'Held' }} />
                   </span>
                 </div>
                 <div className="ph-receipt__payee" style={{ ['--i' as string]: 1 }}>
-                  <span>Kettle Corner</span>
+                  <span>Menu photos</span>
                   <span className="ph-amount">
-                    <span className="ph-amount__sign">−</span>$18.40
+                    <span className="ph-amount__sign">−</span>$18
                   </span>
                 </div>
                 <dl className="ph-lines" style={{ ['--i' as string]: 2 }}>
@@ -181,12 +183,12 @@ export function HeroDemo() {
                   </div>
                   <div className="ph-line">
                     <dt>Allowed by your rule</dt>
-                    <dd>Food: up to $40 a day</dd>
+                    <dd>Errands: up to $50 per task</dd>
                   </div>
                   <div className="ph-line">
                     <dt>PayPal</dt>
                     <dd className="ph-mono">
-                      <States align="start" value={s.paid ? 'paid' : 'auth'} states={{ auth: 'Authorizing', paid: 'Captured · 7XK29481LM' }} />
+                      <States align="start" value={s.held ? 'held' : 'auth'} states={{ auth: 'Authorizing', held: 'Authorized · 3KF05293L7' }} />
                     </dd>
                   </div>
                 </dl>
@@ -204,7 +206,7 @@ export function HeroDemo() {
             )}
 
             <div className="ph-note" data-in={s.step >= 7 || undefined} style={{ left: card.x, top: card.y + card.height + 14 }}>
-              Filed to your Ledger
+              Paid out only when the proof passes
             </div>
           </>
         )
