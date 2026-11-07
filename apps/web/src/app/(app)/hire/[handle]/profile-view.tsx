@@ -136,7 +136,7 @@ export function ProfileView({ handle }: { handle: string }) {
           </Card>
         </div>
 
-        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-10">
+        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
           <Card>
             <div className="flex items-center gap-4 px-5 pt-4">
               <TrustRing score={p.trust.score} size={56} />

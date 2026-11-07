@@ -88,7 +88,7 @@ function RoleLedger({ role }: { role: LedgerRole }) {
           role={role}
           onShow={(a) => {
             setSpotlight(a);
-            window.scrollTo({ top: 0, behavior: "smooth" });
+            (document.getElementById("app-scroll") ?? window).scrollTo({ top: 0, behavior: "smooth" });
           }}
         />
         <PinnedWidgets host={host} />

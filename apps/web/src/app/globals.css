@@ -9,10 +9,14 @@
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+  /* Page titles and the one big number on a screen */
+  --font-display: var(--font-display-face), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 
   /* Ground and surfaces */
   --color-canvas: #f6f8f7;
   --color-surface: #ffffff;
+  /* The app's content sheet, a step lighter than the canvas the sidebar sits on */
+  --color-panel: #fbfcfc;
   --color-sunken: #eff2f1;
   --color-line: #e2e7e5;
   --color-line-strong: #cfd7d4;
@@ -59,20 +63,33 @@
   --radius-xs: 6px;
   --radius-sm: 8px;
   --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 22px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
 
-  --shadow-card: 0 1px 2px rgb(12 21 18 / 0.04), 0 1px 1px rgb(12 21 18 / 0.03);
+  --shadow-card: 0 1px 2px rgb(12 21 18 / 0.04), 0 1px 1px rgb(12 21 18 / 0.02);
+  --shadow-hover: 0 1px 2px rgb(12 21 18 / 0.05), 0 6px 16px -6px rgb(12 21 18 / 0.1);
+  --shadow-inset-top: inset 0 1px 0 rgb(255 255 255 / 0.55);
   --shadow-raised: 0 1px 2px rgb(12 21 18 / 0.05), 0 8px 24px -8px rgb(12 21 18 / 0.12);
   --shadow-float: 0 2px 4px rgb(12 21 18 / 0.04), 0 24px 48px -16px rgb(24 38 59 / 0.22);
 
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
   --animate-rise: rise 420ms var(--ease-out-soft) both;
   --animate-shimmer: shimmer 2.2s linear infinite;
+  --animate-pop: pop 260ms var(--ease-out-soft) both;
+  --animate-pulse-dot: pulse-dot 2s var(--ease-out-soft) infinite;
 
   @keyframes rise {
     from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: translateY(4px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pulse-dot {
+    0% { box-shadow: 0 0 0 0 rgb(13 206 218 / 0.45); }
+    70%, 100% { box-shadow: 0 0 0 6px rgb(13 206 218 / 0); }
   }
   @keyframes shimmer {
     from { background-position: -200% 0; }
@@ -86,6 +103,9 @@
   --metal: linear-gradient(135deg, #eef3f9 0%, #b8c8dc 28%, #6f8db3 52%, #c9d7e8 74%, #f3f6fa 100%);
   --metal-soft: linear-gradient(135deg, #f6f9fc 0%, #dbe5f0 45%, #c1d0e2 60%, #eef3f8 100%);
   --brand: linear-gradient(135deg, #6ef3d6 0%, #0dceda 50%, #3f5f8c 100%);
+  /* Progress that is money moving: mint into aqua */
+  --meter-brand: linear-gradient(90deg, #9af8de 0%, #3ee0d8 55%, #0dceda 100%);
+  --meter-steel: linear-gradient(90deg, #c4d3e6 0%, #7393bd 100%);
 }
 
 html {
@@ -109,6 +129,39 @@ body {
 .tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
+}
+
+.font-display {
+  font-family: var(--font-display);
+  font-feature-settings: "tnum" 0;
+}
+
+/*
+ * The pale aurora at the top of a page: mint, aqua and steel washes that fade
+ * out well before the content. Quiet on purpose (one per page, never on cards).
+ */
+.aurora {
+  background:
+    radial-gradient(60% 120% at 12% 0%, rgb(110 243 214 / 0.16) 0%, transparent 60%),
+    radial-gradient(50% 110% at 55% 0%, rgb(13 206 218 / 0.09) 0%, transparent 62%),
+    radial-gradient(45% 100% at 92% 0%, rgb(115 147 189 / 0.12) 0%, transparent 60%);
+}
+
+/* Fine dots for illustration grounds */
+.dot-ground {
+  background-image: radial-gradient(rgb(12 21 18 / 0.09) 1px, transparent 1.2px);
+  background-size: 14px 14px;
+}
+
+/* Trim a label to its letters so it centers in a pill or beside an icon */
+.trim-cap {
+  text-box: trim-both cap alphabetic;
+}
+
+/* Thin, quiet scrollbars inside the app sheet */
+.scroll-quiet {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(12 21 18 / 0.14) transparent;
 }
 
 /* A faint grid on the canvas, used behind hero areas */

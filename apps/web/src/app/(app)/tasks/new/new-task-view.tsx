@@ -308,7 +308,7 @@ export function NewTaskView() {
           {form ? <Editor form={form} set={set} onBuild={() => save("build")} building={saving === "build"} /> : null}
         </div>
 
-        <aside className="flex flex-col gap-4 lg:sticky lg:top-10">
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-20">
           {form ? (
             <>
               <TaskCard preview task={previewTask(form, payoutCents)} />

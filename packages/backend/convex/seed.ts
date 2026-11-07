@@ -861,3 +861,29 @@ export const run = internalMutation({
     return `Seeded the demo world: Adi, ${donors.length} donors, 6 tasks, ${coffees.length + 14} receipts.`;
   },
 });
+
+/**
+ * Local development: sign in as yourself and see the demo world. Moves a Clerk
+ * login onto the seeded user Adi (and removes the empty row its first sign-in
+ * made), so every screen has data. Run:
+ * `pnpm --filter @plex/backend exec convex run seed:claimDemo '{"handle":"<your handle>"}'`.
+ */
+export const claimDemo = internalMutation({
+  args: { handle: v.string() },
+  handler: async (ctx, { handle }) => {
+    const mine = await ctx.db
+      .query("users")
+      .withIndex("by_handle", (q) => q.eq("handle", handle))
+      .unique();
+    const adi = await ctx.db
+      .query("users")
+      .withIndex("by_handle", (q) => q.eq("handle", "adi"))
+      .unique();
+    if (!mine?.clerkId) return `No signed-in user with handle ${handle}.`;
+    if (!adi) return "Seed the demo world first: pnpm seed.";
+    const clerkId = mine.clerkId;
+    await ctx.db.delete(mine._id);
+    await ctx.db.patch(adi._id, { clerkId });
+    return `Signed-in user ${handle} now acts as Adi.`;
+  },
+});

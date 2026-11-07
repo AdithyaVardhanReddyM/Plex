@@ -23,8 +23,8 @@ export function Amount({
   const sizes = {
     sm: "text-[13px]",
     md: "text-[15px]",
-    lg: "text-[22px] tracking-[-0.02em]",
-    xl: "text-[40px] tracking-[-0.035em] leading-none",
+    lg: "font-display text-[22px] font-bold tracking-[-0.025em]",
+    xl: "font-display text-[42px] font-bold tracking-[-0.04em] leading-none",
   };
   return (
     <span className={cn("tabular inline-flex items-baseline font-semibold text-ink", sizes[size], className)}>

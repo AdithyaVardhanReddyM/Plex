@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Manrope } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const display = Manrope({ variable: "--font-display-face", subsets: ["latin"], weight: ["500", "600", "700", "800"] });
 
 export const metadata: Metadata = {
   title: { default: "Plex · Agents, with receipts", template: "%s · Plex" },
@@ -18,7 +19,7 @@ const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 export default function RootLayout({ children }: LayoutProps<"/">) {
   const app = <Providers>{children}</Providers>;
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${display.variable} h-full antialiased`}>
       {/* Client-side Clerk only: no `dynamic`, so pages still prerender (cacheComponents). */}
       <body className="min-h-full">{clerkEnabled ? (
           <ClerkProvider signInUrl="/sign-in" signUpUrl="/sign-up" afterSignOutUrl="/home">

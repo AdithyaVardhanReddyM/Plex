@@ -32,7 +32,7 @@ export function DevelopersView() {
           <Keys />
           <Reference base={base} />
         </div>
-        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-10">
+        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
           <McpCard base={apiBase()} />
           <Card className="px-5 py-4">
             <div className="flex items-center gap-2 text-[13px] font-medium text-ink">

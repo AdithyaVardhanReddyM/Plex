@@ -258,7 +258,7 @@ export function BuilderView() {
           ) : null}
         </div>
 
-        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-10">
+        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
           <Card className="overflow-hidden">
             <div className="flex items-center gap-2 px-5 pt-4 pb-3 text-[13px] font-medium text-ink">
               <Sparkles className="size-4 text-faint" strokeWidth={1.9} /> Plex builder

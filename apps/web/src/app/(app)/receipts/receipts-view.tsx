@@ -108,7 +108,7 @@ export function ReceiptsView() {
             ))
           )}
         </Card>
-        <div className="lg:sticky lg:top-10">
+        <div className="lg:sticky lg:top-20">
           {active ? <ReceiptCard key={active._id} receipt={active} className="animate-rise" /> : null}
         </div>
       </div>
