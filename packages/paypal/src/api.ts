@@ -25,6 +25,8 @@ export interface CreateOrderInput {
   cancelUrl?: string;
   brandName?: string;
   idempotencyKey?: string;
+  /** A saved PayPal wallet (Vault payment token): no buyer redirect. */
+  vaultId?: string;
 }
 
 export interface Order {
@@ -58,15 +60,17 @@ export function createOrder(pp: PayPalClient, input: CreateOrderInput): Promise<
         },
       ],
       payment_source: {
-        paypal: {
-          experience_context: {
-            brand_name: input.brandName ?? "Plex",
-            user_action: "PAY_NOW",
-            shipping_preference: "NO_SHIPPING",
-            return_url: input.returnUrl,
-            cancel_url: input.cancelUrl,
-          },
-        },
+        paypal: input.vaultId
+          ? { vault_id: input.vaultId }
+          : {
+              experience_context: {
+                brand_name: input.brandName ?? "Plex",
+                user_action: "PAY_NOW",
+                shipping_preference: "NO_SHIPPING",
+                return_url: input.returnUrl,
+                cancel_url: input.cancelUrl,
+              },
+            },
       },
     },
   });
@@ -83,6 +87,55 @@ export const authorizeOrder = (pp: PayPalClient, orderId: string, idempotencyKey
 
 export const approvalUrl = (order: Order): string | undefined =>
   order.links.find((l) => l.rel === "payer-action" || l.rel === "approve")?.href;
+
+// ── Vault v3: save a PayPal wallet once, charge it later (merchant-initiated) ─
+
+export interface SetupToken {
+  id: string;
+  status: string;
+  links: Link[];
+}
+
+export interface PaymentToken {
+  id: string;
+  customer?: { id: string };
+  payment_source?: { paypal?: { email_address?: string; payer_id?: string } };
+}
+
+/** Step 1: the payer approves saving their wallet (no charge). */
+export const createSetupToken = (
+  pp: PayPalClient,
+  input: { returnUrl: string; cancelUrl: string; description: string; idempotencyKey?: string },
+) =>
+  pp.request<SetupToken>("POST", "/v3/vault/setup-tokens", {
+    idempotencyKey: input.idempotencyKey,
+    body: {
+      payment_source: {
+        paypal: {
+          description: input.description.slice(0, 127),
+          usage_type: "MERCHANT",
+          customer_type: "CONSUMER",
+          permit_multiple_payment_tokens: false,
+          experience_context: {
+            brand_name: "Plex",
+            shipping_preference: "NO_SHIPPING",
+            return_url: input.returnUrl,
+            cancel_url: input.cancelUrl,
+          },
+        },
+      },
+    },
+  });
+
+/** Step 2, after approval: turn the setup token into a reusable payment token. */
+export const createPaymentToken = (pp: PayPalClient, setupTokenId: string) =>
+  pp.request<PaymentToken>("POST", "/v3/vault/payment-tokens", {
+    idempotencyKey: `vault-${setupTokenId}`,
+    body: { payment_source: { token: { id: setupTokenId, type: "SETUP_TOKEN" } } },
+  });
+
+export const deletePaymentToken = (pp: PayPalClient, paymentTokenId: string) =>
+  pp.request<void>("DELETE", `/v3/vault/payment-tokens/${paymentTokenId}`);
 
 // ── Payments v2: authorizations, captures, refunds ───────────────────────────
 
