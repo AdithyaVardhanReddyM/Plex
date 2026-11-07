@@ -4,12 +4,13 @@ import { useAction, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
 import type { FunctionReturnType } from "convex/server";
 import { useState } from "react";
-import { Check, Info, Lock, Minus, Plus, ShieldCheck } from "lucide-react";
+import { CalendarDays, Check, Info, Lock, Minus, Plus, ShieldCheck } from "lucide-react";
 import { api, type Id } from "@/lib/convex";
 import { Button } from "@/components/ui/button";
-import { Card, Input, Label, Textarea } from "@/components/ui/primitives";
+import { Card, Input, Label, Segmented, Textarea } from "@/components/ui/primitives";
+import { Amount } from "@/components/ui/money";
 import { cn, formatCents } from "@/lib/utils";
-import { CauseCover, windowLabel } from "./parts";
+import { CauseCover, shortWindow } from "./parts";
 
 export type CausePage = NonNullable<FunctionReturnType<typeof api.causes.bySlug>>;
 type Mode = "shift" | "once" | "split";
@@ -31,11 +32,14 @@ export function DonatePanel({
   data,
   selectedTaskId,
   onSelectTask,
+  onceRequest = 0,
   cancelled,
 }: {
   data: CausePage;
   selectedTaskId: Id<"tasks"> | null;
   onSelectTask: (id: Id<"tasks">) => void;
+  /** Bumped by the page to open the panel on "Give once". */
+  onceRequest?: number;
   cancelled?: boolean;
 }) {
   const viewer = useQuery(api.users.viewer);
@@ -43,8 +47,20 @@ export function DonatePanel({
   const start = useAction(api.donations.start);
 
   const fundable = data.tasks.filter((t) => t.open && t.fundedCents < t.costCents && ["open", "assigned"].includes(t.status));
-  const [mode, setMode] = useState<Mode>(fundable.length ? "shift" : "once");
+  const [modeChoice, setMode] = useState<Mode>(fundable.length ? "shift" : "once");
   const task = fundable.find((t) => t._id === selectedTaskId) ?? fundable[0] ?? null;
+  // Picking a shift anywhere on the page brings the panel to it.
+  const [seenTask, setSeenTask] = useState(selectedTaskId);
+  if (selectedTaskId !== seenTask) {
+    setSeenTask(selectedTaskId);
+    if (selectedTaskId && fundable.some((t) => t._id === selectedTaskId)) setMode("shift");
+  }
+  const [seenOnce, setSeenOnce] = useState(onceRequest);
+  if (onceRequest !== seenOnce) {
+    setSeenOnce(onceRequest);
+    setMode("once");
+  }
+  const mode: Mode = modeChoice === "shift" && !task ? "once" : modeChoice;
   const [shifts, setShifts] = useState(1);
   const [onceCents, setOnceCents] = useState(data.unit?.cents ?? 4_500);
   const [custom, setCustom] = useState("");
@@ -95,11 +111,27 @@ export function DonatePanel({
     }
   }
 
+  const modes = [
+    ...(fundable.length ? [{ value: "shift" as const, label: "Fund a shift" }] : []),
+    { value: "once" as const, label: "Give once" },
+    { value: "split" as const, label: "Split" },
+  ];
+
+  const totalNote =
+    mode === "shift" && task
+      ? `${shiftCount} ${shiftCount === 1 ? "person" : "people"} on ${task.title}`
+      : mode === "split"
+        ? `Split across ${chosenSplit.length} ${chosenSplit.length === 1 ? "cause" : "causes"}`
+        : data.unit && onceCents >= data.unit.cents
+          ? `${shiftsIn(onceCents, data.unit.cents)} of paid local work`
+          : `To ${data.cause.name}`;
+
   return (
     <Card className="overflow-hidden shadow-raised">
-      <div className="px-5 pt-5">
-        <div className="text-[15px] font-semibold tracking-[-0.01em] text-ink">Donate</div>
-        <div className="mt-0.5 text-[13px] text-muted">
+      <div className="h-1" style={{ backgroundImage: "var(--meter-brand)" }} aria-hidden />
+      <div className="px-5 pt-4">
+        <div className="text-[15px] font-semibold tracking-[-0.012em] text-ink">Donate</div>
+        <div className="mt-0.5 text-[13px] leading-snug text-muted">
           {data.unit ? (
             <>
               <span className="tabular font-medium text-ink-2">{formatCents(data.unit.cents)}</span> {data.unit.label}.
@@ -108,30 +140,13 @@ export function DonatePanel({
             "Every dollar comes back with a receipt."
           )}
         </div>
-        <div className="mt-4 grid grid-cols-3 gap-1 rounded-sm bg-sunken p-1" role="tablist" aria-label="How to give">
-          {(
-            [
-              ["shift", "Fund a shift"],
-              ["once", "Give once"],
-              ["split", "Split"],
-            ] as const
-          ).map(([m, label]) => (
-            <button
-              key={m}
-              type="button"
-              role="tab"
-              aria-selected={mode === m}
-              disabled={m === "shift" && !fundable.length}
-              onClick={() => setMode(m)}
-              className={cn(
-                "h-8 rounded-[6px] text-[13px] font-medium transition-[background-color,color,box-shadow] disabled:opacity-40",
-                mode === m ? "bg-surface text-ink shadow-card ring-1 ring-line" : "text-muted hover:text-ink",
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          items={modes}
+          value={mode}
+          onChange={setMode}
+          size="sm"
+          className="mt-4 flex w-full [&>button]:flex-1 [&>button]:justify-center"
+        />
       </div>
 
       <div className="px-5 pt-4">
@@ -151,60 +166,65 @@ export function DonatePanel({
                       setShifts(1);
                     }}
                     className={cn(
-                      "grid w-full grid-cols-[18px_minmax(0,1fr)] gap-2.5 rounded-md px-3 py-2.5 text-left ring-1 ring-inset transition-colors",
-                      on ? "bg-surface ring-ink/80" : "ring-line hover:bg-canvas",
+                      "grid w-full grid-cols-[18px_minmax(0,1fr)_auto] items-start gap-3 rounded-[12px] border px-3 py-2.5 text-left transition-[border-color,background-color,box-shadow]",
+                      "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-green-200",
+                      on ? "border-ink/70 bg-surface shadow-card" : "border-line hover:border-line-strong hover:bg-canvas/60",
                     )}
                   >
                     <span
                       className={cn(
-                        "mt-0.5 flex size-[18px] items-center justify-center rounded-full ring-1 ring-inset",
-                        on ? "bg-ink text-white ring-ink" : "ring-line-strong",
+                        "mt-0.5 flex size-[18px] items-center justify-center rounded-full transition-colors",
+                        on ? "bg-ink text-white" : "ring-1 ring-inset ring-line-strong",
                       )}
                     >
                       {on ? <Check className="size-3" strokeWidth={2.6} /> : null}
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-[13.5px] font-medium leading-snug text-ink">{t.title}</span>
-                      <span className="mt-0.5 block text-[12.5px] leading-snug text-muted">
-                        {windowLabel(t.windowStart, t.windowEnd)}
+                      <span className="block truncate text-[13.5px] font-medium leading-snug text-ink">{t.title}</span>
+                      <span className="mt-0.5 flex items-center gap-1.5 text-[12px] leading-snug text-muted">
+                        <CalendarDays className="size-3 flex-none text-faint" strokeWidth={2} />
+                        <span className="truncate">{shortWindow(t.windowStart, t.windowEnd)}</span>
                       </span>
-                      <span className="tabular mt-0.5 block text-[12.5px] leading-snug text-muted">
-                        {formatCents(t.perSpotCents)} a person · {formatCents(t.costCents - t.fundedCents)} still needed
-                      </span>
+                    </span>
+                    <span className="text-right">
+                      <span className="tabular block text-[13px] font-semibold text-ink">{formatCents(t.perSpotCents)}</span>
+                      <span className="tabular block text-[11.5px] text-faint">{formatCents(t.costCents - t.fundedCents)} left</span>
                     </span>
                   </button>
                 );
               })}
             </div>
-            <div className="flex items-center justify-between gap-3 rounded-md bg-canvas px-3 py-2 ring-1 ring-inset ring-line">
-              <div className="text-[13px] text-ink-2">
+            <div className="flex items-center justify-between gap-3 rounded-[12px] bg-canvas/70 px-3 py-2 ring-1 ring-inset ring-line">
+              <div className="text-[13px] font-medium text-ink-2">
                 People you pay for
-                <div className="text-[12px] text-faint">{formatCents(task.perSpotCents)} each</div>
+                <div className="tabular text-[12px] font-normal text-faint">{formatCents(task.perSpotCents)} each</div>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5 rounded-full bg-surface p-0.5 ring-1 ring-inset ring-line">
                 <Button
                   variant="ghost"
                   size="icon-sm"
                   aria-label="One fewer"
                   disabled={shiftCount <= 1}
                   onClick={() => setShifts(Math.max(1, shiftCount - 1))}
+                  className="size-7"
                 >
                   <Minus />
                 </Button>
-                <span className="tabular w-6 text-center text-[15px] font-semibold text-ink">{shiftCount}</span>
+                <span className="tabular w-7 text-center text-[15px] font-semibold text-ink">{shiftCount}</span>
                 <Button
                   variant="ghost"
                   size="icon-sm"
                   aria-label="One more"
                   disabled={shiftCount >= maxShifts}
                   onClick={() => setShifts(Math.min(maxShifts, shiftCount + 1))}
+                  className="size-7"
                 >
                   <Plus />
                 </Button>
               </div>
             </div>
-            <p className="flex gap-2 text-[12.5px] leading-relaxed text-steel-700">
-              <Lock className="mt-0.5 size-3.5 flex-none" strokeWidth={1.9} />
+            <p className="flex gap-2 rounded-[10px] bg-steel-50 px-3 py-2 text-[12.5px] leading-relaxed text-steel-700 ring-1 ring-inset ring-steel-100">
+              <Lock className="mt-0.5 size-3.5 flex-none" strokeWidth={2} />
               Plex holds it until the shift&apos;s proof passes, then pays the workers. You get the photos.
             </p>
           </div>
@@ -212,23 +232,34 @@ export function DonatePanel({
 
         {mode === "once" ? (
           <div className="space-y-3">
-            <div className="grid grid-cols-4 gap-1.5">
-              {ONCE_CHIPS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => {
-                    setOnceCents(c);
-                    setCustom("");
-                  }}
-                  className={cn(
-                    "tabular h-10 rounded-sm text-[14px] font-semibold ring-1 ring-inset transition-colors",
-                    onceCents === c && !custom ? "bg-ink text-white ring-ink" : "bg-surface text-ink ring-line hover:bg-canvas",
-                  )}
-                >
-                  {formatCents(c)}
-                </button>
-              ))}
+            <div className="grid grid-cols-4 gap-1 rounded-[12px] bg-sunken p-1 ring-1 ring-inset ring-line/60" role="radiogroup" aria-label="Amount">
+              {ONCE_CHIPS.map((c) => {
+                const on = onceCents === c && !custom;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => {
+                      setOnceCents(c);
+                      setCustom("");
+                    }}
+                    className={cn(
+                      "flex h-14 flex-col items-center justify-center rounded-[9px] transition-[background-color,color,box-shadow]",
+                      "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-green-200",
+                      on
+                        ? "bg-surface text-ink shadow-[0_1px_2px_rgb(12_21_18/0.08),0_0_0_1px_rgb(12_21_18/0.06)]"
+                        : "text-ink-2 hover:bg-surface/60 hover:text-ink",
+                    )}
+                  >
+                    <span className="tabular text-[15px] font-semibold leading-none">{formatCents(c)}</span>
+                    <span className={cn("mt-1.5 text-[11px] leading-none", on ? "text-green-700" : "text-faint")}>
+                      {data.unit ? (c >= data.unit.cents ? shiftsIn(c, data.unit.cents) : "toward one") : " "}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
             <div>
               <Label htmlFor="custom-amount">Other amount</Label>
@@ -249,7 +280,6 @@ export function DonatePanel({
             </div>
             {data.unit && onceCents >= data.unit.cents ? (
               <p className="text-[12.5px] leading-relaxed text-muted">
-                That&apos;s {Math.floor(onceCents / data.unit.cents) === 1 ? "one shift" : `${Math.floor(onceCents / data.unit.cents)} shifts`} of paid local work.{" "}
                 {data.org.name} assigns it to the next shift that needs it.
               </p>
             ) : null}
@@ -279,8 +309,8 @@ export function DonatePanel({
                   <label
                     key={c._id}
                     className={cn(
-                      "grid cursor-pointer grid-cols-[18px_28px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-md px-3 py-2 ring-1 ring-inset transition-colors",
-                      on ? "bg-surface ring-line-strong" : "ring-line hover:bg-canvas",
+                      "grid cursor-pointer grid-cols-[16px_28px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-[12px] border px-3 py-2 transition-colors",
+                      on ? "border-line-strong bg-surface" : "border-line hover:bg-canvas/60",
                     )}
                   >
                     <input
@@ -291,7 +321,7 @@ export function DonatePanel({
                         setSplitIds(on ? chosenSplit.filter((x) => x !== c._id) : [...chosenSplit, c._id])
                       }
                     />
-                    <CauseCover hue={c.coverHue} className="size-7 rounded-[6px]" />
+                    <CauseCover hue={c.coverHue} className="size-7 rounded-[8px] ring-1 ring-inset ring-line/60" />
                     <span className="min-w-0">
                       <span className="block truncate text-[13px] font-medium text-ink">{c.name}</span>
                       <span className="block truncate text-[12px] text-muted">{c.orgName}</span>
@@ -318,7 +348,7 @@ export function DonatePanel({
             onChange={(e) => setName(e.target.value)}
             maxLength={40}
           />
-          <label className="mt-2 flex cursor-pointer items-center gap-2 text-[13px] text-ink-2">
+          <label className="mt-2 flex w-fit cursor-pointer items-center gap-2 text-[13px] text-ink-2">
             <input
               type="checkbox"
               className="size-4 accent-[var(--color-ink)]"
@@ -329,7 +359,9 @@ export function DonatePanel({
           </label>
         </div>
         <div>
-          <Label htmlFor="donor-why">Why you&apos;re giving <span className="font-normal text-faint">(optional, goes on your receipt)</span></Label>
+          <Label htmlFor="donor-why">
+            Why you&apos;re giving <span className="font-normal text-faint">· optional, goes on your receipt</span>
+          </Label>
           <Textarea
             id="donor-why"
             value={message}
@@ -341,22 +373,29 @@ export function DonatePanel({
         </div>
       </div>
 
-      <div className="px-5 pt-4 pb-5">
+      <div className="mt-4 border-t border-line bg-canvas/50 px-5 pt-4 pb-5">
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[12.5px] font-medium text-muted">Total</div>
+            <div className="mt-0.5 truncate text-[12px] text-faint">{totalNote}</div>
+          </div>
+          <Amount cents={total} size="lg" />
+        </div>
         {cancelled && !error ? (
-          <p className="mb-3 flex gap-2 rounded-sm bg-sunken px-3 py-2 text-[12.5px] text-ink-2">
+          <p className="mt-3 flex gap-2 rounded-[10px] bg-sunken px-3 py-2 text-[12.5px] text-ink-2">
             <Info className="mt-0.5 size-3.5 flex-none text-muted" strokeWidth={1.9} />
             You cancelled at PayPal. Nothing was charged.
           </p>
         ) : null}
         {error ? (
-          <p className="mb-3 rounded-sm bg-disputed-bg px-3 py-2 text-[12.5px] leading-relaxed text-disputed" role="alert">
+          <p className="mt-3 rounded-[10px] bg-disputed-bg px-3 py-2 text-[12.5px] leading-relaxed text-disputed" role="alert">
             {error}
           </p>
         ) : null}
         <Button
           variant="brand"
           size="lg"
-          className="w-full"
+          className="mt-4 w-full"
           disabled={busy || total < 100 || tooSmall || (mode === "split" && chosenSplit.length === 0)}
           onClick={donate}
         >
@@ -369,6 +408,11 @@ export function DonatePanel({
       </div>
     </Card>
   );
+}
+
+function shiftsIn(cents: number, unit: number) {
+  const n = Math.floor(cents / unit);
+  return n === 1 ? "1 shift" : `${n} shifts`;
 }
 
 function shortName(name: string) {

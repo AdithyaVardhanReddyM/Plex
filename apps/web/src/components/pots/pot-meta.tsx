@@ -106,7 +106,25 @@ const RULE_KIND: Record<PolicyRule["kind"], string> = {
   auto_approve: "Always allowed",
 };
 
-/** One structured rule: kind, its plain sentence and the raw value the engine reads. */
+/** What a rule does when it fires, as `evaluate()` applies it. */
+export const RULE_EFFECT: Record<PolicyRule["kind"], { label: string; tone: "steel" | "red" | "green" }> = {
+  daily_limit: { label: "Asks you", tone: "steel" },
+  monthly_limit: { label: "Asks you", tone: "steel" },
+  per_purchase_limit: { label: "Asks you", tone: "steel" },
+  approval_over: { label: "Asks you", tone: "steel" },
+  block_category: { label: "Asks you", tone: "steel" },
+  allow_merchants: { label: "Blocks others", tone: "red" },
+  quiet_hours: { label: "Blocks", tone: "red" },
+  auto_approve: { label: "Allows", tone: "green" },
+};
+
+const EFFECT_TONE = {
+  steel: "bg-steel-50 text-steel-700 ring-steel-200/70",
+  red: "bg-disputed-bg text-disputed ring-disputed/15",
+  green: "bg-green-50 text-green-800 ring-green-200/80",
+};
+
+/** One structured rule: kind, its plain sentence, the raw value the engine reads and what it does. */
 export function RuleLine({
   rule,
   line,
@@ -119,24 +137,47 @@ export function RuleLine({
   className?: string;
 }) {
   const Icon = RULE_ICON[rule.kind];
+  const effect = RULE_EFFECT[rule.kind];
   return (
     <li
       className={cn(
-        "grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-3 rounded-md px-3 py-2.5 transition-colors duration-300",
-        highlight === "allow" && "bg-green-50 ring-1 ring-inset ring-green-200",
-        highlight === "needs_approval" && "bg-steel-50 ring-1 ring-inset ring-steel-200",
-        highlight === "deny" && "bg-disputed-bg ring-1 ring-inset ring-disputed/20",
+        "grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3 rounded-[10px] px-3 py-2.5 ring-1 ring-transparent ring-inset transition-[background-color,box-shadow] duration-300",
+        highlight === "allow" && "bg-green-50 ring-green-200",
+        highlight === "needs_approval" && "bg-steel-50 ring-steel-200",
+        highlight === "deny" && "bg-disputed-bg ring-disputed/20",
         className,
       )}
     >
-      <span className="flex size-7 items-center justify-center rounded-[8px] bg-sunken text-ink-2">
+      <span
+        className={cn(
+          "flex size-[34px] items-center justify-center rounded-[10px] ring-1 ring-inset transition-colors",
+          highlight === "needs_approval"
+            ? "bg-surface text-steel-600 ring-steel-200"
+            : highlight === "deny"
+              ? "bg-surface text-disputed ring-disputed/20"
+              : highlight === "allow"
+                ? "bg-surface text-green-700 ring-green-200"
+                : "bg-sunken text-ink-2 ring-line/70",
+        )}
+      >
         <Icon className="size-4" strokeWidth={1.9} />
       </span>
       <div className="min-w-0">
-        <div className="text-[14px] font-medium leading-snug text-ink">{line}</div>
-        <div className="mt-0.5 truncate font-mono text-[11.5px] leading-snug text-faint">{ruleCode(rule)}</div>
+        <div className="text-[13.5px] font-medium leading-snug text-ink">{line}</div>
+        <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11.5px] leading-snug">
+          <span className="flex-none text-muted">{RULE_KIND[rule.kind]}</span>
+          <span className="text-faint">·</span>
+          <code className="truncate font-mono text-faint">{ruleCode(rule)}</code>
+        </div>
       </div>
-      <span className="hidden text-[12px] text-muted sm:block">{RULE_KIND[rule.kind]}</span>
+      <span
+        className={cn(
+          "inline-flex h-[22px] items-center rounded-full px-2 text-[11.5px] font-medium whitespace-nowrap ring-1 ring-inset",
+          EFFECT_TONE[effect.tone],
+        )}
+      >
+        {highlight ? "Decided it" : effect.label}
+      </span>
     </li>
   );
 }

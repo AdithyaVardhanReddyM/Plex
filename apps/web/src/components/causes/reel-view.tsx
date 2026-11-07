@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAction, useQuery } from "convex/react";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, BadgeCheck, CalendarDays, Check, ImageOff, Link2, Lock, MapPin, TriangleAlert } from "lucide-react";
+import { ArrowRight, BadgeCheck, CalendarDays, Check, ImageOff, Link2, Lock, MapPin, ShieldCheck, TriangleAlert } from "lucide-react";
 import { api, type Id } from "@/lib/convex";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Avatar, Card, EmptyState, Skeleton } from "@/components/ui/primitives";
@@ -62,7 +62,7 @@ export function ReelView({ donationId }: { donationId: string }) {
         <CauseCover hue={reel.cause.coverHue} className="px-5 pt-5 pb-6 sm:px-7 sm:pt-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-[13px] font-medium text-ink-2">
-              <Avatar name={reel.org.name} color={reel.org.avatarColor} size={22} />
+              <Avatar name={reel.org.name} color={reel.org.avatarColor} size={22} square />
               {reel.org.name}
             </div>
             <span
@@ -75,8 +75,8 @@ export function ReelView({ donationId }: { donationId: string }) {
               {verified ? "Proof passed" : reel.status === "held" ? "Held until proof" : "Given"}
             </span>
           </div>
-          <div className="mt-6 text-[12.5px] font-medium text-ink-2">Proof Reel</div>
-          <h1 className="mt-1 text-[24px] font-semibold leading-[1.2] tracking-[-0.025em] text-ink sm:text-[28px]">
+          <div className="mt-6 text-[12.5px] font-medium text-green-800">Proof Reel</div>
+          <h1 className="mt-1 font-display text-[24px] leading-[1.2] font-bold tracking-[-0.03em] text-ink sm:text-[28px]">
             {reel.task?.title ?? reel.cause.name}
           </h1>
           {reel.task ? (
@@ -105,7 +105,7 @@ export function ReelView({ donationId }: { donationId: string }) {
             <div className={cn("grid gap-2", reel.media.length >= 3 ? "grid-cols-3" : "grid-cols-2")}>
               {reel.media.map((m, i) => (
                 <figure key={i} className="min-w-0">
-                  <div className="relative aspect-[4/5] overflow-hidden rounded-md bg-sunken ring-1 ring-inset ring-line">
+                  <div className="relative aspect-[4/5] overflow-hidden rounded-[12px] bg-sunken ring-1 ring-inset ring-line">
                     {m.url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={m.url} alt={`${m.label}: ${m.description}`} className="size-full object-cover" />
@@ -135,21 +135,29 @@ export function ReelView({ donationId }: { donationId: string }) {
         ) : null}
 
         {reel.proof?.verdict ? (
-          <div className="mx-5 mt-5 rounded-md bg-canvas p-4 ring-1 ring-inset ring-line sm:mx-7">
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-[13.5px] font-semibold text-ink">
-                Checked by Plex · {Math.round(reel.proof.verdict.confidence * 100)}% ·{" "}
-                {reel.proof.verdict.checks.filter((c) => c.passed).length} of {reel.proof.verdict.checks.length} checks
+          <div className="mx-5 mt-5 overflow-hidden rounded-[12px] border border-line sm:mx-7">
+            <div className="flex items-center justify-between gap-3 border-b border-line bg-canvas/60 px-4 py-3">
+              <div className="flex items-center gap-2.5">
+                <span className="flex size-7 items-center justify-center rounded-[8px] bg-green-50 text-green-700 ring-1 ring-inset ring-green-100">
+                  <ShieldCheck className="size-[15px]" strokeWidth={1.9} />
+                </span>
+                <div className="text-[13.5px] font-semibold text-ink">Checked by Plex</div>
+              </div>
+              <div className="tabular flex items-center gap-2 text-[12px] text-muted">
+                <span>{Math.round(reel.proof.verdict.confidence * 100)}% confident</span>
+                <span className="inline-flex h-[22px] items-center rounded-full bg-green-50 px-2 font-medium text-green-800 ring-1 ring-inset ring-green-200/80">
+                  {reel.proof.verdict.checks.filter((c) => c.passed).length} of {reel.proof.verdict.checks.length} passed
+                </span>
               </div>
             </div>
-            <ul className="mt-2.5 space-y-1.5">
+            <ul className="divide-y divide-line">
               {reel.proof.verdict.checks.map((c) => (
-                <li key={c.check} className="flex items-start gap-2 text-[13px] leading-snug">
-                  <span className={cn("mt-0.5", c.passed ? "text-green-700" : "text-disputed")}>
+                <li key={c.check} className="grid grid-cols-[16px_minmax(0,1fr)] items-start gap-2.5 px-4 py-2.5 text-[13px] leading-snug">
+                  <span className={cn("mt-px", c.passed ? "text-green-700" : "text-disputed")}>
                     {c.passed ? <Check className="size-3.5" strokeWidth={2.4} /> : <TriangleAlert className="size-3.5" strokeWidth={1.9} />}
                   </span>
                   <span>
-                    <span className="text-ink">{c.check}</span> <span className="text-muted">· {c.detail}</span>
+                    <span className="font-medium text-ink">{c.check}</span> <span className="text-muted">· {c.detail}</span>
                   </span>
                 </li>
               ))}
@@ -208,7 +216,7 @@ export function ReelView({ donationId }: { donationId: string }) {
 
       {reel.receipt ? (
         <div className="mt-6">
-          <div className="mb-3 text-[15px] font-semibold text-ink">Your receipt</div>
+          <div className="mb-3 text-[15px] font-semibold tracking-[-0.012em] text-ink">Your receipt</div>
           <ReceiptCard receipt={reel.receipt} />
         </div>
       ) : null}

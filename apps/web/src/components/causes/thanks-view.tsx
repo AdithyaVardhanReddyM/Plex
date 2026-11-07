@@ -53,7 +53,7 @@ export function ThanksView({ slug, checkoutId, token }: { slug: string; checkout
   if (!completed && phase.kind === "error")
     return (
       <Card className="mx-auto max-w-xl p-6">
-        <div className="text-[17px] font-semibold text-ink">The donation didn&apos;t go through</div>
+        <div className="font-display text-[20px] font-bold tracking-[-0.02em] text-ink">The donation didn&apos;t go through</div>
         <p className="mt-2 text-[14px] leading-relaxed text-muted">{phase.message}</p>
         <p className="mt-1 text-[13px] text-faint">Nothing is recorded until PayPal confirms the capture.</p>
         <div className="mt-5 flex gap-2">
@@ -101,15 +101,16 @@ export function ThanksView({ slug, checkoutId, token }: { slug: string; checkout
 
   return (
     <div className="mx-auto max-w-xl animate-rise">
-      <div className="flex size-11 items-center justify-center rounded-full bg-green-400 text-ink shadow-[0_6px_16px_-6px_rgb(13_206_218/0.6)]">
+      <div className="flex size-12 items-center justify-center rounded-full bg-green-300 text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.55),0_6px_16px_-6px_rgb(13_206_218/0.6)] ring-4 ring-green-100">
         <Check className="size-5" strokeWidth={2.4} />
       </div>
-      <h1 className="mt-5 text-[28px] font-semibold leading-tight tracking-[-0.03em] text-ink">
+      <h1 className="mt-5 font-display text-[30px] leading-tight font-bold tracking-[-0.03em] text-ink">
         Thank you{firstName ? `, ${firstName}` : ""}.
       </h1>
       <p className="mt-2 text-[15px] leading-relaxed text-ink-2">{headline}</p>
 
       <Card className="mt-6 p-5">
+        <div className="mb-3.5 text-[12.5px] font-medium text-muted">What happens to your money</div>
         <ol className="space-y-3">
           {steps.map((s, i) => (
             <li key={i} className="grid grid-cols-[22px_minmax(0,1fr)] items-center gap-3 text-[14px]">
