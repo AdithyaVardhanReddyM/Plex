@@ -27,21 +27,21 @@ const ICONS: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement> & 
 };
 
 /** Pot colors map onto the two brand scales only: green and steel. */
-export const POT_TINT: Record<string, { bar: string; chip: string }> = {
-  green: { bar: "bg-green-500", chip: "bg-green-50 text-green-700" },
-  blue: { bar: "bg-steel-500", chip: "bg-steel-50 text-steel-600" },
-  teal: { bar: "bg-green-400", chip: "bg-green-50 text-green-700" },
-  steel: { bar: "bg-steel-400", chip: "bg-steel-50 text-steel-600" },
+export const POT_TINT: Record<string, { bar: string; chip: string; meter: "brand" | "steel" }> = {
+  green: { bar: "bg-green-500", chip: "bg-green-50 text-green-700 ring-green-100", meter: "brand" },
+  blue: { bar: "bg-steel-500", chip: "bg-steel-50 text-steel-600 ring-steel-100", meter: "steel" },
+  teal: { bar: "bg-green-400", chip: "bg-green-50 text-green-700 ring-green-100", meter: "brand" },
+  steel: { bar: "bg-steel-400", chip: "bg-steel-50 text-steel-600 ring-steel-100", meter: "steel" },
 };
 
 export function PotIcon({ pot, size = 24, className }: { pot: Pick<Doc<"pots">, "icon" | "color">; size?: number; className?: string }) {
   const Icon = ICONS[pot.icon] ?? PiggyBank;
   return (
     <span
-      className={cn("flex flex-none items-center justify-center rounded-[7px]", POT_TINT[pot.color]?.chip, className)}
-      style={{ width: size, height: size }}
+      className={cn("flex flex-none items-center justify-center ring-1 ring-inset", POT_TINT[pot.color]?.chip, className)}
+      style={{ width: size, height: size, borderRadius: Math.round(size * 0.3) }}
     >
-      <Icon className="size-3.5" strokeWidth={2} />
+      <Icon className={size >= 32 ? "size-4" : "size-3.5"} strokeWidth={1.9} />
     </span>
   );
 }
@@ -69,8 +69,8 @@ export function PotGauge({
         aria-label={`${pot.name}: ${formatCents(pot.spentMonthCents)} of ${formatCents(pot.monthlyBudgetCents)} this month`}
       >
         <div
-          className={cn("h-full rounded-full transition-[width] duration-700", POT_TINT[pot.color]?.bar)}
-          style={{ width: `${pct}%` }}
+          className="h-full rounded-full transition-[width] duration-700"
+          style={{ width: `${pct}%`, backgroundImage: POT_TINT[pot.color]?.meter === "steel" ? "var(--meter-steel)" : "var(--meter-brand)" }}
         />
       </div>
       <div className="tabular mt-2 flex items-baseline justify-between gap-2 text-[12px] text-muted">

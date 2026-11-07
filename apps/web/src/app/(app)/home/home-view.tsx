@@ -2,16 +2,29 @@
 
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
-import { useState } from "react";
-import { ArrowRight, Bot, ListChecks, Lock, ShieldCheck } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Bot,
+  Check,
+  Clock,
+  ListChecks,
+  Lock,
+  ShieldCheck,
+} from "lucide-react";
 import { api } from "@/lib/convex";
 import type { Doc } from "@/lib/convex";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Badge, Card, CardHeader, PageHeader, Skeleton } from "@/components/ui/primitives";
+import { Badge, Card, CardHeader, EmptyState, IconTile, PageHeader, Skeleton } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
-import { ReceiptRow } from "@/components/receipt/receipt";
-import { PotGauge, PotIcon, type Pot } from "@/components/pots/pot-meta";
-import { formatCents, relativeTime } from "@/lib/utils";
+import { DayBars, Ring } from "@/components/ui/viz";
+import { ReceiptRow, type Receipt } from "@/components/receipt/receipt";
+import { PotIcon, type Pot } from "@/components/pots/pot-meta";
+import { MoneyFlow } from "@/components/art/money-flow";
+import { cn, formatCents, relativeTime } from "@/lib/utils";
+
+const DAY = 24 * 3_600_000;
 
 function greeting() {
   const h = new Date().getHours();
@@ -20,71 +33,47 @@ function greeting() {
 
 export function HomeView() {
   const viewer = useQuery(api.users.viewer);
-  const receipts = useQuery(api.receipts.list, { limit: 40 });
+  const receipts = useQuery(api.receipts.list, { limit: 80 });
   const pots = useQuery(api.pots.list);
   const approvals = useQuery(api.pots.pendingApprovals);
   const tasks = useQuery(api.pots.myOpenTasks);
 
-  const [weekAgo] = useState(() => Date.now() - 7 * 24 * 3_600_000);
-  const week = receipts?.filter((r) => r.occurredAt >= weekAgo) ?? [];
+  const [now] = useState(() => Date.now());
+  const week = useMemo(() => receipts?.filter((r) => r.occurredAt >= now - 7 * DAY) ?? [], [receipts, now]);
   const movedByAgents = week.filter((r) => r.agentLabel).reduce((s, r) => s + r.amountCents, 0);
-  const held = receipts?.filter((r) => r.state === "held").reduce((s, r) => s + r.amountCents, 0) ?? 0;
+  const held = receipts?.filter((r) => r.state === "held" || r.state === "funded") ?? [];
+  const heldCents = held.reduce((s, r) => s + r.amountCents, 0);
 
   return (
     <div className="animate-rise">
       <PageHeader
         eyebrow={new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-        title={viewer ? `${greeting()}, ${viewer.name.split(" ")[0]}` : <Skeleton className="h-8 w-64" />}
-        description="Your agents spent within your limits this week. Everything they moved has a receipt."
+        title={viewer ? `${greeting()}, ${viewer.name.split(" ")[0]}` : <Skeleton className="h-9 w-72" />}
+        description="Your agents spent inside your limits this week. Everything they moved has a receipt."
         actions={
-          <Link href="/tasks" className={buttonVariants({ variant: "secondary" })}>
-            Post a task <ArrowRight />
+          <Link href="/ledger" className={buttonVariants({ variant: "secondary" })}>
+            Ask the Ledger <ArrowUpRight />
           </Link>
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-        {/* This week */}
-        <Card className="@container overflow-hidden">
-          <div className="grid gap-6 p-5 @[560px]:grid-cols-[minmax(0,1fr)_auto] @[560px]:p-6">
-            <div>
-              <div className="flex items-center gap-2 text-[13px] font-medium text-muted">
-                <Bot className="size-4 text-faint" strokeWidth={1.9} />
-                Moved by your agents, last 7 days
-              </div>
-              <div className="mt-3">
-                {receipts ? <Amount cents={movedByAgents} size="xl" /> : <Skeleton className="h-10 w-44" />}
-              </div>
-              <div className="mt-2 text-[13px] text-muted">
-                {receipts ? `${week.length} receipts · 0 outside your rules` : " "}
-              </div>
-            </div>
-            <div className="flex flex-col justify-between gap-3 rounded-md bg-steel-50/70 p-4 ring-1 ring-inset ring-steel-100 @[560px]:w-56">
-              <div className="flex items-center gap-2 text-[13px] font-medium text-steel-700">
-                <Lock className="size-4" strokeWidth={1.9} />
-                Held until proof passes
-              </div>
-              <div>
-                {receipts ? <Amount cents={held} size="lg" className="text-steel-800" /> : <Skeleton className="h-7 w-20" />}
-                <div className="mt-1 text-[12.5px] text-steel-600">Paid out only on verified work</div>
-              </div>
-            </div>
-          </div>
-          <PotStrip pots={pots} />
-        </Card>
-
-        {/* Approvals */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <WeekCard week={week} movedCents={movedByAgents} heldCents={heldCents} heldCount={held.length} now={now} loading={!receipts} />
         <ApprovalsCard approvals={approvals} pots={pots} />
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <MoneyFlow receipts={week} approvalsWaiting={approvals?.length ?? 0} loading={!receipts} className="mt-4" />
+
+      <PotStrip pots={pots} />
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <Card>
           <CardHeader
             title="Recent receipts"
             description="Who it went to, why, and which rule allowed it."
             action={
-              <Link href="/receipts" className="text-[13px] font-medium text-green-700 hover:text-green-800">
-                View all
+              <Link href="/receipts" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+                View all <ArrowRight />
               </Link>
             }
           />
@@ -93,7 +82,7 @@ export function HomeView() {
               ? receipts.slice(0, 10).map((r) => <ReceiptRow key={r._id} receipt={r} href={`/receipts/${r._id}`} />)
               : Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="flex items-center gap-3 px-3 py-3">
-                    <Skeleton className="size-8 rounded-full" />
+                    <Skeleton className="size-[34px] rounded-[10px]" />
                     <Skeleton className="h-4 flex-1" />
                     <Skeleton className="h-4 w-16" />
                   </div>
@@ -109,32 +98,90 @@ export function HomeView() {
   );
 }
 
-function PotStrip({ pots }: { pots: Pot[] | undefined }) {
+// ── This week ────────────────────────────────────────────────────────────────
+
+function WeekCard({
+  week,
+  movedCents,
+  heldCents,
+  heldCount,
+  now,
+  loading,
+}: {
+  week: Receipt[];
+  movedCents: number;
+  heldCents: number;
+  heldCount: number;
+  now: number;
+  loading: boolean;
+}) {
+  const days = useMemo(() => {
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    return Array.from({ length: 7 }, (_, i) => {
+      const from = start.getTime() - (6 - i) * DAY;
+      const cents = week
+        .filter((r) => r.agentLabel && r.occurredAt >= from && r.occurredAt < from + DAY)
+        .reduce((s, r) => s + r.amountCents, 0);
+      return { cents, label: new Date(from).toLocaleDateString("en-US", { weekday: "narrow" }) };
+    });
+  }, [week, now]);
+  const outside = 0;
+
   return (
-    <div className="grid grid-cols-2 gap-px border-t border-line bg-line @[640px]:grid-cols-4">
-      {(pots ?? Array.from({ length: 4 }).map(() => null)).map((p, i) => (
-        <Link
-          key={p?._id ?? i}
-          href="/pots"
-          className="group min-w-0 bg-surface px-4 py-4 transition-colors hover:bg-canvas @[420px]:px-5"
-        >
-          {p ? (
-            <>
-              <div className="flex items-center gap-2">
-                <PotIcon pot={p} />
-                <span className="truncate text-[13px] font-medium text-ink-2">{p.name}</span>
-              </div>
-              <Amount cents={p.spentMonthCents} size="md" className="mt-3" />
-              <PotGauge pot={p} bare className="mt-2" />
-            </>
-          ) : (
-            <Skeleton className="h-[86px] w-full" />
-          )}
-        </Link>
-      ))}
-    </div>
+    <Card className="@container overflow-hidden">
+      <div className="grid @[640px]:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="flex flex-col p-5 @[640px]:p-6">
+          <div className="flex items-center gap-2 text-[13px] font-medium text-muted">
+            <Bot className="size-4 text-faint" strokeWidth={1.9} />
+            Moved by your agents, last 7 days
+          </div>
+          <div className="mt-3 flex flex-wrap items-end gap-x-4 gap-y-2">
+            {loading ? <Skeleton className="h-11 w-48" /> : <Amount cents={movedCents} size="xl" />}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Badge tone="outline" className="tabular">
+              {week.length} receipts
+            </Badge>
+            <Badge tone="green">
+              <Check />
+              {outside} outside your rules
+            </Badge>
+          </div>
+          <DayBars values={days.map((d) => d.cents)} labels={days.map((d) => d.label)} height={96} className="mt-auto pt-6" />
+        </div>
+
+        {/* Held: the steel, foil-edged side of the card */}
+        <div className="relative flex flex-col justify-between gap-6 border-t border-line bg-gradient-to-b from-steel-50 to-surface p-5 @[640px]:border-t-0 @[640px]:border-l @[640px]:p-6">
+          <div className="absolute inset-x-0 top-0 h-1 @[640px]:inset-y-0 @[640px]:right-auto @[640px]:h-auto @[640px]:w-1" style={{ background: "var(--metal)" }} aria-hidden />
+          <div>
+            <div className="flex items-center gap-2 text-[13px] font-medium text-steel-700">
+              <Lock className="size-4" strokeWidth={1.9} />
+              Held until proof passes
+            </div>
+            <div className="mt-3">
+              {loading ? <Skeleton className="h-8 w-24" /> : <Amount cents={heldCents} size="lg" className="text-[30px] text-steel-900" />}
+            </div>
+            <p className="mt-1.5 text-[12.5px] leading-relaxed text-steel-600">
+              PayPal holds it. It pays out only when the work is verified, and goes back to you if it isn&apos;t.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 rounded-[12px] bg-surface/80 px-3 py-2.5 ring-1 ring-inset ring-steel-100">
+            <IconTile tone="steel" size="sm">
+              <Clock />
+            </IconTile>
+            <div className="min-w-0 text-[12.5px] leading-snug">
+              <div className="font-medium text-ink">{heldCount} waiting on proof</div>
+              <div className="text-muted">Released the moment it passes</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 }
+
+// ── Approvals ────────────────────────────────────────────────────────────────
 
 function ApprovalsCard({
   approvals,
@@ -154,61 +201,117 @@ function ApprovalsCard({
         description="Anything over a limit waits for you."
         action={approvals?.length ? <Badge tone="steel">{approvals.length} waiting</Badge> : null}
       />
-      <div className="flex flex-1 flex-col p-5 pt-4">
+      <div className="flex flex-1 flex-col p-4 pt-3.5">
         {approvals === undefined ? (
-          <Skeleton className="h-36 w-full" />
+          <Skeleton className="h-48 w-full rounded-[12px]" />
         ) : first ? (
-          <div className="flex flex-1 flex-col rounded-md border border-line bg-canvas/60 p-4">
-            <div className="flex items-center gap-2 text-[12.5px] font-medium text-muted">
+          <div className="flex flex-1 flex-col overflow-hidden rounded-[14px] border border-line bg-surface shadow-raised">
+            <div className="flex items-center gap-2 border-b border-line bg-canvas/70 px-4 py-2.5 text-[12px] font-medium text-muted">
               <Bot className="size-3.5" strokeWidth={2} />
-              {first.agentLabel} wants to buy
+              <span className="truncate">{first.agentLabel} wants to buy</span>
+              <span className="ml-auto flex-none text-faint">{relativeTime(first._creationTime)}</span>
             </div>
-            <div className="mt-2 text-[15px] font-semibold leading-snug text-ink">{first.description}</div>
-            <div className="mt-0.5 text-[13px] text-muted">{first.merchant} · from {pot?.name ?? "a"} pot</div>
-            <div className="mt-4 flex items-end justify-between">
-              <Amount cents={first.amountCents} size="lg" />
-              <span className="flex items-center gap-1.5 text-[12.5px] text-steel-600">
-                <ShieldCheck className="size-3.5" strokeWidth={2} />
-                {first.ruleText}
-              </span>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <Button variant="secondary" onClick={() => decide({ id: first._id, approve: false })}>
-                Decline
-              </Button>
-              <Button variant="brand" onClick={() => decide({ id: first._id, approve: true })}>
-                Approve
-              </Button>
+            <div className="flex flex-1 flex-col px-4 pt-3.5 pb-4">
+              <div className="text-[15px] font-semibold leading-snug tracking-[-0.01em] text-ink">{first.description}</div>
+              <div className="mt-0.5 text-[12.5px] text-muted">
+                {first.merchant} · {pot?.name ?? "a"} pot
+              </div>
+              <div className="mt-4 flex items-end justify-between gap-3">
+                <Amount cents={first.amountCents} size="lg" className="text-[28px]" />
+              </div>
+              <div className="mt-3 flex items-start gap-2 rounded-[10px] bg-steel-50 px-3 py-2 text-[12.5px] leading-snug text-steel-700 ring-1 ring-inset ring-steel-100">
+                <ShieldCheck className="mt-px size-3.5 flex-none" strokeWidth={2} />
+                <span>
+                  Paused by your rule: <span className="font-medium">{first.ruleText}</span>
+                </span>
+              </div>
+              <div className="mt-auto grid grid-cols-2 gap-2 pt-4">
+                <Button variant="secondary" onClick={() => decide({ id: first._id, approve: false })}>
+                  Decline
+                </Button>
+                <Button variant="brand" onClick={() => decide({ id: first._id, approve: true })}>
+                  Approve {formatCents(first.amountCents)}
+                </Button>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center rounded-md border border-dashed border-line px-4 py-8 text-center">
-            <ShieldCheck className="size-5 text-green-700" strokeWidth={1.9} />
-            <div className="mt-2 text-[14px] font-medium text-ink">Nothing waiting</div>
-            <div className="mt-0.5 text-[13px] text-muted">Your agents are inside every limit.</div>
-          </div>
+          <EmptyState
+            icon={<ShieldCheck />}
+            title="Nothing waiting"
+            body="Your agents are inside every limit."
+            className="flex-1 justify-center rounded-[14px] border border-dashed border-line py-8"
+          />
         )}
       </div>
     </Card>
   );
 }
 
+// ── Pots ─────────────────────────────────────────────────────────────────────
+
+function PotStrip({ pots }: { pots: Pot[] | undefined }) {
+  return (
+    <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {(pots ?? Array.from({ length: 4 }).map(() => null)).map((p, i) =>
+        p ? (
+          <Link
+            key={p._id}
+            href="/pots"
+            className="group flex flex-col rounded-lg border border-line bg-surface p-4 shadow-card transition-[box-shadow,border-color] hover:border-line-strong hover:shadow-hover"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <PotIcon pot={p} size={28} />
+                <span className="truncate text-[13.5px] font-medium text-ink">{p.name}</span>
+              </div>
+              <Ring
+                value={p.monthlyBudgetCents ? p.spentMonthCents / p.monthlyBudgetCents : 0}
+                size={34}
+                stroke={3.5}
+                tone={p.color === "blue" || p.color === "steel" ? "steel" : "brand"}
+              />
+            </div>
+            <div className="mt-4">
+              <Amount cents={p.spentMonthCents} size="lg" />
+            </div>
+            <div className="tabular mt-0.5 text-[12px] text-muted">
+              of {formatCents(p.monthlyBudgetCents)} this month ·{" "}
+              {formatCents(Math.max(0, p.monthlyBudgetCents - p.spentMonthCents))} left
+            </div>
+          </Link>
+        ) : (
+          <Skeleton key={i} className="h-[124px] w-full rounded-lg" />
+        ),
+      )}
+    </div>
+  );
+}
+
 function RulesCard({ pots }: { pots: Pot[] | undefined }) {
   return (
     <Card>
-      <CardHeader title="Your rules" description="Written in your words, enforced in code." />
-      <div className="space-y-4 p-5 pt-4">
+      <CardHeader
+        title="Your rules"
+        description="Your words, enforced in code."
+        action={
+          <Link href="/pots" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            Edit <ArrowRight />
+          </Link>
+        }
+      />
+      <div className="space-y-2 p-4 pt-3.5">
         {pots
           ? pots.slice(0, 3).map((p) => (
-              <div key={p._id}>
-                <div className="text-[13px] font-medium text-ink">{p.name}</div>
-                <p className="mt-1 text-[13px] leading-relaxed text-muted">“{p.rulesText}”</p>
+              <div key={p._id} className="rounded-[12px] border border-line bg-canvas/50 px-3.5 py-3">
+                <div className="flex items-center gap-2 text-[12.5px] font-medium text-ink-2">
+                  <PotIcon pot={p} size={20} />
+                  {p.name}
+                </div>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-pretty text-ink">“{p.rulesText}”</p>
               </div>
             ))
           : <Skeleton className="h-32 w-full" />}
-        <Link href="/pots" className="inline-flex items-center gap-1 text-[13px] font-medium text-green-700 hover:text-green-800">
-          Edit limits <ArrowRight className="size-3.5" />
-        </Link>
       </div>
     </Card>
   );
@@ -222,7 +325,7 @@ const TASK_STATUS: Record<string, { label: string; tone: "outline" | "steel" | "
   open: { label: "Open", tone: "outline" },
   assigned: { label: "Assigned", tone: "steel" },
   submitted: { label: "Proof in", tone: "green" },
-  verifying: { label: "Checking proof", tone: "steel" },
+  verifying: { label: "Checking", tone: "steel" },
   approved: { label: "Approved", tone: "green" },
 };
 
@@ -240,8 +343,8 @@ function TasksCard({ tasks }: { tasks: OpenTask[] | undefined }) {
         title="Tasks you posted"
         description="Paid only when the proof passes."
         action={
-          <Link href="/tasks" className="text-[13px] font-medium text-green-700 hover:text-green-800">
-            All tasks
+          <Link href="/tasks" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            All <ArrowRight />
           </Link>
         }
       />
@@ -249,34 +352,33 @@ function TasksCard({ tasks }: { tasks: OpenTask[] | undefined }) {
         {tasks === undefined ? (
           <Skeleton className="m-3 h-20" />
         ) : !tasks.length ? (
-          <div className="flex flex-col items-center px-4 py-8 text-center">
-            <ListChecks className="size-5 text-faint" strokeWidth={1.9} />
-            <div className="mt-2 text-[14px] font-medium text-ink">Nothing in flight</div>
-            <div className="mt-0.5 text-[13px] text-muted">Post a task and pay only for verified work.</div>
-          </div>
+          <EmptyState icon={<ListChecks />} title="Nothing in flight" body="Post a task and pay only for verified work." className="py-8" />
         ) : (
           <ul>
             {tasks.slice(0, 4).map((t) => {
               const status = TASK_STATUS[t.status] ?? TASK_STATUS.open!;
+              const funded = t.fundingState === "authorized" || t.fundingState === "captured";
               return (
                 <li key={t._id}>
                   <Link
-                    href="/tasks"
-                    className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-sunken/70"
+                    href={`/tasks/${t._id}`}
+                    className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-[10px] px-3 py-2.5 transition-colors hover:bg-sunken/70"
                   >
                     <div className="min-w-0">
-                      <div className="line-clamp-2 text-[14px] font-medium leading-snug text-ink">{t.title}</div>
-                      <div className="mt-1 flex min-w-0 items-center text-[12.5px] text-muted">
+                      <div className="line-clamp-2 text-[13.5px] font-medium leading-snug text-ink">{t.title}</div>
+                      <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[12px] text-muted">
+                        {funded ? <Lock className="size-3 text-steel-500" strokeWidth={2.2} /> : null}
                         <span className="truncate">
-                          {t.fundingState === "authorized" || t.fundingState === "captured" ? "Funds held" : "Unfunded"}
-                          {" · "}
+                          {funded ? "Funds held" : "Unfunded"} ·{" "}
                           {t.windowEnd > now ? `due ${relativeTime(t.windowEnd)}` : `ended ${relativeTime(t.windowEnd)}`}
                         </span>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <span className="tabular text-[13px] font-semibold text-ink">{formatCents(payoutCents(t.payout))}</span>
-                      <Badge tone={status.tone}>{status.label}</Badge>
+                      <span className="tabular text-[13.5px] font-semibold text-ink">{formatCents(payoutCents(t.payout))}</span>
+                      <Badge tone={status.tone} className={cn(status.tone === "outline" && "text-muted")}>
+                        {status.label}
+                      </Badge>
                     </div>
                   </Link>
                 </li>

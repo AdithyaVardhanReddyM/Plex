@@ -91,6 +91,12 @@
     0% { box-shadow: 0 0 0 0 rgb(13 206 218 / 0.45); }
     70%, 100% { box-shadow: 0 0 0 6px rgb(13 206 218 / 0); }
   }
+  @keyframes flow {
+    0% { left: 0%; opacity: 0; }
+    12% { opacity: 1; }
+    88% { opacity: 1; }
+    100% { left: 100%; opacity: 0; }
+  }
   @keyframes shimmer {
     from { background-position: -200% 0; }
     to { background-position: 200% 0; }
@@ -177,6 +183,20 @@ body {
   background-image: radial-gradient(circle at 8px 0, var(--color-canvas) 5px, transparent 5.5px);
   background-size: 16px 10px;
   background-repeat: repeat-x;
+}
+
+/*
+ * The receipt's torn foot: a row of half-circles cut from a white strip, with
+ * the card's border and shadow carried round the scallops.
+ */
+.perforation-edge {
+  background:
+    radial-gradient(circle at 7px 12px, transparent 6px, var(--color-line) 6.2px, var(--color-line) 7px, transparent 7.3px) 0 0 / 14px 12px repeat-x,
+    linear-gradient(var(--color-surface), var(--color-surface)) 0 0 / 100% 6px no-repeat;
+  -webkit-mask: radial-gradient(circle at 7px 12px, transparent 6px, #000 6.4px) 0 0 / 14px 12px repeat-x;
+  mask: radial-gradient(circle at 7px 12px, transparent 6px, #000 6.4px) 0 0 / 14px 12px repeat-x;
+  border-inline: 1px solid var(--color-line);
+  filter: drop-shadow(0 6px 8px rgb(24 38 59 / 0.06));
 }
 
 .skeleton {

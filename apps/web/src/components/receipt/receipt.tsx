@@ -65,26 +65,36 @@ function direction(r: Receipt): "in" | "out" {
 
 // ── Compact row, for lists ───────────────────────────────────────────────────
 
+export function ReceiptKindIcon({ receipt, size = 34 }: { receipt: Receipt; size?: number }) {
+  const dir = direction(receipt);
+  return (
+    <span
+      className={cn(
+        "relative flex flex-none items-center justify-center ring-1 ring-inset [&_svg]:size-4 [&_svg]:stroke-[1.9]",
+        dir === "in" ? "bg-green-50 text-green-700 ring-green-100" : "bg-surface text-ink-2 ring-line shadow-card",
+      )}
+      style={{ width: size, height: size, borderRadius: Math.round(size * 0.3) }}
+    >
+      {dir === "in" ? <ArrowDownLeft /> : KIND[receipt.kind].icon}
+    </span>
+  );
+}
+
 export function ReceiptRow({ receipt, href }: { receipt: Receipt; href?: string }) {
   const dir = direction(receipt);
   const content = (
-    <div className="grid grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-3 rounded-md px-3 py-2.5 transition-colors group-hover:bg-sunken/70">
-      <span
-        className={cn(
-          "flex size-8 items-center justify-center rounded-full [&_svg]:size-4",
-          dir === "in" ? "bg-green-50 text-green-700" : "bg-steel-50 text-steel-600",
-        )}
-      >
-        {dir === "in" ? <ArrowDownLeft /> : KIND[receipt.kind].icon}
-      </span>
+    <div className="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3 rounded-[10px] px-3 py-2.5 transition-colors group-hover:bg-sunken/70">
+      <ReceiptKindIcon receipt={receipt} />
       <div className="min-w-0">
-        <div className="truncate text-[14px] font-medium leading-snug text-ink">{receipt.payeeLabel === "Plex (held)" ? receipt.why : receipt.payeeLabel}</div>
-        <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] leading-snug text-muted">
+        <div className="truncate text-[13.5px] font-medium leading-snug text-ink">
+          {receipt.payeeLabel === "Plex (held)" ? receipt.why : dir === "in" ? receipt.payerLabel : receipt.payeeLabel}
+        </div>
+        <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] leading-snug text-muted">
           <span className="truncate">
             {KIND[receipt.kind].label}
             {receipt.agentLabel ? <span className="hidden sm:inline"> · {receipt.agentLabel}</span> : null}
           </span>
-          <span className="text-faint">·</span>
+          <span className="text-line-strong">·</span>
           <span className="flex-none">{relativeTime(receipt.occurredAt)}</span>
         </div>
       </div>
@@ -95,7 +105,7 @@ export function ReceiptRow({ receipt, href }: { receipt: Receipt; href?: string 
     </div>
   );
   return href ? (
-    <Link href={href} className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400 rounded-md">
+    <Link href={href} className="group block rounded-[10px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-green-200">
       {content}
     </Link>
   ) : (
@@ -107,11 +117,13 @@ export function ReceiptRow({ receipt, href }: { receipt: Receipt; href?: string 
 
 function Line({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[20px_minmax(0,1fr)] gap-x-3 gap-y-1 py-3">
-      <span className="mt-0.5 text-faint [&_svg]:size-4">{icon}</span>
+    <div className="grid grid-cols-[28px_minmax(0,1fr)] gap-x-3 py-3.5">
+      <span className="flex size-7 items-center justify-center rounded-[8px] bg-sunken text-ink-2 [&_svg]:size-[15px] [&_svg]:stroke-[1.9]">
+        {icon}
+      </span>
       <div className="min-w-0">
-        <div className="text-[12px] font-medium tracking-[0.01em] text-faint">{label}</div>
-        <div className="mt-1 text-[14px] leading-relaxed text-ink-2">{children}</div>
+        <div className="text-[11.5px] font-medium text-faint">{label}</div>
+        <div className="mt-0.5 text-[13.5px] leading-relaxed text-ink-2">{children}</div>
       </div>
     </div>
   );
@@ -126,111 +138,129 @@ const RULE_SOURCE: Record<Receipt["rule"]["source"], string> = {
   system: "Plex",
 };
 
+/**
+ * The receipt: the product's signature object. A foil edge on top, the amount,
+ * the person's own words, the rule that allowed it, the evidence, and a
+ * timeline down to the PayPal IDs, closed by a perforated foot.
+ */
 export function ReceiptCard({ receipt, className }: { receipt: Receipt; className?: string }) {
   const dir = direction(receipt);
   const ids = Object.entries(receipt.paypal ?? {}).filter(([, v]) => Boolean(v));
   return (
-    <article
-      className={cn(
-        "relative overflow-hidden rounded-lg border border-line bg-surface shadow-raised",
-        className,
-      )}
-    >
-      {/* Foil edge: every receipt carries it */}
-      <div className="h-1 w-full" style={{ background: "var(--metal)" }} aria-hidden />
+    <article className={cn("relative", className)}>
+      <div className="relative overflow-hidden rounded-t-lg border border-b-0 border-line bg-surface shadow-raised">
+        {/* Foil edge: every receipt carries it */}
+        <div className="h-1.5 w-full" style={{ background: "var(--metal)" }} aria-hidden />
 
-      <div className="px-5 pt-4 pb-1">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2 text-[13px] font-medium text-muted [&_svg]:size-4">
-            {KIND[receipt.kind].icon}
-            <span className="truncate">{KIND[receipt.kind].label}</span>
-          </div>
-          <StatePill state={receipt.state} />
-        </div>
-        <div className="mt-3 flex items-end justify-between gap-4">
-          <div className="min-w-0">
-            <div className="truncate text-[17px] font-semibold tracking-[-0.015em] text-ink">
-              {dir === "in" ? receipt.payerLabel : receipt.payeeLabel}
+        <div className="px-5 pt-4 pb-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <ReceiptKindIcon receipt={receipt} size={30} />
+              <div className="min-w-0">
+                <div className="truncate text-[13px] font-medium text-ink-2">{KIND[receipt.kind].label}</div>
+                <div className="tabular text-[11.5px] text-faint">{shortDate(receipt.occurredAt)}</div>
+              </div>
             </div>
-            <div className="mt-0.5 text-[13px] text-muted">
-              {dir === "in" ? "to " + receipt.payeeLabel : "from " + receipt.payerLabel} · {shortDate(receipt.occurredAt)}
-            </div>
+            <StatePill state={receipt.state} />
           </div>
-          <Amount cents={receipt.amountCents} currency={receipt.currency} sign={dir} size="lg" />
+          <div className="mt-5 flex items-end justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-[11.5px] font-medium text-faint">{dir === "in" ? "From" : "To"}</div>
+              <div className="mt-0.5 truncate text-[17px] font-semibold tracking-[-0.015em] text-ink">
+                {dir === "in" ? receipt.payerLabel : receipt.payeeLabel}
+              </div>
+              <div className="mt-0.5 truncate text-[12.5px] text-muted">
+                {dir === "in" ? "to " + receipt.payeeLabel : "from " + receipt.payerLabel}
+              </div>
+            </div>
+            <Amount cents={receipt.amountCents} currency={receipt.currency} sign={dir} size="lg" className="text-[26px]" />
+          </div>
         </div>
-      </div>
 
-      <div className="divide-y divide-line px-5">
-        <Line icon={<Quote />} label="Why">
-          <span className="text-ink">“{receipt.why}”</span>
-        </Line>
-        <Line icon={<ShieldCheck />} label={RULE_SOURCE[receipt.rule.source]}>
-          {receipt.rule.text}
-        </Line>
-        {receipt.agentLabel ? (
-          <Line icon={<Bot />} label="Agent">
-            {receipt.agentLabel}
+        <div className="mx-5 rounded-[12px] bg-gradient-to-br from-green-50 to-surface px-4 py-3.5 ring-1 ring-inset ring-green-100">
+          <div className="flex items-center gap-1.5 text-[11.5px] font-medium text-green-800">
+            <Quote className="size-3.5" strokeWidth={2} />
+            Why, in your words
+          </div>
+          <p className="mt-1.5 text-[14.5px] leading-relaxed font-medium text-pretty text-ink">“{receipt.why}”</p>
+        </div>
+
+        <div className="divide-y divide-line px-5 pt-1">
+          <Line icon={<ShieldCheck />} label={RULE_SOURCE[receipt.rule.source]}>
+            {receipt.rule.text}
           </Line>
-        ) : null}
-        {receipt.evidence?.verdict || receipt.evidence?.checks?.length ? (
-          <Line icon={<BadgeCheck />} label="Evidence">
-            {receipt.evidence.verdict ? <div className="font-medium text-ink">{receipt.evidence.verdict}</div> : null}
-            {receipt.evidence.checks?.length ? (
-              <ul className="mt-1.5 space-y-1">
-                {receipt.evidence.checks.map((c) => (
-                  <li key={c.check} className="flex items-start gap-2 text-[13px]">
-                    <span className={cn("mt-0.5 [&_svg]:size-3.5", c.passed ? "text-green-700" : "text-disputed")}>
-                      {c.passed ? <Check /> : <TriangleAlert />}
-                    </span>
-                    <span>
-                      <span className="text-ink">{c.check}</span> <span className="text-muted">· {c.detail}</span>
-                    </span>
+          {receipt.agentLabel ? (
+            <Line icon={<Bot />} label="Agent">
+              {receipt.agentLabel}
+            </Line>
+          ) : null}
+          {receipt.evidence?.verdict || receipt.evidence?.checks?.length ? (
+            <Line icon={<BadgeCheck />} label="Evidence">
+              {receipt.evidence.verdict ? <div className="font-medium text-ink">{receipt.evidence.verdict}</div> : null}
+              {receipt.evidence.checks?.length ? (
+                <ul className="mt-1.5 space-y-1">
+                  {receipt.evidence.checks.map((c) => (
+                    <li key={c.check} className="flex items-start gap-2 text-[13px]">
+                      <span className={cn("mt-0.5 [&_svg]:size-3.5", c.passed ? "text-green-700" : "text-disputed")}>
+                        {c.passed ? <Check /> : <TriangleAlert />}
+                      </span>
+                      <span>
+                        <span className="text-ink">{c.check}</span> <span className="text-muted">· {c.detail}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </Line>
+          ) : null}
+          {receipt.evidence?.transcript?.length ? (
+            <Line icon={<HandCoins />} label={receipt.evidence.savedCents ? `Negotiated by agents · saved ${formatCents(receipt.evidence.savedCents)}` : "Negotiated by agents"}>
+              <ol className="space-y-1.5">
+                {receipt.evidence.transcript.map((t, i) => (
+                  <li key={i} className="text-[13px] leading-snug">
+                    <span className="font-medium text-ink">{t.from}:</span> <span>{t.text}</span>
                   </li>
                 ))}
-              </ul>
-            ) : null}
-          </Line>
-        ) : null}
-        {receipt.evidence?.transcript?.length ? (
-          <Line icon={<HandCoins />} label={receipt.evidence.savedCents ? `Negotiated by agents · saved ${formatCents(receipt.evidence.savedCents)}` : "Negotiated by agents"}>
-            <ol className="space-y-1.5">
-              {receipt.evidence.transcript.map((t, i) => (
-                <li key={i} className="text-[13px] leading-snug">
-                  <span className="font-medium text-ink">{t.from}:</span> <span>{t.text}</span>
-                </li>
-              ))}
-            </ol>
-          </Line>
-        ) : null}
-      </div>
+              </ol>
+            </Line>
+          ) : null}
+        </div>
 
-      {/* Timeline */}
-      <div className="border-t border-line bg-canvas/60 px-5 py-3.5">
-        <ol className="space-y-2">
-          {receipt.timeline.map((t, i) => (
-            <li key={i} className="grid grid-cols-[12px_minmax(0,1fr)_auto] items-start gap-3 text-[13px] leading-[1.4]">
-              <span
-                className={cn(
-                  "mt-[6px] size-2 rounded-full",
-                  i === receipt.timeline.length - 1 ? "bg-green-500" : "bg-line-strong",
-                )}
-              />
-              <span className="text-pretty text-ink-2">{t.label}</span>
-              <span className="tabular whitespace-nowrap text-faint">{shortDate(t.at)}</span>
-            </li>
-          ))}
-        </ol>
-        {ids.length ? (
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-dashed border-line pt-3">
-            {ids.map(([k, v]) => (
-              <span key={k} className="text-[11.5px] text-faint">
-                PayPal {k.replace(/Id$/, "").replace(/([A-Z])/g, " $1").toLowerCase()}{" "}
-                <span className="font-mono text-muted">{String(v)}</span>
-              </span>
-            ))}
-          </div>
-        ) : null}
+        {/* Timeline */}
+        <div className="border-t border-dashed border-line-strong/70 px-5 pt-4 pb-5">
+          <div className="mb-3 text-[11.5px] font-medium text-faint">Timeline</div>
+          <ol className="relative">
+            {receipt.timeline.map((t, i) => {
+              const last = i === receipt.timeline.length - 1;
+              return (
+                <li key={i} className="relative grid grid-cols-[14px_minmax(0,1fr)_auto] items-start gap-3 pb-3 text-[13px] leading-[1.4] last:pb-0">
+                  {!last ? <span className="absolute top-[13px] bottom-0 left-[6.5px] w-px bg-line-strong/70" aria-hidden /> : null}
+                  <span
+                    className={cn(
+                      "relative mt-[3px] size-3.5 rounded-full ring-[3px] ring-canvas",
+                      last ? "bg-green-500" : "border-[1.5px] border-line-strong bg-surface",
+                    )}
+                  />
+                  <span className={cn("text-pretty", last ? "font-medium text-ink" : "text-ink-2")}>{t.label}</span>
+                  <span className="tabular whitespace-nowrap text-[12px] text-faint">{shortDate(t.at)}</span>
+                </li>
+              );
+            })}
+          </ol>
+          {ids.length ? (
+            <dl className="mt-4 grid gap-1.5 rounded-[10px] border border-line bg-surface px-3 py-2.5">
+              {ids.map(([k, v]) => (
+                <div key={k} className="flex items-center justify-between gap-3 text-[11.5px]">
+                  <dt className="text-faint">PayPal {k.replace(/Id$/, "").replace(/([A-Z])/g, " $1").toLowerCase()}</dt>
+                  <dd className="truncate font-mono text-muted">{String(v)}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+        </div>
       </div>
+      {/* Perforated foot */}
+      <div className="perforation-edge h-3 w-full" aria-hidden />
     </article>
   );
 }

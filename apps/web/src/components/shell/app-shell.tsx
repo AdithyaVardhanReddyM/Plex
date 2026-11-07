@@ -335,7 +335,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <ScrollReset />
             </Suspense>
             <div className="aurora pointer-events-none absolute inset-x-0 top-0 h-[340px] lg:rounded-t-xl" aria-hidden />
-            <main className="relative mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 lg:px-10 lg:pt-9 lg:pb-14">
+            <main className="relative mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-10 lg:pt-9 lg:pb-14">
               {children}
             </main>
           </div>
