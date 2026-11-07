@@ -8,7 +8,7 @@ import { ArrowLeft, Camera, Check, CircleAlert, Clock, Crosshair, FileText, Load
 import { api } from "@/lib/convex";
 import type { Id } from "@/lib/convex";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardHeader, EmptyState, IconTile, Input, Label, Meter, PageHeader, Skeleton, Textarea } from "@/components/ui/primitives";
+import { Card, CardHeader, EmptyState, Input, Label, Meter, PageHeader, Skeleton, Textarea } from "@/components/ui/primitives";
 import { TaskArt } from "@/components/art/empty-art";
 import { PersonaSwitch, useAs } from "@/components/tasks/persona";
 import { SpecIcon, errorMessage } from "@/components/tasks/task-ui";
@@ -219,6 +219,7 @@ export function ProofUpload({ id }: { id: string }) {
           {media.length ? (
             <Card>
               <CardHeader
+                className="px-5"
                 icon={<Camera />}
                 title={hasPhotos ? "Photos" : "Files"}
                 description={hasPhotos ? "Taken now, on site. The time and place come from the photo when it has them." : "One file per item."}
@@ -247,7 +248,7 @@ export function ProofUpload({ id }: { id: string }) {
 
           {written.length ? (
             <Card>
-              <CardHeader icon={<FileText />} title="Write-up" description="Notes and links go to the proof engine as you type them." />
+              <CardHeader className="px-5" icon={<FileText />} title="Write-up" description="Notes and links go to the proof engine as you type them." />
               <ol className="grid gap-4 p-5 pt-4">
                 {written.map(({ s, i }) => (
                   <li key={i}>
@@ -292,27 +293,24 @@ export function ProofUpload({ id }: { id: string }) {
         </div>
 
         <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
-          {/* The challenge code: steel, with the foil edge */}
-          <Card className="overflow-hidden">
-            <div className="relative bg-gradient-to-b from-steel-50 to-surface px-5 pt-5 pb-4">
-              <div className="absolute inset-x-0 top-0 h-1" style={{ background: "var(--metal)" }} aria-hidden />
-              <div className="flex items-center gap-1.5 text-[13px] font-medium text-steel-700">
-                <ShieldCheck className="size-4" strokeWidth={1.9} /> Challenge code
-              </div>
-              <div className="mt-3 inline-flex rounded-[12px] bg-surface px-4 py-2.5 font-mono text-[24px] leading-none font-semibold tracking-tight text-ink shadow-card ring-1 ring-line ring-inset">
-                {task.challengeCode}
-              </div>
-              <p className="mt-3 text-[12.5px] leading-relaxed text-steel-600">
-                Write it on paper and hold it in one photo. It proves the photo was taken for this task, today.
-              </p>
+          {/* The challenge code: the screen's lit card */}
+          <section className="spotlight rounded-xl p-6">
+            <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
+              <ShieldCheck className="size-4 text-green-300" strokeWidth={1.9} /> Challenge code
             </div>
+            <div className="mt-4 font-mono text-[40px] leading-none font-semibold tracking-[-0.02em] break-all text-white">
+              {task.challengeCode}
+            </div>
+            <p className="mt-3 text-[12.5px] leading-relaxed text-white/55">
+              Write it on paper and hold it in one photo. It proves the photo was taken for this task, today.
+            </p>
             {task.location ? (
-              <div className="flex items-center justify-between gap-3 border-t border-line px-5 py-3.5">
+              <div className="mt-6 flex items-center justify-between gap-3">
                 <span className="flex min-w-0 items-start gap-2.5 text-[13px]">
-                  <MapPin className="mt-0.5 size-4 flex-none text-faint" strokeWidth={1.9} />
+                  <MapPin className="mt-0.5 size-[18px] flex-none text-white/45" strokeWidth={1.9} />
                   <span className="min-w-0">
-                    <span className="block font-medium leading-snug text-ink-2">{task.location.label}</span>
-                    <span className="block text-[12px] leading-snug text-muted">
+                    <span className="block font-medium leading-snug text-white">{task.location.label}</span>
+                    <span className="block text-[12px] leading-snug text-white/50">
                       {geo.state === "ok"
                         ? `Location shared · ±${Math.round(geo.accuracy ?? 0)} m`
                         : geo.state === "denied"
@@ -322,22 +320,27 @@ export function ProofUpload({ id }: { id: string }) {
                   </span>
                 </span>
                 {geo.state === "ok" ? (
-                  <span className="flex size-7 flex-none items-center justify-center rounded-full bg-green-50 text-green-700 ring-1 ring-green-200 ring-inset">
-                    <Check className="size-3.5" strokeWidth={2.4} />
+                  <span className="flex flex-none items-center gap-1 text-[12.5px] font-medium text-green-300">
+                    <Check className="size-4" strokeWidth={2.4} /> Shared
                   </span>
                 ) : (
-                  <Button variant="secondary" size="sm" onClick={shareLocation} disabled={geo.state === "asking"}>
+                  <button
+                    type="button"
+                    onClick={shareLocation}
+                    disabled={geo.state === "asking"}
+                    className="flex h-8 flex-none items-center gap-1.5 rounded-full bg-white/[0.1] px-3 text-[12.5px] font-medium text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12)] transition-colors hover:bg-white/[0.16] disabled:opacity-60 [&_svg]:size-3.5 [&_svg]:stroke-[2]"
+                  >
                     {geo.state === "asking" ? <Loader2 className="animate-spin" /> : <Crosshair />} Share
-                  </Button>
+                  </button>
                 )}
               </div>
             ) : null}
-          </Card>
+          </section>
 
-          <Card className="max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-20 max-lg:rounded-none max-lg:border-x-0 max-lg:border-b-0 max-lg:shadow-float">
+          <Card className="max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-20 max-lg:rounded-none max-lg:shadow-float">
             <div className="hidden px-5 pt-4 lg:block">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="text-[13px] font-medium text-ink">Ready to send</span>
+                <span className="font-display text-[15px] font-bold tracking-[-0.02em] text-ink">Ready to send</span>
                 <span className="tabular text-[12px] text-muted">
                   {readyCount} of {specs.length} items
                 </span>
@@ -347,9 +350,9 @@ export function ProofUpload({ id }: { id: string }) {
                 {specs.map(({ s, i }) => (
                   <li key={i} className="flex items-center gap-2 text-[12.5px]">
                     {isReady(i) ? (
-                      <Check className="size-3.5 flex-none text-green-700" strokeWidth={2.4} />
+                      <Check className="size-4 flex-none text-green-700" strokeWidth={2.4} />
                     ) : (
-                      <span className="mx-[3px] size-2 flex-none rounded-full border border-line-strong" />
+                      <SpecIcon type={s.type} className="size-4 flex-none text-faint" />
                     )}
                     <span className={cn("truncate", isReady(i) ? "text-ink-2" : "text-muted")}>{s.label}</span>
                   </li>
@@ -358,7 +361,7 @@ export function ProofUpload({ id }: { id: string }) {
             </div>
             <div className="grid gap-3 px-4 py-3 lg:px-5 lg:pt-4 lg:pb-5">
               {hasPhotos ? (
-                <label className="flex cursor-pointer items-start gap-2.5 rounded-[10px] bg-canvas/70 px-3 py-2.5 text-[12.5px] leading-snug text-ink-2 ring-1 ring-line ring-inset">
+                <label className="flex cursor-pointer items-start gap-2.5 rounded-[12px] bg-canvas/70 px-3 py-2.5 text-[12.5px] leading-snug text-ink-2">
                   <input
                     type="checkbox"
                     checked={confirmed}
@@ -425,15 +428,13 @@ function PhotoSlot({
         }}
       />
       {picked ? (
-        <div className="group relative aspect-[4/3] overflow-hidden rounded-[12px] bg-sunken ring-1 ring-line ring-inset">
+        <div className="group relative aspect-[4/3] overflow-hidden rounded-[14px] bg-sunken shadow-card">
           {isImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={picked.preview} alt={label} className="size-full object-cover" />
           ) : (
             <div className="flex size-full flex-col items-center justify-center gap-2 px-4 text-center">
-              <IconTile tone="white" size="md">
-                <SpecIcon type={type} />
-              </IconTile>
+              <SpecIcon type={type} className="size-6 text-ink-2" />
               <span className="max-w-full truncate text-[12.5px] font-medium text-ink-2">{picked.file.name}</span>
             </div>
           )}
@@ -442,17 +443,17 @@ function PhotoSlot({
               type="button"
               onClick={() => input.current?.click()}
               aria-label={`Replace ${label}`}
-              className="flex size-8 items-center justify-center rounded-full bg-surface/95 text-ink-2 shadow-card ring-1 ring-line transition-colors hover:text-ink"
+              className="flex h-7 items-center gap-1 rounded-full bg-surface/95 px-2.5 text-[12px] font-medium text-ink-2 shadow-card transition-colors hover:text-ink"
             >
-              <RefreshCw className="size-3.5" strokeWidth={2} />
+              <RefreshCw className="size-3" strokeWidth={2.2} /> Replace
             </button>
             <button
               type="button"
               onClick={onClear}
               aria-label={`Remove ${label}`}
-              className="flex size-8 items-center justify-center rounded-full bg-surface/95 text-ink-2 shadow-card ring-1 ring-line transition-colors hover:text-disputed"
+              className="flex h-7 items-center gap-1 rounded-full bg-surface/95 px-2.5 text-[12px] font-medium text-ink-2 shadow-card transition-colors hover:text-disputed"
             >
-              <X className="size-3.5" strokeWidth={2} />
+              <X className="size-3" strokeWidth={2.2} /> Remove
             </button>
           </div>
           <div className="absolute inset-x-2 bottom-2 flex flex-wrap gap-1">
@@ -482,15 +483,15 @@ function PhotoSlot({
             onPick(e.dataTransfer.files?.[0]);
           }}
           className={cn(
-            "flex aspect-[4/3] w-full flex-col items-center justify-center gap-2.5 rounded-[12px] border border-dashed px-4 text-center transition-colors",
+            "flex aspect-[4/3] w-full flex-col items-center justify-center gap-2.5 rounded-[14px] px-4 text-center transition-[background-color,box-shadow]",
             over
-              ? "border-green-500 bg-green-50/70"
-              : "border-line-strong bg-canvas/60 hover:border-green-400 hover:bg-green-50/40",
+              ? "bg-green-50 shadow-[inset_0_0_0_2px_var(--color-green-400)]"
+              : "bg-canvas/80 hover:bg-green-50/60",
           )}
         >
-          <IconTile tone={over ? "mint" : "white"} size="md">
+          <span className={cn("[&_svg]:size-6 [&_svg]:stroke-[1.7]", over ? "text-green-700" : "text-ink-2")}>
             {type === "photo" ? <Camera /> : <SpecIcon type={type} />}
-          </IconTile>
+          </span>
           <span>
             <span className="block text-[13px] font-medium text-ink">
               {type === "photo" ? "Take or choose a photo" : type === "video" ? "Add a video" : "Add a file"}
@@ -499,14 +500,9 @@ function PhotoSlot({
           </span>
         </button>
       )}
-      <figcaption className="mt-2 grid grid-cols-[18px_minmax(0,1fr)] gap-x-2">
-        <span
-          className={cn(
-            "tabular mt-px flex size-[18px] items-center justify-center rounded-full text-[10.5px] font-semibold",
-            picked ? "bg-green-300 text-ink" : "bg-sunken text-muted",
-          )}
-        >
-          {picked ? <Check className="size-3" strokeWidth={2.6} /> : n}
+      <figcaption className="mt-2.5 grid grid-cols-[18px_minmax(0,1fr)] gap-x-2">
+        <span className={cn("tabular flex h-5 items-center font-display text-[15px] font-extrabold tracking-[-0.03em]", picked ? "text-green-700" : "text-faint")}>
+          {picked ? <Check className="size-4" strokeWidth={2.6} /> : n}
         </span>
         <span className="min-w-0">
           <span className="block truncate text-[13px] font-medium text-ink">{label}</span>

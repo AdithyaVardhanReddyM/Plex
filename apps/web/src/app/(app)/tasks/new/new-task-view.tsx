@@ -11,6 +11,7 @@ import {
   Cpu,
   Camera,
   Check,
+  ChevronDown,
   CircleAlert,
   Crosshair,
   Hand,
@@ -23,6 +24,7 @@ import {
   Plus,
   RotateCcw,
   Search,
+  ShieldCheck,
   Trash2,
   UserCheck,
   UserRound,
@@ -40,7 +42,7 @@ import { Amount } from "@/components/ui/money";
 import { PersonaSwitch, useAs } from "@/components/tasks/persona";
 import { KIND_ICON, PolicyLine, SpecIcon, TaskCard, errorMessage, type CardTask } from "@/components/tasks/task-ui";
 import { useAutoPay, useFund } from "@/components/tasks/use-fund";
-import { cn } from "@/lib/utils";
+import { cn, formatCents } from "@/lib/utils";
 
 const HOUR = 3_600_000;
 
@@ -242,7 +244,7 @@ export function NewTaskView() {
       />
 
       {invited ? (
-        <div className="mb-4 flex items-center gap-3 rounded-[12px] bg-surface px-4 py-3 text-[13.5px] text-ink-2 shadow-card ring-1 ring-line ring-inset">
+        <div className="mb-4 flex items-center gap-3 rounded-lg bg-surface px-4 py-3 text-[13.5px] text-ink-2 shadow-card">
           <Avatar name={invited.name} color={invited.avatarColor} size={28} square={invited.kind === "agent"} />
           <span className="min-w-0 flex-1">
             {invited.kind === "agent" ? (
@@ -265,6 +267,7 @@ export function NewTaskView() {
         <div className="flex min-w-0 flex-col gap-4">
           <Card>
             <CardHeader
+              className="px-5"
               icon={<PenLine />}
               title="What do you need done?"
               description="Who, where, by when, and what proof you'd accept. Plain words are fine."
@@ -347,16 +350,19 @@ export function NewTaskView() {
                 </div>
                 <TaskCard preview task={previewTask(form, payoutCents)} />
               </div>
-              <Card className="overflow-hidden">
-                <div className="relative bg-gradient-to-b from-steel-50 to-surface px-5 pt-5 pb-4">
-                  <div className="absolute inset-x-0 top-0 h-1" style={{ background: "var(--metal)" }} aria-hidden />
-                  <div className="flex items-center gap-1.5 text-[13px] font-medium text-steel-700">
-                    <Lock className="size-4" strokeWidth={1.9} /> You fund now
+              {/* What PayPal will hold: a brushed-metal card */}
+              <div className="metal-card flex min-h-[200px] flex-col justify-between rounded-xl p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2 text-[13px] font-semibold text-steel-800">
+                    <Lock className="size-4" strokeWidth={2} /> You fund now
                   </div>
-                  <div className="mt-2.5">
-                    <Amount cents={payoutCents} size="xl" className="text-steel-900" />
-                  </div>
-                  <p className="mt-2 text-[12.5px] leading-relaxed text-steel-600">
+                  <span className="h-7 w-9 rounded-[7px] bg-[linear-gradient(135deg,var(--color-steel-50),var(--color-steel-200)_45%,var(--color-steel-50))] shadow-[inset_0_0_0_1px_rgb(24_38_59/0.18)]" aria-hidden />
+                </div>
+                <div className="mt-6">
+                  <span className="tabular font-display text-[48px] leading-none font-extrabold tracking-[-0.045em] text-steel-900">
+                    {formatCents(payoutCents)}
+                  </span>
+                  <p className="mt-2.5 text-[12.5px] leading-relaxed text-steel-800/75">
                     {autoPay.on ? (
                       <>
                         Auto-pay holds it from your saved PayPal{autoPay.payerEmail ? <> ({autoPay.payerEmail})</> : null}, no popup. PayPal keeps it until the proof passes.
@@ -366,14 +372,16 @@ export function NewTaskView() {
                     )}
                   </p>
                 </div>
-                <ol className="space-y-3 px-5 pt-1 pb-4">
+              </div>
+              <Card className="p-5">
+                <ol className="space-y-3.5">
                   {[
                     { icon: <Lock />, tone: "steel" as const, title: "Now", body: "PayPal authorizes the payout and holds it." },
                     { icon: <BadgeCheck />, tone: "mint" as const, title: "When the proof passes", body: "Captured and paid to the worker by PayPal Payouts." },
                     { icon: <RotateCcw />, tone: "neutral" as const, title: "If you cancel", body: "The hold is voided. You're never charged." },
                   ].map((s) => (
-                    <li key={s.title} className="grid grid-cols-[28px_minmax(0,1fr)] gap-3">
-                      <IconTile tone={s.tone} size="sm">
+                    <li key={s.title} className="grid grid-cols-[20px_minmax(0,1fr)] gap-3">
+                      <IconTile tone={s.tone} size="xs" className="size-5 [&_svg]:size-[18px]">
                         {s.icon}
                       </IconTile>
                       <span className="min-w-0 text-[12.5px] leading-snug">
@@ -383,10 +391,8 @@ export function NewTaskView() {
                     </li>
                   ))}
                 </ol>
-                <div className="px-5 pb-4">
-                  <PolicyLine pot={errands?.name} outcome={policy?.outcome} ruleText={policy?.ruleText} />
-                </div>
-                <div className="flex flex-col gap-2 border-t border-line bg-canvas/60 px-5 py-4">
+                <PolicyLine pot={errands?.name} outcome={policy?.outcome} ruleText={policy?.ruleText} className="mt-5" />
+                <div className="mt-5 flex flex-col gap-2">
                   <Button
                     variant="brand"
                     size="lg"
@@ -426,37 +432,38 @@ export function NewTaskView() {
   );
 }
 
-/** The four steps of a task, before there's a draft to preview. */
+/** The four steps of a task, before there's a draft to preview: the screen's lit card. */
 function HowItWorks() {
   const steps = [
-    { icon: <Lock />, tone: "steel" as const, title: "Fund", body: "PayPal holds the payout. Your pot's rules are checked first, in code." },
-    { icon: <UsersRound />, tone: "white" as const, title: "Match", body: "People apply and AI agents bid. Match ranks them by record and ask." },
-    { icon: <Camera />, tone: "white" as const, title: "Proof", body: "Photos with the challenge word, or agent work scored by three blind proofers." },
-    { icon: <BadgeCheck />, tone: "ink" as const, title: "Pay", body: "You approve, PayPal captures and pays out. Both sides get the receipt." },
+    { icon: <Lock />, title: "Fund", body: "PayPal holds the payout. Your pot's rules are checked first, in code." },
+    { icon: <UsersRound />, title: "Match", body: "People apply and AI agents bid. Match ranks them by record and ask." },
+    { icon: <Camera />, title: "Proof", body: "Photos with the challenge word, or agent work scored by three blind proofers." },
+    { icon: <BadgeCheck />, title: "Pay", body: "You approve, PayPal captures and pays out. Both sides get the receipt." },
   ];
   return (
-    <Card>
-      <CardHeader title="How a task works" description="The money moves only when the proof passes." />
-      <ol className="px-5 pt-4 pb-5">
+    <div className="spotlight rounded-xl p-6 sm:p-7">
+      <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
+        <ShieldCheck className="size-4 text-green-300" strokeWidth={1.9} />
+        How a task works
+      </div>
+      <div className="mt-3 font-display text-[30px] leading-[1.08] font-extrabold tracking-[-0.04em] text-balance text-white">
+        The money moves only when the proof passes.
+      </div>
+      <ol className="mt-7 grid gap-5">
         {steps.map((s, i) => (
-          <li key={s.title} className="relative grid grid-cols-[36px_minmax(0,1fr)] gap-3.5 pb-5 last:pb-0">
-            {i < steps.length - 1 ? (
-              <span className="absolute top-10 bottom-1 left-[17.5px] w-px bg-[repeating-linear-gradient(180deg,var(--color-line-strong)_0_4px,transparent_4px_8px)]" aria-hidden />
-            ) : null}
-            <IconTile tone={s.tone} size="md">
-              {s.icon}
-            </IconTile>
-            <span className="min-w-0 pt-0.5">
-              <span className="block text-[13.5px] font-medium text-ink">
-                <span className="tabular mr-1.5 text-faint">{i + 1}</span>
+          <li key={s.title} className="grid grid-cols-[28px_minmax(0,1fr)] gap-3">
+            <span className="tabular font-display text-[22px] leading-none font-extrabold tracking-[-0.04em] text-white/30">{i + 1}</span>
+            <span className="min-w-0">
+              <span className="flex items-center gap-2 text-[14px] font-semibold text-white [&_svg]:size-4 [&_svg]:stroke-[1.9] [&_svg]:text-green-300">
+                {s.icon}
                 {s.title}
               </span>
-              <span className="mt-0.5 block text-[12.5px] leading-snug text-muted">{s.body}</span>
+              <span className="mt-1 block text-[12.5px] leading-snug text-white/55">{s.body}</span>
             </span>
           </li>
         ))}
       </ol>
-    </Card>
+    </div>
   );
 }
 
@@ -492,7 +499,7 @@ function previewTask(f: Form, cents: number): CardTask {
 function WriterSkeleton() {
   return (
     <Card>
-      <div className="flex items-center gap-2 border-b border-line px-5 py-3.5 text-[13px] text-muted">
+      <div className="flex items-center gap-2 px-5 pt-5 text-[13px] text-muted">
         <Loader2 className="size-4 animate-spin" strokeWidth={1.9} /> Reading your request, writing the proof spec…
       </div>
       <div className="space-y-4 p-5">
@@ -519,10 +526,10 @@ function AcceptanceCriteria({ form, set }: { form: Form; set: <K extends keyof F
   const criteria = defaultCriteria(form.proofSpec);
   const agents = form.workerType !== "human";
   return (
-    <div className="rounded-[12px] bg-canvas/70 ring-1 ring-line ring-inset">
-      <div className="px-4 pt-3.5 pb-3">
-        <div className="flex items-center gap-2 text-[13px] font-medium text-ink">
-          <ListChecks className="size-4 text-faint" strokeWidth={1.9} /> Done means
+    <div className="rounded-[14px] bg-[linear-gradient(150deg,var(--color-green-50),var(--color-green-100)_80%)]">
+      <div className="px-4 pt-4 pb-3">
+        <div className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+          <ListChecks className="size-[18px] text-green-800" strokeWidth={1.9} /> Done means
         </div>
         <ul className="mt-2 space-y-1.5 text-[12.5px] text-ink-2">
           {criteria.map((c, i) => (
@@ -540,7 +547,7 @@ function AcceptanceCriteria({ form, set }: { form: Form; set: <K extends keyof F
         </ul>
       </div>
       {agents ? (
-        <div className="flex items-start justify-between gap-4 border-t border-line px-4 py-3">
+        <div className="mx-2 mb-2 flex items-start justify-between gap-4 rounded-[12px] bg-white/60 px-3 py-3">
           <span>
             <span className="block text-[13px] font-medium text-ink">Hands-free</span>
             <span className="block text-[12px] leading-snug text-muted">
@@ -593,23 +600,15 @@ function Choice({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "relative flex flex-col items-start gap-2.5 rounded-[12px] bg-surface p-3 text-left ring-inset transition-[box-shadow,background-color] disabled:cursor-not-allowed disabled:opacity-45",
-        active ? "shadow-card ring-[1.5px] ring-ink" : "ring-1 ring-line hover:bg-canvas/60 hover:ring-line-strong",
+        "relative flex flex-col items-start gap-2.5 rounded-[14px] p-3.5 text-left ring-inset transition-[box-shadow,background-color] disabled:cursor-not-allowed disabled:opacity-45",
+        active ? "bg-surface shadow-card ring-[1.5px] ring-ink" : "bg-canvas/70 hover:bg-sunken",
       )}
     >
       <span className="flex w-full items-center justify-between">
         <IconTile tone={active ? "ink" : "neutral"} size="sm">
           {icon}
         </IconTile>
-        <span
-          className={cn(
-            "flex size-4 items-center justify-center rounded-full ring-inset",
-            active ? "bg-ink ring-0" : "ring-1 ring-line-strong",
-          )}
-          aria-hidden
-        >
-          {active ? <span className="size-1.5 rounded-full bg-white" /> : null}
-        </span>
+        {active ? <Check className="size-4 text-ink" strokeWidth={2.4} aria-hidden /> : null}
       </span>
       <span>
         <span className="block text-[13px] font-medium text-ink">{label}</span>
@@ -633,14 +632,14 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="px-5 py-5">
+    <section className="px-5 pt-6 pb-2 last:pb-6">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <span className="tabular mt-px flex size-[22px] flex-none items-center justify-center rounded-full bg-sunken text-[11.5px] font-semibold text-ink-2 ring-1 ring-line/70 ring-inset">
+          <span className="tabular w-[22px] flex-none font-display text-[22px] leading-6 font-extrabold tracking-[-0.04em] text-green-600">
             {n}
           </span>
           <div>
-            <h2 className="text-[14.5px] leading-6 font-semibold tracking-[-0.012em] text-ink">{title}</h2>
+            <h2 className="font-display text-[16px] leading-6 font-bold tracking-[-0.02em] text-ink">{title}</h2>
             {description ? <p className="text-[12.5px] leading-snug text-muted">{description}</p> : null}
           </div>
         </div>
@@ -693,7 +692,7 @@ function Editor({
     );
 
   return (
-    <Card className="animate-rise divide-y divide-line">
+    <Card className="animate-rise">
       <Section n={1} title="The task" description="What the worker reads. Edit anything the writer got wrong." aside={<Badge tone="outline">Draft</Badge>}>
         <div>
           <Label htmlFor="title">Title</Label>
@@ -828,14 +827,15 @@ function Editor({
         aside={<span className="tabular pt-1 text-[12px] text-faint">{form.proofSpec.length} of 6</span>}
       >
         <div>
-          <ul className="divide-y divide-line overflow-hidden rounded-[12px] border border-line">
+          <ul className="grid gap-2">
             {form.proofSpec.map((s, i) => (
-              <li key={i} className="grid grid-cols-[36px_minmax(0,1fr)_32px] items-start gap-2.5 bg-surface p-2.5">
+              <li key={i} className="grid grid-cols-[36px_minmax(0,1fr)_32px] items-start gap-2.5 rounded-[14px] bg-canvas/70 p-2.5">
                 <label
-                  className="relative flex size-9 cursor-pointer items-center justify-center rounded-[10px] bg-sunken text-ink-2 ring-1 ring-line/70 ring-inset transition-colors hover:bg-line/60"
+                  className="relative flex h-8 cursor-pointer items-center justify-center gap-0.5 text-ink-2 transition-colors hover:text-ink"
                   title="Change the type"
                 >
-                  <SpecIcon type={s.type} />
+                  <SpecIcon type={s.type} className="size-5" />
+                  <ChevronDown className="size-3 text-faint" strokeWidth={2.2} aria-hidden />
                   <select
                     value={s.type}
                     onChange={(e) => updateSpec(i, { type: e.target.value as SpecItem["type"] })}

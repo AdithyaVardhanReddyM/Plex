@@ -20,6 +20,7 @@ import {
   MapPin,
   PenLine,
   RotateCcw,
+  Route,
   ShieldCheck,
   UserCheck,
   Wallet,
@@ -31,7 +32,7 @@ import { criterionLabel, defaultCriteria } from "@plex/backend/lib/hire";
 import { api } from "@/lib/convex";
 import type { Id } from "@/lib/convex";
 import { buttonVariants } from "@/components/ui/button";
-import { Avatar, Card, CardHeader, EmptyState, IconTile, Skeleton } from "@/components/ui/primitives";
+import { Avatar, Card, CardHeader, EmptyState, Skeleton } from "@/components/ui/primitives";
 import { TaskArt } from "@/components/art/empty-art";
 import { ReceiptCard, ReceiptRow } from "@/components/receipt/receipt";
 import { PersonaSwitch, useAs } from "@/components/tasks/persona";
@@ -83,7 +84,7 @@ export function TaskDetail({ id }: { id: string }) {
           {task.title}
         </h1>
         <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted">
-          {poster ? <Avatar name={poster.name} color={poster.avatarColor} size={22} /> : null}
+          {poster ? <Avatar name={poster.name} color={poster.avatarColor} size={24} square={poster.kind !== "person"} /> : null}
           <span className="font-medium text-ink-2">{isPoster ? "You" : (poster?.name ?? "Someone")}</span>
           {task.agentLabel ? (
             <span className="inline-flex items-center gap-1">
@@ -154,12 +155,12 @@ function TaskDetailSkeleton() {
     <div>
       <Skeleton className="h-4 w-16" />
       <div className="mt-8 flex items-center gap-2">
-        <Skeleton className="size-6 rounded-[7px]" />
+        <Skeleton className="size-[18px] rounded-[6px]" />
         <Skeleton className="h-3.5 w-48" />
       </div>
       <Skeleton className="mt-4 h-8 w-[30rem] max-w-full" />
       <Skeleton className="mt-3 h-4 w-64" />
-      <Skeleton className="mt-7 h-[104px] w-full rounded-lg" />
+      <Skeleton className="mt-7 h-[232px] w-full rounded-xl" />
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex flex-col gap-4">
           <Skeleton className="h-36 w-full rounded-lg" />
@@ -270,47 +271,80 @@ function Lifecycle({ data }: { data: TaskPage }) {
   });
   const doneCount = resolved.filter((s) => s.state === "done" || s.state === "held").length;
 
+  const current = resolved.find((s) => s.state === "current" || s.state === "warn" || s.state === "stop");
+  const headline = STAGE[status];
+
   return (
-    <Card className="relative overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-5 pt-4">
-        <div className="text-[13px] font-medium text-ink">Where it stands</div>
-        <span className="tabular text-[12px] text-faint">
-          {doneCount} of {resolved.length}
-        </span>
+    <section className="spotlight rounded-xl px-6 pt-6 pb-7 sm:px-7">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
+            <Route className="size-4 text-green-300" strokeWidth={1.9} />
+            Where it stands
+          </div>
+          <div className="mt-3 font-display text-[34px] leading-[1.05] font-extrabold tracking-[-0.04em] text-balance text-white sm:text-[42px]">
+            {headline}
+          </div>
+          {current ? (
+            <p className="mt-2 text-[13px] text-white/55">
+              {current.state === "current" ? "Up next: " : ""}
+              {current.label} · {current.sub}
+            </p>
+          ) : (
+            <p className="mt-2 text-[13px] text-white/55">Every step is done. Both sides have the receipt.</p>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-[12px] font-medium">
+          <span className={cn(GLASS, "tabular text-white/70")}>
+            {doneCount} of {resolved.length} steps
+          </span>
+          {!ended && !paid ? <span className={cn(GLASS, "text-white/70")}>{timeLeft(task)}</span> : null}
+        </div>
       </div>
-      <ol className="relative grid gap-0 px-5 pt-3 pb-5 md:grid-cols-6">
+
+      <ol className="relative mt-8 grid gap-0 md:grid-cols-6">
         {resolved.map((s, i) => {
           const next = resolved[i + 1];
-          const lit = next && (next.state === "done" || next.state === "held" || next.state === "current" || next.state === "warn" || next.state === "stop") && (s.state === "done" || s.state === "held");
+          const reached = (st: StepState) => st === "done" || st === "held";
+          const lit = next && reached(s.state) && next.state !== "todo";
+          const fill = lit ? (s.state === "held" ? "var(--meter-steel)" : "var(--meter-brand)") : undefined;
           return (
-            <li key={s.key} className="relative flex gap-3 pb-4 last:pb-0 md:flex-col md:gap-0 md:pb-0">
+            <li key={s.key} className="relative flex gap-3.5 pb-5 last:pb-0 md:flex-col md:gap-0 md:pb-0">
               {next ? (
                 <>
-                  {/* vertical connector (mobile) */}
+                  {/* vertical connector (phones) */}
                   <span
                     aria-hidden
-                    className={cn("absolute top-8 bottom-0 left-[13px] w-0.5 rounded-full md:hidden", lit ? "" : "bg-line")}
-                    style={lit ? { backgroundImage: s.state === "held" ? "var(--meter-steel)" : "var(--meter-brand)" } : undefined}
+                    className={cn("absolute top-8 bottom-1 left-[11px] w-0.5 rounded-full md:hidden", !lit && "bg-white/12")}
+                    style={fill ? { backgroundImage: fill } : undefined}
                   />
                   {/* horizontal connector */}
                   <span
                     aria-hidden
-                    className={cn("absolute top-[13px] right-1.5 left-9 hidden h-0.5 rounded-full md:block", lit ? "" : "bg-line")}
-                    style={lit ? { backgroundImage: s.state === "held" ? "var(--meter-steel)" : "var(--meter-brand)" } : undefined}
+                    className={cn("absolute top-[11px] right-3 left-9 hidden h-0.5 rounded-full md:block", !lit && "bg-white/12")}
+                    style={fill ? { backgroundImage: fill } : undefined}
                   />
                 </>
               ) : null}
-              <StepNode state={s.state} icon={s.icon} />
-              <div className="min-w-0 pt-0.5 md:pt-2.5 md:pr-3">
+              <StepIcon state={s.state} icon={s.icon} />
+              <div className="min-w-0 md:pt-3 md:pr-3">
                 <div
                   className={cn(
-                    "text-[13px] leading-snug font-medium",
-                    s.state === "todo" ? "text-faint" : s.state === "warn" ? "text-refunded" : s.state === "stop" ? "text-disputed" : "text-ink",
+                    "text-[13.5px] leading-snug font-semibold",
+                    s.state === "todo"
+                      ? "text-white/35"
+                      : s.state === "warn"
+                        ? "text-refunded-bg"
+                        : s.state === "stop"
+                          ? "text-disputed-bg"
+                          : s.state === "current"
+                            ? "text-green-200"
+                            : "text-white",
                   )}
                 >
                   {s.label}
                 </div>
-                <div className={cn("mt-0.5 truncate text-[12px] leading-snug", s.state === "held" ? "text-steel-600" : "text-muted")}>
+                <div className={cn("mt-0.5 truncate text-[12px] leading-snug", s.state === "todo" ? "text-white/30" : "text-white/55")}>
                   {s.sub}
                 </div>
               </div>
@@ -318,37 +352,51 @@ function Lifecycle({ data }: { data: TaskPage }) {
           );
         })}
       </ol>
-    </Card>
+    </section>
   );
 }
 
-function StepNode({ state, icon }: { state: StepState; icon: React.ReactNode }) {
-  const base = "relative z-[1] flex size-7 flex-none items-center justify-center rounded-full [&_svg]:size-3.5 [&_svg]:stroke-[2.1]";
+const GLASS = "rounded-full bg-white/[0.08] px-2.5 py-1 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]";
+
+/** The task's state in a few words: the spotlight's headline. */
+const STAGE: Record<TaskPage["task"]["status"], string> = {
+  draft: "Not funded yet",
+  open: "Open for takers",
+  assigned: "Work in progress",
+  verifying: "Checking the proof",
+  submitted: "Proof in, waiting on approval",
+  approved: "Paying out",
+  paid: "Paid on proof",
+  rejected: "Proof rejected",
+  disputed: "Contested",
+  cancelled: "Cancelled",
+  refunded: "Refunded",
+};
+
+/** A step's state as a bare glyph on the night ground: no circle behind it. */
+function StepIcon({ state, icon }: { state: StepState; icon: React.ReactNode }) {
+  const base = "relative z-[1] flex size-6 flex-none items-center justify-center [&_svg]:size-5 [&_svg]:stroke-[2]";
   switch (state) {
     case "done":
       return (
-        <span className={cn(base, "bg-green-300 text-ink ring-1 ring-inset ring-green-500/30")}>
-          <Check />
+        <span className={cn(base, "text-green-300")}>
+          <Check className="!stroke-[2.6]" />
         </span>
       );
     case "held":
       return (
-        <span className={cn(base, "text-steel-800 ring-1 ring-inset ring-steel-400/40")} style={{ background: "var(--metal)" }}>
+        <span className={cn(base, "text-steel-200")}>
           <Lock />
         </span>
       );
     case "current":
-      return (
-        <span className={cn(base, "bg-surface text-ink shadow-[0_0_0_4px_var(--color-green-50)] ring-[1.5px] ring-inset ring-ink")}>
-          {icon}
-        </span>
-      );
+      return <span className={cn(base, "text-white")}>{icon}</span>;
     case "warn":
-      return <span className={cn(base, "bg-refunded-bg text-refunded ring-1 ring-inset ring-refunded/25")}>{icon}</span>;
+      return <span className={cn(base, "text-refunded-bg")}>{icon}</span>;
     case "stop":
-      return <span className={cn(base, "bg-disputed-bg text-disputed ring-1 ring-inset ring-disputed/25")}>{icon}</span>;
+      return <span className={cn(base, "text-disputed-bg")}>{icon}</span>;
     default:
-      return <span className={cn(base, "border border-dashed border-line-strong bg-surface text-faint")}>{icon}</span>;
+      return <span className={cn(base, "text-white/30")}>{icon}</span>;
   }
 }
 
@@ -448,17 +496,17 @@ function BriefCard({ data }: { data: TaskPage }) {
   const seesCode = role === "poster" || role === "assignee";
   return (
     <Card>
-      <CardHeader title="The brief" description="What the worker sees, and what the proof must show." />
+      <CardHeader className="px-5" title="The brief" description="What the worker sees, and what the proof must show." />
       <div className="px-5 pt-3">
         <p className="text-[14px] leading-relaxed text-pretty text-ink-2">{task.description}</p>
         {task.brief && task.brief !== task.description ? (
-          <p className="mt-3 border-l-2 border-line-strong/70 pl-3 text-[13px] leading-relaxed text-muted">
-            Asked as “{task.brief}”
+          <p className="mt-3 text-[13px] leading-relaxed text-muted">
+            <span className="text-faint">Asked as</span> “{task.brief}”
           </p>
         ) : null}
       </div>
 
-      <dl className="mx-5 mt-4 grid grid-cols-1 gap-px overflow-hidden rounded-[12px] border border-line bg-line sm:grid-cols-2 xl:grid-cols-3">
+      <dl className="mx-5 mt-5 grid grid-cols-1 gap-x-8 gap-y-5 rounded-[14px] bg-canvas/70 px-5 py-5 sm:grid-cols-2 xl:grid-cols-3">
         <Fact icon={<Clock />} label="Window" foot={timeLeft(task)}>
           {windowLabel(task.windowStart, task.windowEnd)}
         </Fact>
@@ -483,19 +531,17 @@ function BriefCard({ data }: { data: TaskPage }) {
         </Fact>
       </dl>
 
-      <div className="px-5 pt-5 pb-5">
+      <div className="px-5 pt-6 pb-5">
         <div className="flex items-baseline justify-between gap-3">
-          <div className="text-[13.5px] font-semibold text-ink">Proof spec</div>
+          <div className="font-display text-[15px] font-bold tracking-[-0.02em] text-ink">Proof spec</div>
           <span className="tabular text-[12px] text-faint">
             {task.proofSpec.length} item{task.proofSpec.length === 1 ? "" : "s"}
           </span>
         </div>
-        <ol className="mt-1.5 divide-y divide-line">
+        <ol className="-mx-3 mt-1.5">
           {task.proofSpec.map((s, i) => (
-            <li key={i} className="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3 py-2.5">
-              <IconTile size="md" className="size-[34px]">
-                <SpecIcon type={s.type} />
-              </IconTile>
+            <li key={i} className="grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 rounded-[12px] px-3 py-3 transition-colors hover:bg-sunken/70">
+              <SpecIcon type={s.type} className="size-5 text-ink-2" />
               <span className="min-w-0">
                 <span className="block text-[13.5px] font-medium text-ink">{s.label}</span>
                 {s.description && s.description !== s.label ? (
@@ -507,10 +553,10 @@ function BriefCard({ data }: { data: TaskPage }) {
           ))}
         </ol>
         {data.digital ? (
-          <div className="mt-3 rounded-[12px] bg-canvas/70 px-4 py-3.5 ring-1 ring-line ring-inset">
+          <div className="mt-3 rounded-[14px] bg-[linear-gradient(150deg,var(--color-green-50),var(--color-green-100)_80%)] px-4 py-4">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[13px] font-medium text-ink">Done means</span>
-              {task.autoHire ? <span className="text-[12px] font-medium text-green-700">Hands-free</span> : null}
+              <span className="text-[13px] font-semibold text-ink">Done means</span>
+              {task.autoHire ? <span className="text-[12px] font-medium text-green-800">Hands-free</span> : null}
             </div>
             <ul className="mt-2 space-y-1.5 text-[12.5px] text-ink-2">
               {(task.criteria ?? defaultCriteria(task.proofSpec)).map((c, i) => (
@@ -528,15 +574,14 @@ function BriefCard({ data }: { data: TaskPage }) {
             </ul>
           </div>
         ) : (
-          <div className="relative mt-3 flex items-center justify-between gap-4 overflow-hidden rounded-[12px] bg-steel-50/80 py-3 pr-3.5 pl-4 ring-1 ring-steel-100 ring-inset">
-            <span className="absolute inset-y-0 left-0 w-1" style={{ background: "var(--metal)" }} aria-hidden />
-            <span className="text-[12.5px] leading-snug text-steel-700">
+          <div className="mt-3 flex items-center justify-between gap-4 rounded-[14px] bg-[linear-gradient(150deg,var(--color-steel-50),var(--color-steel-100)_80%)] py-3.5 pr-3.5 pl-4">
+            <span className="text-[12.5px] leading-snug text-steel-800">
               <span className="font-medium">Challenge code.</span> Shown in one photo, so proof can&apos;t be prepared in advance.
             </span>
             <span
               className={cn(
-                "flex-none rounded-[8px] px-2.5 py-1 font-mono text-[13px] font-semibold tracking-wide",
-                seesCode ? "bg-surface text-ink shadow-card ring-1 ring-line ring-inset" : "bg-steel-100 text-steel-500",
+                "flex-none rounded-[10px] px-3 py-1.5 font-mono text-[15px] font-semibold tracking-wide",
+                seesCode ? "bg-surface text-ink shadow-card" : "bg-white/50 text-steel-500",
               )}
             >
               {seesCode ? task.challengeCode : "on accept"}
@@ -552,8 +597,8 @@ const WHO = { human: "A person", either: "A person or an AI agent", agent: "An A
 
 function Fact({ icon, label, foot, children }: { icon: React.ReactNode; label: string; foot?: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[16px_minmax(0,1fr)] gap-x-2.5 bg-surface px-4 py-3">
-      <span className="mt-px text-faint [&_svg]:size-4 [&_svg]:stroke-[1.9]">{icon}</span>
+    <div className="grid grid-cols-[18px_minmax(0,1fr)] gap-x-3">
+      <span className="mt-px text-ink-2 [&_svg]:size-[18px] [&_svg]:stroke-[1.9]">{icon}</span>
       <div className="min-w-0">
         <dt className="text-[12px] text-faint">{label}</dt>
         <dd className="mt-0.5 text-[13.5px] leading-snug font-medium text-ink">{children}</dd>
@@ -572,7 +617,7 @@ function TaskReceipts({ receipts }: { receipts: TaskPage["receipts"] }) {
   return (
     <section className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between px-1">
-        <div className="text-[13.5px] font-semibold text-ink">Receipts</div>
+        <div className="font-display text-[15px] font-bold tracking-[-0.02em] text-ink">Receipts</div>
         <div className="tabular text-[12px] text-faint">
           {receipts.length} for this task
         </div>

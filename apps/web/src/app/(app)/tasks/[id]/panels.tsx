@@ -39,7 +39,6 @@ import { useRun } from "@/components/tasks/use-run";
 import {
   CheckList,
   Deliverable,
-  FundingBadge,
   MatchScore,
   PolicyLine,
   SpecIcon,
@@ -85,15 +84,16 @@ export function ConnectionsCard({ data }: { data: TaskPage }) {
   return (
     <Card>
       <CardHeader
+        className="px-5"
         icon={<Link2 />}
         title="Connections"
         description="Lend the hired agent one account for this task only. The token is encrypted, used only by the agent's tool calls and the proof check, and deleted when the task is paid or refunded."
         action={live.length ? <Badge tone="green">{live.length} connected</Badge> : needed ? <Badge tone="amber">Needed</Badge> : null}
       />
       {conn.rows.length ? (
-        <ul className="mt-3 divide-y divide-line border-t border-line">
+        <ul className="mt-3 px-2">
           {conn.rows.map((r) => (
-            <li key={r._id} className={cn("flex items-center justify-between gap-3 px-5 py-3", r.wiped && "opacity-60")}>
+            <li key={r._id} className={cn("flex items-center justify-between gap-3 rounded-[12px] px-3 py-3 transition-colors hover:bg-sunken/70", r.wiped && "opacity-60")}>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 text-[13.5px] font-medium text-ink">
                   {r.label} <Badge tone={r.kind === "github" ? "steel" : "neutral"}>{r.kind === "github" ? "GitHub MCP" : "MCP server"}</Badge>
@@ -113,7 +113,7 @@ export function ConnectionsCard({ data }: { data: TaskPage }) {
         </ul>
       ) : null}
       {conn.canEdit && live.length < 3 ? (
-        <div className="mt-3 grid gap-3.5 border-t border-line bg-canvas/40 px-5 pt-4 pb-5">
+        <div className="mx-5 mt-4 mb-5 grid gap-3.5 rounded-[14px] bg-canvas/70 p-4">
           {!conn.ready ? <p className="text-[12.5px] text-disputed">This deployment has no CONNECTIONS_KEY, so it can&apos;t store tokens.</p> : null}
           <Segmented
             size="sm"
@@ -208,16 +208,16 @@ function Panel({
 }) {
   return (
     <Card className="overflow-hidden">
-      <div className="flex items-start gap-3.5 px-5 py-4">
-        <IconTile tone={PANEL_TILE[tone]} size="lg">
+      <div className="flex items-start gap-3.5 px-5 pt-5 pb-5">
+        <IconTile tone={PANEL_TILE[tone]} size="sm" className="mt-0.5 [&_svg]:size-5">
           {icon}
         </IconTile>
-        <div className="min-w-0 flex-1 self-center">
-          <div className="text-[15.5px] leading-snug font-semibold tracking-[-0.014em] text-ink">{title}</div>
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-[19px] leading-snug font-bold tracking-[-0.025em] text-ink">{title}</div>
           {body ? <div className="mt-1 text-[13px] leading-relaxed text-pretty text-muted">{body}</div> : null}
         </div>
       </div>
-      {children ? <div className="border-t border-line bg-canvas/50 px-5 py-4">{children}</div> : null}
+      {children ? <div className="mx-5 mb-5 rounded-[14px] bg-canvas/70 p-4">{children}</div> : null}
     </Card>
   );
 }
@@ -442,7 +442,7 @@ export function ActionPanel({ data }: { data: TaskPage }) {
           title={
             <>
               {isPoster ? `Paid ${assignee?.name ?? "the worker"}` : role === "assignee" ? "You were paid" : "Paid"}{" "}
-              <Amount cents={payout?.amountCents ?? payoutFor(data)} size="md" className="text-[15.5px] text-green-800" />
+              <Amount cents={payout?.amountCents ?? payoutFor(data)} size="md" className="font-display text-[19px] font-bold text-green-700" />
             </>
           }
           body={
@@ -521,7 +521,7 @@ export function ActionPanel({ data }: { data: TaskPage }) {
             )
           }
         >
-          <div className="rounded-[12px] bg-surface p-3.5 shadow-card ring-1 ring-line ring-inset">
+          <div className="rounded-[12px] bg-surface p-3.5 shadow-card">
             <div className="flex items-center justify-between gap-3">
               <span className="flex items-center gap-2 text-[12.5px] font-medium text-ink">
                 <Cpu className="size-4 text-faint" strokeWidth={1.9} /> Mediator
@@ -587,7 +587,7 @@ function AgentBidding({ data }: { data: TaskPage }) {
   // Nobody on Plex can do it: offer to create an agent for it.
   if (!human && !agentBids && fit && fit.digital && !names.length)
     return (
-      <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-refunded-bg px-3.5 py-3 ring-1 ring-refunded/15 ring-inset">
+      <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-refunded-bg px-3.5 py-3">
         <span className="flex min-w-0 items-start gap-2 text-[12.5px] leading-snug text-ink-2">
           <Cpu className="mt-px size-4 flex-none text-faint" strokeWidth={1.9} />
           <span>
@@ -600,7 +600,7 @@ function AgentBidding({ data }: { data: TaskPage }) {
       </div>
     );
   return (
-    <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-surface px-3.5 py-3 shadow-card ring-1 ring-line ring-inset">
+    <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-surface px-3.5 py-3 shadow-card">
       <span className="flex min-w-0 items-center gap-2 text-[12.5px] leading-snug text-ink-2">
         <Cpu className="size-4 flex-none text-faint" strokeWidth={1.9} />
         {human
@@ -630,7 +630,7 @@ function AgentBidding({ data }: { data: TaskPage }) {
 /** Round by round: what the agent asked, and when code moved its number. */
 function BidTrail({ bids }: { bids: NonNullable<TaskPage["applications"][number]["bids"]> }) {
   return (
-    <ol className="mt-2.5 space-y-1.5 border-l border-line pl-3">
+    <ol className="mt-2.5 space-y-1.5">
       {bids.map((b, i) => (
         <li key={i} className="text-[12.5px] leading-snug">
           <span className="tabular font-medium text-ink">Round {b.round} · {formatCents(b.cents)}</span>
@@ -659,14 +659,14 @@ function SplitNote({ cents, applicant }: { cents: number; applicant: NonNullable
 function Scorecards({ cards }: { cards: NonNullable<NonNullable<TaskPage["proof"]>["scorecards"]> }) {
   const dims = ["completeness", "accuracy", "method", "quality"] as const;
   return (
-    <div className="border-t border-line px-5 pt-4 pb-4">
+    <div className="px-5 pt-6 pb-2">
       <div className="flex items-baseline justify-between gap-3">
-        <div className="text-[13.5px] font-semibold text-ink">Proofer scorecards</div>
+        <div className="font-display text-[15px] font-bold tracking-[-0.02em] text-ink">Proofer scorecards</div>
         <div className="text-[12px] text-faint">Scored blind, 1 to 5</div>
       </div>
-      <div className="mt-2.5 overflow-x-auto rounded-[12px] border border-line">
-        <table className="w-full min-w-[540px] text-[12.5px]">
-          <thead className="bg-canvas/70">
+      <div className="-mx-2 mt-2 overflow-x-auto">
+        <table className="w-full min-w-[540px] border-separate border-spacing-y-1 text-[12.5px]">
+          <thead>
             <tr className="text-left text-faint">
               <th className="px-3 py-2 font-medium">Proofer</th>
               {dims.map((d) => (
@@ -677,9 +677,9 @@ function Scorecards({ cards }: { cards: NonNullable<NonNullable<TaskPage["proof"
               <th className="px-3 py-2 text-right font-medium">Vote</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-line">
+          <tbody>
             {cards.map((c) => (
-              <tr key={c.proofer} className="align-top">
+              <tr key={c.proofer} className="align-top [&>td]:bg-canvas/70 [&>td:first-child]:rounded-l-[12px] [&>td:last-child]:rounded-r-[12px]">
                 <td className="px-3 py-2.5">
                   <span className="flex items-center gap-2 font-medium text-ink">
                     <Avatar name={c.proofer} size={20} square color="var(--color-steel-500)" />
@@ -704,15 +704,19 @@ function Scorecards({ cards }: { cards: NonNullable<NonNullable<TaskPage["proof"
   );
 }
 
-/** A 1–5 score as its figure and five small pips. */
+/** A 1–5 score as its figure and a short bar. */
 function ScorePips({ value }: { value: number }) {
   return (
     <span className="inline-flex items-center gap-1.5" aria-label={`${value} of 5`}>
       <span className="tabular w-2.5 font-medium text-ink">{value}</span>
-      <span className="flex gap-[3px]" aria-hidden>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <span key={i} className={cn("h-2.5 w-1 rounded-full", i < value ? (value >= 4 ? "bg-green-500" : value >= 3 ? "bg-steel-400" : "bg-refunded") : "bg-sunken")} />
-        ))}
+      <span className="h-1.5 w-10 overflow-hidden rounded-full bg-line/70" aria-hidden>
+        <span
+          className="block h-full rounded-full"
+          style={{
+            width: `${(value / 5) * 100}%`,
+            background: value >= 4 ? "var(--meter-brand)" : value >= 3 ? "var(--meter-steel)" : "var(--color-refunded)",
+          }}
+        />
       </span>
     </span>
   );
@@ -775,6 +779,7 @@ export function ProofPanel({ data }: { data: TaskPage }) {
   return (
     <Card className="overflow-hidden">
       <CardHeader
+        className="px-5"
         icon={<Camera />}
         title="Proof"
         description={
@@ -798,7 +803,7 @@ export function ProofPanel({ data }: { data: TaskPage }) {
         <div className="mt-4 grid grid-cols-2 gap-3 px-5 sm:grid-cols-3">
           {tiles.map(({ s, i, it }) => (
             <figure key={i} className="min-w-0">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-[12px] bg-sunken ring-1 ring-line ring-inset">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-[14px] bg-sunken shadow-card">
                 {it?.imageUrl ? (
                   <a href={it.imageUrl} target="_blank" rel="noreferrer" className="block size-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -824,7 +829,7 @@ export function ProofPanel({ data }: { data: TaskPage }) {
         <div className={cn("grid gap-3 px-5", tiles.length ? "mt-3" : "mt-4")}>
           {others.map(({ s, i, it }) =>
             s.type === "text" || s.type === "link" ? (
-              <div key={i} className="rounded-[12px] bg-canvas/70 px-4 py-3 ring-1 ring-line ring-inset">
+              <div key={i} className="rounded-[14px] bg-canvas/70 px-4 py-3.5">
                 <div className="flex items-center gap-1.5 text-[12px] font-medium text-faint">
                   <SpecIcon type={s.type} className="size-3.5" /> {s.label}
                 </div>
@@ -841,7 +846,7 @@ export function ProofPanel({ data }: { data: TaskPage }) {
                 </div>
               </div>
             ) : (
-              <div key={i} className="flex items-center justify-between gap-3 rounded-[12px] bg-canvas/70 px-4 py-3 ring-1 ring-line ring-inset">
+              <div key={i} className="flex items-center justify-between gap-3 rounded-[14px] bg-canvas/70 px-4 py-3.5">
                 <span className="flex items-center gap-2 text-[13px] font-medium text-ink-2">
                   <SpecIcon type="file" className="size-4 text-faint" /> {s.label}
                 </span>
@@ -864,19 +869,19 @@ export function ProofPanel({ data }: { data: TaskPage }) {
         </p>
       ) : null}
 
-      <div className="mt-4 border-t border-line px-5 pt-3 pb-2">
+      <div className="px-5 pt-6 pb-2">
         <div className="flex items-baseline justify-between gap-3">
-          <div className="text-[13.5px] font-semibold text-ink">Checks</div>
+          <div className="font-display text-[15px] font-bold tracking-[-0.02em] text-ink">Checks</div>
           {rows.length ? (
             <span className="tabular text-[12px] text-faint">
               {passed} of {rows.length} passed
             </span>
           ) : null}
         </div>
-        <CheckList rows={rows} className="mt-1" />
+        <CheckList rows={rows} className="mt-1.5" />
       </div>
       {proof.scorecards?.length && !checking ? <Scorecards cards={proof.scorecards} /> : null}
-      {v && !checking ? <VerdictStrip verdict={v} /> : null}
+      {v && !checking ? <VerdictStrip verdict={v} /> : <div className="h-3" />}
     </Card>
   );
 }
@@ -885,17 +890,17 @@ export function ProofPanel({ data }: { data: TaskPage }) {
 function VerdictStrip({ verdict: v }: { verdict: NonNullable<NonNullable<TaskPage["proof"]>["verdict"]> }) {
   const tone =
     v.result === "pass"
-      ? "bg-green-50/70 ring-green-100"
+      ? "bg-[linear-gradient(150deg,var(--color-green-50),var(--color-green-100)_80%)]"
       : v.result === "fail"
-        ? "bg-disputed-bg/70 ring-disputed/10"
-        : "bg-refunded-bg/70 ring-refunded/10";
+        ? "bg-disputed-bg"
+        : "bg-refunded-bg";
   return (
-    <div className={cn("flex items-center gap-4 border-t border-line px-5 py-4 ring-inset", tone)}>
+    <div className={cn("mx-5 mt-4 mb-5 flex items-center gap-4 rounded-[14px] px-4 py-4", tone)}>
       <Ring value={v.confidence} size={46} stroke={4} tone={v.result === "pass" ? "brand" : "steel"}>
         <span className="tabular trim-cap text-[12px] font-semibold text-ink">{Math.round(v.confidence * 100)}</span>
       </Ring>
       <div className="min-w-0 flex-1">
-        <div className="text-[13.5px] font-semibold text-ink">
+        <div className="font-display text-[15px] font-bold tracking-[-0.02em] text-ink">
           {v.result === "pass" ? "Verdict: pass" : v.result === "fail" ? "Verdict: fail" : "Verdict: needs a human"}
           <span className="font-normal text-muted"> · {Math.round(v.confidence * 100)}% confident</span>
         </div>
@@ -919,6 +924,7 @@ export function Applicants({ data }: { data: TaskPage }) {
   return (
     <Card>
       <CardHeader
+        className="px-5"
         icon={<Users />}
         title={
           <span className="flex items-center gap-2">
@@ -938,23 +944,23 @@ export function Applicants({ data }: { data: TaskPage }) {
         }
       />
       {applications.length === 0 ? (
-        <div className="mx-5 mt-4 mb-5 flex items-center gap-3 rounded-[12px] border border-dashed border-line-strong/80 px-4 py-4 text-[13px] text-muted">
-          <Hourglass className="size-4 flex-none text-faint" strokeWidth={1.9} />
+        <div className="mx-5 mt-4 mb-5 flex items-center gap-3 rounded-[14px] bg-canvas/70 px-4 py-4 text-[13px] text-muted">
+          <Hourglass className="size-[18px] flex-none text-faint" strokeWidth={1.9} />
           {task.status === "draft" ? "People can apply once it's funded." : "No one yet. Applications appear here, ranked as they arrive."}
         </div>
       ) : (
-        <ul className="mt-3 divide-y divide-line border-t border-line">
+        <ul className="mt-3 px-2 pb-2">
           {applications.map((a, i) => {
             const diff = a.askCents - task.fundingCents;
             const best = i === 0 && a.matchScore !== undefined && canDecide;
             return (
-              <li key={a._id} className={cn("px-5 py-4", a.status === "declined" && "opacity-55")}>
+              <li key={a._id} className={cn("rounded-[14px] px-3 py-4 transition-colors hover:bg-sunken/60", a.status === "declined" && "opacity-55")}>
                 <div className="grid grid-cols-[40px_minmax(0,1fr)] gap-x-3.5 sm:grid-cols-[40px_minmax(0,1fr)_auto]">
                   <MatchScore score={a.matchScore} />
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       {a.applicant ? (
-                        <Avatar name={a.applicant.name} color={a.applicant.avatarColor} size={22} square={a.applicant.kind === "agent"} />
+                        <Avatar name={a.applicant.name} color={a.applicant.avatarColor} size={24} square={a.applicant.kind !== "person"} />
                       ) : null}
                       {a.applicant ? (
                         <Link href={`/hire/${a.applicant.handle}`} className="text-[14px] font-medium text-ink underline-offset-2 hover:underline">
@@ -981,14 +987,14 @@ export function Applicants({ data }: { data: TaskPage }) {
                       {a.matchReason ?? <span className="text-faint">Match is ranking…</span>}
                     </div>
                     {a.message ? (
-                      <p className="mt-2 rounded-[10px] bg-canvas/70 px-3 py-2 text-[13px] leading-relaxed text-ink-2 ring-1 ring-line/70 ring-inset">“{a.message}”</p>
+                      <p className="mt-2 text-[13px] leading-relaxed text-ink-2">“{a.message}”</p>
                     ) : null}
                     {a.bids?.length ? <BidTrail bids={a.bids} /> : null}
                     {a.applicant?.kind === "agent" ? <SplitNote cents={Math.min(a.askCents, task.fundingCents)} applicant={a.applicant} /> : null}
                   </div>
                   <div className="col-span-2 mt-3 flex items-center justify-between gap-3 sm:col-span-1 sm:mt-0 sm:flex-col sm:items-end sm:justify-start">
                     <div className="sm:text-right">
-                      <Amount cents={a.askCents} size="md" className="text-[16px]" />
+                      <Amount cents={a.askCents} size="lg" />
                       <div className={cn("text-[11.5px]", diff > 0 ? "text-refunded" : "text-faint")}>
                         {diff === 0 ? "posted price" : diff > 0 ? `+${formatCents(diff)} over budget` : `${formatCents(-diff)} under`}
                       </div>
@@ -1068,6 +1074,7 @@ export function ApplyCard({ data }: { data: TaskPage }) {
   return (
     <Card>
       <CardHeader
+        className="px-5"
         icon={<Send />}
         title="Take this task"
         description={poster ? "Switch “Acting as” to a demo worker to apply." : `Applying as ${me.name}. Match ranks you against the others.`}
@@ -1128,7 +1135,9 @@ export function MoneyCard({ data }: { data: TaskPage }) {
           : "Hold voided"
         : released
           ? "Paid out"
-          : "Held until proof passes";
+          : f.state === "captured"
+            ? "Captured, paying out"
+            : "Held by PayPal";
   const note =
     f.state === "unfunded"
       ? "Fund it and PayPal authorizes the payout. Nothing is charged until the proof passes."
@@ -1136,79 +1145,90 @@ export function MoneyCard({ data }: { data: TaskPage }) {
         ? "Nobody was paid. The receipt shows where the money went."
         : released
           ? "Captured from the hold and sent through PayPal Payouts."
-          : "PayPal holds it. It pays out only when the work is verified, and goes back if it isn't.";
+          : "Paid out the moment the work is verified. Back to you if it isn't.";
+  const ids = (
+    [
+      ["Order", f.orderId],
+      ["Authorization", f.authorizationId],
+      ["Capture", f.captureId],
+    ] as const
+  ).filter(([, v]) => v);
+
+  // Held is a brushed-metal card; paid is a mint face; otherwise a plain card.
+  const face = held
+    ? "metal-card"
+    : released
+      ? "bg-[linear-gradient(150deg,var(--color-green-50),var(--color-green-100)_70%,var(--color-green-200))] shadow-card"
+      : "bg-surface shadow-card";
+  const ink = held ? "text-steel-900" : "text-ink";
+  const soft = held ? "text-steel-800/75" : released ? "text-ink-2/75" : "text-muted";
+
   return (
-    <Card className="overflow-hidden">
-      <div
-        className={cn(
-          "relative px-5 pt-5 pb-4",
-          held && "bg-gradient-to-b from-steel-50 to-surface",
-          released && "bg-gradient-to-b from-green-50/80 to-surface",
-        )}
-      >
-        <div className="absolute inset-x-0 top-0 h-1" style={{ background: released ? "var(--meter-brand)" : "var(--metal)" }} aria-hidden />
-        <div className="flex items-center justify-between gap-3">
-          <div
-            className={cn(
-              "flex items-center gap-1.5 text-[13px] font-medium",
-              released ? "text-green-800" : refunded ? "text-refunded" : f.state === "unfunded" ? "text-muted" : "text-steel-700",
-            )}
-          >
-            {released ? (
-              <Check className="size-4" strokeWidth={2} />
-            ) : refunded ? (
-              <RotateCcw className="size-4" strokeWidth={1.9} />
-            ) : (
-              <Lock className="size-4" strokeWidth={1.9} />
-            )}
-            {headline}
-          </div>
-          <FundingBadge funding={f} />
+    <div className={cn("relative overflow-hidden rounded-xl p-6", face)}>
+      {released ? (
+        <span className="pointer-events-none absolute -right-10 -bottom-12 size-40 rounded-full border-[20px] border-white/40" aria-hidden />
+      ) : null}
+      <div className="relative flex items-start justify-between gap-3">
+        <div
+          className={cn(
+            "flex items-center gap-2 text-[13px] font-semibold",
+            held ? "text-steel-800" : released ? "text-green-800" : refunded ? "text-refunded" : "text-muted",
+          )}
+        >
+          {released ? (
+            <Check className="size-4" strokeWidth={2.2} />
+          ) : refunded ? (
+            <RotateCcw className="size-4" strokeWidth={2} />
+          ) : (
+            <Lock className="size-4" strokeWidth={2} />
+          )}
+          {headline}
         </div>
-        <div className="mt-3">
-          <Amount
-            cents={task.fundingCents}
-            size="xl"
-            className={cn(refunded && "text-muted line-through decoration-1", held && "text-steel-900")}
-          />
-        </div>
-        <p className={cn("mt-2 text-[12.5px] leading-relaxed", held ? "text-steel-600" : "text-muted")}>{note}</p>
-        <ol className="mt-4 grid grid-cols-3 gap-2">
-          {STEPS.map((s, i) => {
-            const done = !refunded && order >= i;
-            return (
-              <li key={s.key} className="min-w-0">
-                <div
-                  className={cn("h-1.5 rounded-full transition-colors duration-500", done ? "" : "bg-sunken")}
-                  style={done ? { backgroundImage: i === 2 ? "var(--meter-brand)" : "var(--meter-steel)" } : undefined}
-                />
-                <div className={cn("mt-2 text-[12.5px] font-medium", done ? "text-ink" : "text-faint")}>{s.label}</div>
-                <div className="truncate text-[11.5px] text-faint">{s.sub}</div>
-              </li>
-            );
-          })}
-        </ol>
+        {held ? (
+          <span className="h-7 w-9 rounded-[7px] bg-[linear-gradient(135deg,var(--color-steel-50),var(--color-steel-200)_45%,var(--color-steel-50))] shadow-[inset_0_0_0_1px_rgb(24_38_59/0.18)]" aria-hidden />
+        ) : null}
       </div>
-      {f.orderId ? (
-        <dl className="grid gap-1 border-t border-dashed border-line bg-canvas/60 px-5 py-3">
-          {(
-            [
-              ["Order", f.orderId],
-              ["Authorization", f.authorizationId],
-              ["Capture", f.captureId],
-            ] as const
-          )
-            .filter(([, v]) => v)
-            .map(([k, v]) => (
-              <div key={k} className="grid grid-cols-[118px_minmax(0,1fr)] items-baseline gap-2 text-[11.5px]">
-                <dt className="text-faint">PayPal {k.toLowerCase()}</dt>
-                <dd className="truncate font-mono text-muted">{v}</dd>
-              </div>
-            ))}
-          {f.via === "autopay" ? <div className="mt-0.5 text-[11.5px] text-faint">Held by auto-pay (PayPal Vault), no popup</div> : null}
+      <div className="relative mt-8">
+        <span
+          className={cn(
+            "tabular font-display text-[48px] leading-none font-extrabold tracking-[-0.045em]",
+            ink,
+            refunded && "text-muted line-through decoration-2",
+          )}
+        >
+          {formatCents(task.fundingCents)}
+        </span>
+        <p className={cn("mt-2.5 text-[12.5px] leading-relaxed", soft)}>{note}</p>
+      </div>
+      <ol className="relative mt-5 grid grid-cols-3 gap-2">
+        {STEPS.map((s, i) => {
+          const done = !refunded && order >= i;
+          return (
+            <li key={s.key} className="min-w-0">
+              <div
+                className={cn("h-1.5 rounded-full transition-colors duration-500", !done && (held || released ? "bg-white/55" : "bg-sunken"))}
+                style={done ? { background: held ? "var(--color-steel-800)" : "var(--color-ink)" } : undefined}
+              />
+              <div className={cn("mt-2 text-[12.5px] font-semibold", done ? ink : held ? "text-steel-800/60" : "text-faint")}>{s.label}</div>
+              <div className={cn("truncate text-[11.5px]", held ? "text-steel-800/60" : "text-faint")}>{s.sub}</div>
+            </li>
+          );
+        })}
+      </ol>
+      {ids.length ? (
+        <dl className={cn("relative mt-5 grid gap-1 rounded-[12px] px-3.5 py-3", held || released ? "bg-white/45" : "bg-canvas/70")}>
+          {ids.map(([k, v]) => (
+            <div key={k} className="grid grid-cols-[110px_minmax(0,1fr)] items-baseline gap-2 text-[11.5px]">
+              <dt className={held ? "text-steel-800/70" : "text-faint"}>PayPal {k.toLowerCase()}</dt>
+              <dd className={cn("truncate font-mono", held ? "text-steel-900" : "text-ink-2")}>{v}</dd>
+            </div>
+          ))}
+          {f.via === "autopay" ? (
+            <div className={cn("mt-0.5 text-[11.5px]", held ? "text-steel-800/70" : "text-faint")}>Held by auto-pay (PayPal Vault), no popup</div>
+          ) : null}
         </dl>
       ) : null}
-    </Card>
+    </div>
   );
 }
 
@@ -1235,7 +1255,7 @@ function RegistrySearch({ task, onPick }: { task: TaskPage["task"]; onPick: (url
   }
 
   return (
-    <div className="rounded-[12px] bg-surface px-3.5 py-3 shadow-card ring-1 ring-line ring-inset">
+    <div className="rounded-[12px] bg-surface px-3.5 py-3 shadow-card">
       <div className="text-[12.5px] font-medium text-ink">Find a server in the MCP Registry</div>
       <p className="mt-0.5 text-[12px] leading-snug text-faint">Prefer Official servers: a third-party server sees everything the agent sends it, including your token.</p>
       {suggested.length ? (
@@ -1263,9 +1283,9 @@ function RegistrySearch({ task, onPick }: { task: TaskPage["task"]; onPick: (url
       {error ? <p className="mt-2 text-[12px] text-disputed">{error}</p> : null}
       {results ? (
         results.length ? (
-          <ul className="mt-2 divide-y divide-line">
+          <ul className="-mx-2 mt-2">
             {results.map((r) => (
-              <li key={r.name} className="flex items-start justify-between gap-3 py-2">
+              <li key={r.name} className="flex items-start justify-between gap-3 rounded-[10px] px-2 py-2 transition-colors hover:bg-sunken/70">
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 truncate text-[12.5px] font-medium text-ink">
                     {r.title} {r.official ? <Badge tone="green">Official</Badge> : <Badge tone="neutral">Third party</Badge>}
@@ -1301,6 +1321,7 @@ export function PayPalDeskCard({ data }: { data: TaskPage }) {
   return (
     <Card className="overflow-hidden">
       <CardHeader
+        className="px-5"
         icon={<Landmark />}
         title="PayPal desk"
         description="An agent reads PayPal's own records. Code compares them with the receipts."
@@ -1325,9 +1346,9 @@ export function PayPalDeskCard({ data }: { data: TaskPage }) {
           </div>
           <p className="mt-2 text-[13px] leading-relaxed text-ink-2">{c.summary}</p>
           {c.facts.length ? (
-            <dl className="mt-3 divide-y divide-line rounded-[12px] border border-line">
+            <dl className="mt-3 grid gap-2 rounded-[14px] bg-canvas/70 px-3.5 py-3">
               {c.facts.map((f) => (
-                <div key={f.label} className="grid grid-cols-[96px_minmax(0,1fr)_16px] items-start gap-2 px-3 py-2 text-[12.5px]">
+                <div key={f.label} className="grid grid-cols-[96px_minmax(0,1fr)_16px] items-start gap-2 text-[12.5px]">
                   <dt className="text-faint">{f.label}</dt>
                   <dd className="min-w-0 break-words text-ink-2">{f.value}</dd>
                   {f.ok === undefined ? (
@@ -1342,7 +1363,7 @@ export function PayPalDeskCard({ data }: { data: TaskPage }) {
             </dl>
           ) : null}
           {c.dispute ? (
-            <div className={cn("mt-3 rounded-[12px] px-3.5 py-3 ring-1 ring-inset", c.dispute.action === "contest" ? "bg-steel-50 ring-steel-200" : "bg-refunded-bg ring-refunded/15")}>
+            <div className={cn("mt-3 rounded-[14px] px-3.5 py-3", c.dispute.action === "contest" ? "bg-steel-50" : "bg-refunded-bg")}>
               <div className="text-[12.5px] font-medium text-ink">
                 Dispute {c.dispute.amount} · {c.dispute.reason} · Plex will {c.dispute.action === "contest" ? "contest it with the proof" : "accept it and refund"}
               </div>
@@ -1360,7 +1381,7 @@ export function PayPalDeskCard({ data }: { data: TaskPage }) {
         </div>
       )}
       {errorFor("desk") ? (
-        <div className="border-t border-line px-5 pb-3">
+        <div className="px-5 pb-4">
           <ErrorLine message={errorFor("desk")} />
         </div>
       ) : null}

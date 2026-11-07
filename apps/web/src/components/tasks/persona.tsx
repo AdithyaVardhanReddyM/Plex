@@ -102,11 +102,11 @@ export function PersonaSwitch({ className }: { className?: string }) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         data-open={open || undefined}
-        className="flex h-9 items-center gap-2 rounded-sm border border-line bg-surface pr-2.5 pl-1.5 text-[13px] shadow-card transition-colors hover:border-line-strong data-open:border-line-strong data-open:bg-canvas"
+        className="flex h-9 items-center gap-2 rounded-full bg-surface pr-3 pl-1.5 text-[13px] shadow-card transition-shadow hover:shadow-hover data-open:shadow-hover"
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <Avatar name={current.name} color={current.avatarColor} size={24} />
+        <Avatar name={current.name} color={current.avatarColor} size={24} square={current.kind === "org"} />
         <span className="text-muted">Acting as</span>
         <span className="font-medium text-ink">{current.name.split(" ")[0]}</span>
         <ChevronDown className="size-4 text-faint" strokeWidth={1.9} />
@@ -114,7 +114,7 @@ export function PersonaSwitch({ className }: { className?: string }) {
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 z-40 mt-1.5 w-72 rounded-md border border-line bg-surface p-1.5 shadow-float animate-rise"
+          className="absolute right-0 z-40 mt-1.5 w-72 rounded-lg bg-surface p-1.5 shadow-float animate-rise"
         >
           <div className="flex items-center gap-2 px-2.5 pt-1.5 pb-2 text-[12px] text-muted">
             <Repeat2 className="size-4 text-faint" strokeWidth={1.9} />
@@ -138,7 +138,7 @@ export function PersonaSwitch({ className }: { className?: string }) {
                   active && "bg-sunken",
                 )}
               >
-                <Avatar name={p.name} color={p.avatarColor} size={28} />
+                <Avatar name={p.name} color={p.avatarColor} size={28} square={p.kind === "org"} />
                 <span className="min-w-0">
                   <span className="block truncate text-[13px] font-medium text-ink">{p.name}</span>
                   <span className="block truncate text-[12px] text-muted">
