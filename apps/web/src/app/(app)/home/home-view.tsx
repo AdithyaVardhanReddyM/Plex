@@ -239,7 +239,7 @@ function ApprovalsCard({
         {approvals === undefined ? (
           <Skeleton className="h-48 w-full rounded-[12px]" />
         ) : first ? (
-          <div className="flex flex-1 flex-col overflow-hidden rounded-[16px] bg-canvas/70 ring-1 ring-inset ring-line">
+          <div className="flex flex-1 flex-col overflow-hidden rounded-[16px] bg-canvas/80">
             <div className="flex items-center gap-2 px-4 pt-3.5 text-[12px] font-medium text-muted">
               <Cpu className="size-3.5" strokeWidth={2} />
               <span className="truncate">{first.agentLabel} wants to buy</span>
@@ -253,7 +253,7 @@ function ApprovalsCard({
               <div className="mt-4 flex items-end justify-between gap-3">
                 <Amount cents={first.amountCents} size="lg" className="text-[28px]" />
               </div>
-              <div className="mt-3 flex items-start gap-2 rounded-[10px] bg-steel-50 px-3 py-2 text-[12.5px] leading-snug text-steel-700 ring-1 ring-inset ring-steel-100">
+              <div className="mt-3 flex items-start gap-2 text-[12.5px] leading-snug text-steel-700">
                 <ShieldCheck className="mt-px size-3.5 flex-none" strokeWidth={2} />
                 <span>
                   Paused by your rule: <span className="font-medium">{first.ruleText}</span>
@@ -274,7 +274,7 @@ function ApprovalsCard({
             icon={<ShieldCheck />}
             title="Nothing waiting"
             body="Your agents are inside every limit."
-            className="flex-1 justify-center rounded-[14px] border border-dashed border-line py-8"
+            className="flex-1 justify-center rounded-[14px] bg-canvas/80 py-8"
           />
         )}
       </div>

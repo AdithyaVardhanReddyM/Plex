@@ -178,7 +178,7 @@ export function ReceiptCard({ receipt, className }: { receipt: Receipt; classNam
           </div>
         </div>
 
-        <div className="mx-5 rounded-[12px] bg-gradient-to-br from-green-50 to-surface px-4 py-3.5 ring-1 ring-inset ring-green-100">
+        <div className="mx-5 rounded-[14px] bg-gradient-to-br from-green-100/80 via-green-50 to-surface px-4 py-4">
           <div className="flex items-center gap-1.5 text-[11.5px] font-medium text-green-800">
             <Quote className="size-3.5" strokeWidth={2} />
             Why, in your words
@@ -186,7 +186,7 @@ export function ReceiptCard({ receipt, className }: { receipt: Receipt; classNam
           <p className="mt-1.5 text-[14.5px] leading-relaxed font-medium text-pretty text-ink">“{receipt.why}”</p>
         </div>
 
-        <div className="divide-y divide-line px-5 pt-1">
+        <div className="space-y-1 px-5 pt-2 pb-2">
           <Line icon={<ShieldCheck />} label={RULE_SOURCE[receipt.rule.source]}>
             {receipt.rule.text}
           </Line>
@@ -246,20 +246,17 @@ export function ReceiptCard({ receipt, className }: { receipt: Receipt; classNam
         </div>
 
         {/* Timeline */}
-        <div className="border-t border-dashed border-line-strong/70 px-5 pt-4 pb-5">
+        <div className="mx-3 mb-3 rounded-[14px] bg-canvas/80 px-4 pt-4 pb-4">
           <div className="mb-3 text-[11.5px] font-medium text-faint">Timeline</div>
           <ol className="relative">
             {receipt.timeline.map((t, i) => {
               const last = i === receipt.timeline.length - 1;
               return (
-                <li key={i} className="relative grid grid-cols-[14px_minmax(0,1fr)_auto] items-start gap-3 pb-3 text-[13px] leading-[1.4] last:pb-0">
-                  {!last ? <span className="absolute top-[13px] bottom-0 left-[6.5px] w-px bg-line-strong/70" aria-hidden /> : null}
-                  <span
-                    className={cn(
-                      "relative mt-[3px] size-3.5 rounded-full ring-[3px] ring-canvas",
-                      last ? "bg-green-500" : "border-[1.5px] border-line-strong bg-surface",
-                    )}
-                  />
+                <li key={i} className="relative grid grid-cols-[16px_minmax(0,1fr)_auto] items-start gap-3 pb-3 text-[13px] leading-[1.4] last:pb-0">
+                  {!last ? <span className="absolute top-[20px] bottom-[2px] left-[7.5px] w-px bg-line-strong" aria-hidden /> : null}
+                  <span className={cn("relative mt-px [&_svg]:size-4 [&_svg]:stroke-[2]", last ? "text-green-600" : "text-faint")}>
+                    {last ? <BadgeCheck /> : <Check />}
+                  </span>
                   <span className={cn("text-pretty", last ? "font-medium text-ink" : "text-ink-2")}>{t.label}</span>
                   <span className="tabular whitespace-nowrap text-[12px] text-faint">{shortDate(t.at)}</span>
                 </li>
@@ -267,7 +264,7 @@ export function ReceiptCard({ receipt, className }: { receipt: Receipt; classNam
             })}
           </ol>
           {ids.length ? (
-            <dl className="mt-4 grid gap-1.5 rounded-[10px] border border-line bg-surface px-3 py-2.5">
+            <dl className="mt-4 grid gap-1.5 pt-1">
               {ids.map(([k, v]) => (
                 <div key={k} className="flex items-center justify-between gap-3 text-[11.5px]">
                   <dt className="text-faint">PayPal {k.replace(/Id$/, "").replace(/([A-Z])/g, " $1").toLowerCase()}</dt>
