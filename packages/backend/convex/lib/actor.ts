@@ -1,11 +1,12 @@
 import type { QueryCtx, MutationCtx } from "../_generated/server";
 import type { Doc } from "../_generated/dataModel";
+import { ConvexError } from "convex/values";
 import { getViewer, userByHandle } from "./viewer";
 
 /**
  * Who is acting on a two-sided surface like Tasks.
  *
- * Signed-in users always act as themselves. Guests explore the demo world
+ * Signed-in users always act as themselves. Guests (guest mode only) explore the demo world
  * as Adi (the poster) by default, and may switch to one of the seeded demo
  * workers (`as: "rosa"`) to try the other side: apply, upload proof, get
  * paid, or to the demo NGO (`as: "lakeside-commons"`) to approve its impact
@@ -26,6 +27,6 @@ export async function getActor(
 
 export async function requireActor(ctx: QueryCtx | MutationCtx, as?: string) {
   const actor = await getActor(ctx, as);
-  if (!actor) throw new Error("No viewer: run `pnpm seed` to create the demo world.");
+  if (!actor) throw new ConvexError("Sign in to continue.");
   return actor;
 }

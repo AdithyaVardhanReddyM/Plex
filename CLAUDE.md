@@ -23,7 +23,7 @@ docs/              Plan and runbooks
 - **No money moves without a Receipt.** Every PayPal call that moves money writes or advances a `receipts` row through `convex/lib/receipts.ts` (`writeReceipt`, `advanceReceipt`), with `why` (the user's own words), `rule` and `evidence`. Show it with `ReceiptCard` / `ReceiptRow` from `apps/web/src/components/receipt/receipt.tsx`.
 - **Limits are enforced in code.** The model only turns plain English into `rules` once; `convex/lib/policy.ts` `evaluate()` decides. Never let a prompt decide whether money may move.
 - **Money is integer cents** everywhere. Format with `formatCents` / `<Amount>`.
-- **Guest mode is the default.** `getViewer(ctx)` in `convex/lib/viewer.ts` returns the signed-in user, or the seeded demo user Adi. Judges try Plex without an account.
+- **Sign-in is required (for now).** `src/proxy.ts` sends signed-out visitors on app routes to `/sign-in`; only `/`, the auth pages and `/sites/*` are public. `getViewer(ctx)` in `convex/lib/viewer.ts` returns the signed-in user, or null. Guest mode (signed-out callers act as the seeded demo user Adi) comes back for the judges before the deadline: set `PLEX_GUEST_MODE=true` in Convex, make the proxy's routes public and restore the Continue as guest buttons.
 
 ## Backend conventions (Convex)
 

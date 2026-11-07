@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getViewer } from "./lib/viewer";
 
-/** The current viewer: a signed-in user, or the guest acting as Adi. */
+/** The current viewer: the signed-in user, or Adi for a guest in guest mode. */
 export const viewer = query({
   args: {},
   handler: async (ctx) => {

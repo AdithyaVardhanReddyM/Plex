@@ -46,7 +46,7 @@ export const createCheckout = internalMutation({
   },
   handler: async (ctx, args) => {
     const viewer = await getViewer(ctx);
-    if (!viewer) throw new ConvexError("Run `pnpm seed` first: there is no demo donor yet.");
+    if (!viewer) throw new ConvexError("Sign in to continue.");
     if (!args.allocations.length) throw new ConvexError("Choose a cause to give to.");
     if (args.allocations.length > 6) throw new ConvexError("Split across at most 6 causes.");
 

@@ -2,17 +2,11 @@
 
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
-import { useConvexAuth, useMutation } from "convex/react";
-import { useEffect } from "react";
+import { useConvexAuth } from "convex/react";
 import { LogIn } from "lucide-react";
-import { api } from "@/lib/convex";
 import { CLERK_ENABLED } from "@/components/providers";
 
-/**
- * Sign in with Clerk, or keep exploring as a guest. After sign-in the user's
- * own Plex row is created (`users.ensureViewer`); until then, and for guests,
- * the app shows the seeded demo world.
- */
+/** The Clerk account button, or a link to /sign-in when signed out. */
 export function AccountControl() {
   if (!CLERK_ENABLED) return null;
   return <ClerkAccount />;
@@ -20,11 +14,6 @@ export function AccountControl() {
 
 function ClerkAccount() {
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const ensureViewer = useMutation(api.users.ensureViewer);
-
-  useEffect(() => {
-    if (isAuthenticated) void ensureViewer();
-  }, [isAuthenticated, ensureViewer]);
 
   if (isLoading) return <div className="h-9" />;
   if (isAuthenticated)

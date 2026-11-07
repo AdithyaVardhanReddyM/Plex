@@ -99,7 +99,7 @@ function ViewerCard() {
   const viewer = useQuery(api.users.viewer);
   if (viewer === undefined) return <div className="h-12" />;
   if (viewer === null)
-    return <div className="px-2.5 text-[12.5px] text-muted">Run <code className="font-mono">pnpm seed</code> to create the demo world.</div>;
+    return <div className="px-2.5 text-[12.5px] text-muted">Setting up your account…</div>;
   return (
     <div className="flex items-center gap-2.5 rounded-md px-2.5 py-2">
       <Avatar name={viewer.name} color={viewer.avatarColor} size={30} />

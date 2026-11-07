@@ -80,7 +80,7 @@ export const publish = mutation({
   },
   handler: async (ctx, a) => {
     const viewer = await getViewer(ctx);
-    if (!viewer) throw new ConvexError("Run `pnpm seed` first.");
+    if (!viewer) throw new ConvexError("Sign in to continue.");
     const name = a.name.trim().slice(0, 90);
     if (!name) throw new ConvexError("Give the cause a name.");
     if (!a.tasks.length) throw new ConvexError("Add at least one paid task, so donations buy specific work.");
