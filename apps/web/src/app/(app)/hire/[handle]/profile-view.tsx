@@ -23,7 +23,7 @@ import { CATEGORY_LABEL } from "@plex/backend/lib/taskRules";
 import { PLEX_BPS, pct } from "@plex/backend/lib/split";
 import { api } from "@/lib/convex";
 import { buttonVariants } from "@/components/ui/button";
-import { Avatar, Badge, Card, CardHeader, EmptyState, IconTile, Meter, Skeleton, StatusDot } from "@/components/ui/primitives";
+import { Avatar, Badge, Card, CardHeader, EmptyState, Skeleton } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
 import { TrustBreakdown, TrustRing } from "@/components/hire/trust";
 import { AgentMarker, WorkerAvatar, capitalize, modelLabel, shortTurnaround } from "@/components/hire/worker-card";
@@ -76,7 +76,7 @@ export function ProfileView({ handle }: { handle: string }) {
               title={`How ${p.trust.score} is built`}
               description="Computed by Plex from the record, not by a model."
             />
-            <div className="px-5 pt-1 pb-2">
+            <div className="px-2 pt-3 pb-2">
               <TrustBreakdown parts={p.trust.parts} />
             </div>
           </Card>
@@ -96,27 +96,42 @@ function BackLink() {
 
 // ── Hero ─────────────────────────────────────────────────────────────────────
 
+const GLASS =
+  "inline-flex h-[24px] items-center gap-1 rounded-full bg-white/[0.08] px-2.5 text-[12px] font-medium whitespace-nowrap text-white/75 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)] [&_svg]:size-3.5 [&_svg]:stroke-[2]";
+
+/** The profile, lit: the face, the name in display type, the trust ring and the record as big figures. */
 function Hero({ p, first, hireHref }: { p: Profile; first: string; hireHref: string }) {
   const isAgent = p.kind === "agent";
   const free = !p.inProgress;
 
   return (
-    <Card className="overflow-hidden">
-      <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-6">
-        <WorkerAvatar w={p} size={76} />
+    <section className="@container spotlight rounded-xl p-6 sm:p-8">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
+        <WorkerAvatar w={p} size={104} />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-            <h1 className="font-display text-[28px] leading-tight font-bold tracking-[-0.03em] text-ink">{p.name}</h1>
+          <div className="flex flex-wrap items-center gap-2">
             {isAgent ? (
-              <AgentMarker house={p.agent?.house} />
+              <AgentMarker house={p.agent?.house} onDark />
             ) : (
-              <Badge tone="outline" className="h-5 px-1.5 text-[11px]">
+              <span className={GLASS}>
                 <UserRound /> Person
-              </Badge>
+              </span>
+            )}
+            {free ? (
+              <span className="inline-flex h-[24px] items-center rounded-full bg-green-300/15 px-2.5 text-[12px] font-medium text-green-200 shadow-[inset_0_0_0_1px_rgb(110_243_214/0.25)]">
+                Free now
+              </span>
+            ) : (
+              <span className={cn(GLASS, "tabular")}>
+                {p.inProgress} task{p.inProgress > 1 ? "s" : ""} in progress
+              </span>
             )}
           </div>
-          <p className="mt-1 max-w-2xl text-[14px] leading-relaxed text-pretty text-ink-2">{p.agent?.tagline ?? p.bio}</p>
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12.5px] text-muted">
+          <h1 className="mt-3 font-display text-[40px] leading-[1.02] font-extrabold tracking-[-0.045em] text-balance text-white @[640px]:text-[52px]">
+            {p.name}
+          </h1>
+          <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-pretty text-white/70">{p.agent?.tagline ?? p.bio}</p>
+          <div className="mt-3.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] text-white/55">
             {isAgent ? (
               <>
                 <Meta icon={<Cpu />}>{modelLabel(p.agent?.model)}</Meta>
@@ -132,95 +147,103 @@ function Hero({ p, first, hireHref }: { p: Profile; first: string; hireHref: str
             ) : (
               <Meta icon={<MapPin />}>{p.area ?? "Area not shared"}</Meta>
             )}
-            <span className="inline-flex items-center gap-1.5">
-              <StatusDot tone={free ? "green" : "steel"} live={free} />
-              {free ? "Free now" : `${p.inProgress} task${p.inProgress > 1 ? "s" : ""} in progress`}
-            </span>
           </div>
-          <Link href={hireHref} className={cn(buttonVariants({ variant: "primary" }), "mt-4 lg:hidden")}>
+          <Link href={hireHref} className={cn(buttonVariants({ variant: "secondary" }), "mt-5 lg:hidden")}>
             Hire {first}
           </Link>
         </div>
-        <div className="flex flex-none items-center gap-3 sm:flex-col sm:gap-1.5 sm:pl-4">
-          <TrustRing score={p.trust.score} size={76} stroke={6} />
-          <div className="text-[12px] text-muted sm:text-center">
-            <span className="font-medium text-ink-2">Trust score</span>
-            <span className="sm:block"> of 100</span>
+        <div className="flex flex-none items-center gap-4 sm:flex-col sm:gap-2.5 sm:pl-2">
+          <TrustRing score={p.trust.score} size={112} stroke={7} onDark />
+          <div className="text-[12.5px] sm:text-center">
+            <div className="font-medium text-white/80">Trust score</div>
+            <div className="text-white/45">of 100, from the record</div>
           </div>
         </div>
       </div>
 
-      <dl className="grid grid-cols-2 border-t border-line bg-canvas/40 sm:grid-cols-4">
-        <StatCell label="Rating" foot={p.reviews.length ? `${p.reviews.length} verified review${p.reviews.length > 1 ? "s" : ""}` : "No reviews yet"}>
+      <dl className="mt-10 grid grid-cols-2 gap-x-8 gap-y-7 sm:grid-cols-4">
+        <Figure label="Rating" foot={p.reviews.length ? `${p.reviews.length} verified review${p.reviews.length > 1 ? "s" : ""}` : "No reviews yet"}>
           {p.rating !== undefined ? (
             <>
               <Big>{p.rating.toFixed(2)}</Big>
-              <Stars value={p.rating} />
+              <Stars value={p.rating} onDark />
             </>
           ) : (
             <Big muted>New</Big>
           )}
-        </StatCell>
-        <StatCell label="Proofs passed" foot="Judged blind before payout" className="border-l border-line">
+        </Figure>
+        <Figure label="Proofs passed" foot="Judged blind before payout">
           {p.proofPassRate !== undefined ? (
             <>
-              <Big>{Math.round(p.proofPassRate * 100)}%</Big>
-              <Meter value={p.proofPassRate} size="sm" className="w-16" label="Proof pass rate" />
+              <Big>
+                {Math.round(p.proofPassRate * 100)}
+                <span className="text-[0.55em] text-white/55">%</span>
+              </Big>
+              <span className="h-1.5 w-14 overflow-hidden rounded-full bg-white/10" role="meter" aria-label="Proof pass rate" aria-valuenow={Math.round(p.proofPassRate * 100)}>
+                <span className="block h-full rounded-full" style={{ width: `${p.proofPassRate * 100}%`, backgroundImage: "var(--meter-brand)" }} />
+              </span>
             </>
           ) : (
             <Big muted>—</Big>
           )}
-        </StatCell>
-        <StatCell label="Paid tasks" foot="Paid out through PayPal" className="border-t border-line sm:border-t-0 sm:border-l">
+        </Figure>
+        <Figure label="Paid tasks" foot="Paid out through PayPal">
           <Big>{p.tasksCompleted.toLocaleString("en-US")}</Big>
-        </StatCell>
-        <StatCell
+        </Figure>
+        <Figure
           label={isAgent ? "Turnaround" : "Disputes"}
           foot={isAgent ? "From accepted bid to delivery" : p.disputes ? "Counted against trust" : "A clean record"}
-          className="border-t border-l border-line sm:border-t-0"
         >
           {isAgent ? <Big>{shortTurnaround(p.agent?.turnaround)}</Big> : <Big muted={!p.disputes}>{p.disputes}</Big>}
-        </StatCell>
+        </Figure>
       </dl>
-    </Card>
+    </section>
   );
 }
 
 function Meta({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <span className="inline-flex min-w-0 items-center gap-1.5 [&_svg]:size-3.5 [&_svg]:flex-none [&_svg]:stroke-[1.9] [&_svg]:text-faint">
+    <span className="inline-flex min-w-0 items-center gap-1.5 [&_svg]:size-4 [&_svg]:flex-none [&_svg]:stroke-[1.9] [&_svg]:text-green-300/80">
       {icon}
       <span className="truncate">{children}</span>
     </span>
   );
 }
 
-function StatCell({ label, foot, className, children }: { label: string; foot?: string; className?: string; children: React.ReactNode }) {
+function Figure({ label, foot, children }: { label: string; foot?: string; children: React.ReactNode }) {
   return (
-    <div className={cn("min-w-0 px-5 py-4 sm:px-6", className)}>
-      <dt className="text-[12px] text-muted">{label}</dt>
-      <dd className="mt-2 flex h-6 items-center gap-2.5">{children}</dd>
-      {foot ? <dd className="mt-1.5 line-clamp-2 text-[12px] leading-snug text-faint sm:truncate">{foot}</dd> : null}
+    <div className="min-w-0">
+      <dt className="text-[12px] font-medium text-white/50">{label}</dt>
+      <dd className="mt-2 flex h-9 items-center gap-3">{children}</dd>
+      {foot ? <dd className="mt-1.5 line-clamp-2 text-[12px] leading-snug text-white/40 sm:truncate">{foot}</dd> : null}
     </div>
   );
 }
 
 function Big({ children, muted }: { children: React.ReactNode; muted?: boolean }) {
   return (
-    <span className={cn("tabular font-display text-[22px] leading-none font-bold tracking-[-0.025em]", muted ? "text-faint" : "text-ink")}>
+    <span
+      className={cn(
+        "tabular font-display text-[34px] leading-none font-extrabold tracking-[-0.04em]",
+        muted ? "text-white/35" : "text-white",
+      )}
+    >
       {children}
     </span>
   );
 }
 
-function Stars({ value, size = "sm" }: { value: number; size?: "sm" | "xs" }) {
+function Stars({ value, size = "sm", onDark }: { value: number; size?: "sm" | "xs"; onDark?: boolean }) {
   const full = Math.round(value);
   return (
     <span className="inline-flex items-center gap-0.5" role="img" aria-label={`${value} of 5 stars`}>
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}
-          className={cn(size === "sm" ? "size-3.5" : "size-3", i < full ? "fill-current text-refunded" : "text-line-strong")}
+          className={cn(
+            size === "sm" ? "size-3.5" : "size-3",
+            i < full ? "fill-current text-refunded" : onDark ? "text-white/20" : "text-line-strong",
+          )}
           strokeWidth={1.9}
         />
       ))}
@@ -233,11 +256,11 @@ function Stars({ value, size = "sm" }: { value: number; size?: "sm" | "xs" }) {
 function HireCard({ p, first, hireHref }: { p: Profile; first: string; hireHref: string }) {
   const isAgent = p.kind === "agent";
   const steps = [
-    { icon: <FileCheck2 />, tone: "white" as const, title: "Post the task", body: `${first} is named on it and sees it first.` },
-    { icon: <Lock />, tone: "steel" as const, title: "PayPal holds the payout", body: "Nothing is paid yet. It's held, not spent." },
+    { icon: <FileCheck2 />, tone: "text-ink-2", title: "Post the task", body: `${first} is named on it and sees it first.` },
+    { icon: <Lock />, tone: "text-steel-600", title: "PayPal holds the payout", body: "Nothing is paid yet. It's held, not spent." },
     {
       icon: isAgent ? <ShieldCheck /> : <Camera />,
-      tone: "mint" as const,
+      tone: "text-green-700",
       title: "Paid when the proof passes",
       body: isAgent
         ? "Three proofer agents score the delivery blind."
@@ -245,38 +268,31 @@ function HireCard({ p, first, hireHref }: { p: Profile; first: string; hireHref:
     },
   ];
   return (
-    <Card>
-      <div className="px-5 pt-5">
-        <div className="text-[14.5px] font-semibold tracking-[-0.012em] text-ink">Hire {first}</div>
-        <p className="mt-0.5 text-[13px] leading-snug text-muted">
-          {isAgent ? "Delivers text, files or links." : "Does work in person, nearby."} You pay only for verified work.
-        </p>
-      </div>
-      <ol className="relative mt-4 space-y-3.5 px-5">
-        <span className="absolute top-3 bottom-3 left-[33px] w-px bg-line" aria-hidden />
+    <Card className="p-5">
+      <div className="font-display text-[18px] font-bold tracking-[-0.025em] text-ink">Hire {first}</div>
+      <p className="mt-1 text-[13px] leading-snug text-muted">
+        {isAgent ? "Delivers text, files or links." : "Does work in person, nearby."} You pay only for verified work.
+      </p>
+      <ol className="mt-5 space-y-4">
         {steps.map((s) => (
-          <li key={s.title} className="relative flex gap-3">
-            <IconTile tone={s.tone} size="sm">
-              {s.icon}
-            </IconTile>
-            <div className="min-w-0 pt-0.5">
-              <div className="text-[13px] font-medium leading-snug text-ink">{s.title}</div>
-              <div className="text-[12.5px] leading-snug text-muted">{s.body}</div>
+          <li key={s.title} className="flex gap-3">
+            <span className={cn("mt-px flex-none [&_svg]:size-[18px] [&_svg]:stroke-[1.9]", s.tone)}>{s.icon}</span>
+            <div className="min-w-0">
+              <div className="text-[13.5px] font-medium leading-snug text-ink">{s.title}</div>
+              <div className="mt-0.5 text-[12.5px] leading-snug text-muted">{s.body}</div>
             </div>
           </li>
         ))}
       </ol>
-      <div className="p-5 pt-5">
-        <Link href={hireHref} className={cn(buttonVariants({ variant: "primary" }), "w-full")}>
-          Hire {first}
-        </Link>
-      </div>
+      <Link href={hireHref} className={cn(buttonVariants({ variant: "primary", size: "lg" }), "mt-6 w-full")}>
+        Hire {first}
+      </Link>
       {p.skills.length ? (
-        <div className="border-t border-line px-5 py-4">
-          <div className="text-[12px] text-muted">{isAgent ? "Bids on tasks about" : "Skills"}</div>
+        <div className="mt-6">
+          <div className="text-[12px] text-faint">{isAgent ? "Bids on tasks about" : "Skills"}</div>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {p.skills.map((s) => (
-              <Badge key={s} tone="outline" className="text-muted">
+              <Badge key={s} tone="neutral" className="text-ink-2">
                 {capitalize(s)}
               </Badge>
             ))}
@@ -295,8 +311,7 @@ function Reviews({ p }: { p: Profile }) {
       <CardHeader
         title="Verified reviews"
         description="Each one is tied to a task paid through PayPal. No payment, no review."
-        action={p.reviews.length ? <Badge tone="outline" className="tabular">{p.reviews.length}</Badge> : null}
-        divider
+        action={p.reviews.length ? <Badge tone="neutral" className="tabular">{p.reviews.length}</Badge> : null}
       />
       {p.reviews.length === 0 ? (
         <EmptyState
@@ -306,19 +321,19 @@ function Reviews({ p }: { p: Profile }) {
           className="py-10"
         />
       ) : (
-        <ul className="divide-y divide-line">
+        <ul className="space-y-1 px-2 pt-3 pb-2">
           {p.reviews.map((r) => (
-            <li key={r._id} className="grid grid-cols-[32px_minmax(0,1fr)] gap-3 px-5 py-4">
-              <Avatar name={r.authorName} color={r.authorColor} size={32} />
+            <li key={r._id} className="grid grid-cols-[40px_minmax(0,1fr)] gap-3.5 rounded-[12px] px-3 py-3.5 transition-colors hover:bg-sunken/70">
+              <Avatar name={r.authorName} color={r.authorColor} size={40} />
               <div className="min-w-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-[13.5px] font-medium leading-snug text-ink">{r.authorName}</div>
+                    <div className="text-[14px] font-medium leading-snug text-ink">{r.authorName}</div>
                     <div className="truncate text-[12px] text-muted">{r.taskTitle}</div>
                   </div>
                   <Stars value={r.stars} size="xs" />
                 </div>
-                <p className="mt-2 text-[13.5px] leading-relaxed text-pretty text-ink-2">{r.text}</p>
+                <p className="mt-2 text-[14px] leading-relaxed text-pretty text-ink-2">“{r.text}”</p>
                 <div className="mt-2 flex flex-wrap items-center gap-x-1.5 text-[12px] text-faint">
                   <BadgeCheck className="size-3.5 text-green-700" strokeWidth={1.9} />
                   <span>Paid task</span>
@@ -348,27 +363,25 @@ function Reviews({ p }: { p: Profile }) {
 function RecentWork({ p, first }: { p: Profile; first: string }) {
   return (
     <Card>
-      <CardHeader title="Recent paid work" description="Tasks where the proof passed and PayPal paid out." divider />
+      <CardHeader title="Recent paid work" description="Tasks where the proof passed and PayPal paid out." />
       {p.recent.length === 0 ? (
         <EmptyState icon={<FileCheck2 />} title="Nothing paid on Plex yet" body={`${first}'s first paid task shows here, with its receipt.`} className="py-10" />
       ) : (
-        <ul className="p-2">
+        <ul className="px-2 pt-3 pb-2">
           {p.recent.map((t) => (
             <li key={t._id}>
               <Link
                 href={`/tasks/${t._id}`}
-                className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-3 rounded-[10px] px-3 py-2.5 transition-colors hover:bg-sunken/70"
+                className="grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3.5 rounded-[12px] px-3 py-3 transition-colors hover:bg-sunken/70"
               >
-                <IconTile tone="mint">
-                  <BadgeCheck />
-                </IconTile>
+                <BadgeCheck className="size-5 text-green-700" strokeWidth={1.8} />
                 <span className="min-w-0">
                   <span className="block truncate text-[13.5px] font-medium text-ink">{t.title}</span>
                   <span className="block truncate text-[12px] text-muted">
                     {CATEGORY_LABEL[t.category]} · paid {relativeTime(t.at)}
                   </span>
                 </span>
-                <Amount cents={t.cents} size="sm" sign="in" />
+                <Amount cents={t.cents} size="sm" sign="in" className="text-[14px]" />
               </Link>
             </li>
           ))}
@@ -384,17 +397,24 @@ function ProfileSkeleton() {
   return (
     <div>
       <Skeleton className="mb-5 h-4 w-14" />
-      <Card className="overflow-hidden">
-        <div className="flex gap-5 p-6">
-          <Skeleton className="size-[76px] rounded-full" />
+      <div className="spotlight rounded-xl p-6 sm:p-8">
+        <div className="flex gap-6">
+          <div className="size-[104px] flex-none rounded-full bg-white/10" />
           <div className="flex-1 space-y-3 pt-1">
-            <Skeleton className="h-7 w-48" />
-            <Skeleton className="h-4 w-[60%]" />
-            <Skeleton className="h-3 w-56" />
+            <div className="h-6 w-28 rounded-full bg-white/10" />
+            <div className="h-10 w-64 rounded-lg bg-white/10" />
+            <div className="h-4 w-[60%] rounded bg-white/10" />
           </div>
         </div>
-        <div className="h-[100px] border-t border-line bg-canvas/40" />
-      </Card>
+        <div className="mt-10 grid grid-cols-2 gap-x-8 gap-y-7 sm:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="space-y-2.5">
+              <div className="h-3 w-16 rounded bg-white/10" />
+              <div className="h-8 w-20 rounded-lg bg-white/10" />
+            </div>
+          ))}
+        </div>
+      </div>
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Skeleton className="h-96 w-full rounded-lg" />
         <Skeleton className="h-80 w-full rounded-lg" />

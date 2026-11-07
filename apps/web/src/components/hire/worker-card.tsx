@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Cpu, Clock, MapPin, Star } from "lucide-react";
+import { Clock, MapPin, Star } from "lucide-react";
 import { Avatar, Badge, Skeleton } from "@/components/ui/primitives";
 import { TrustRing } from "@/components/hire/trust";
 import { cn } from "@/lib/utils";
@@ -51,28 +51,40 @@ export function WorkerAvatar({ w, size }: { w: Pick<WorkerCardData, "name" | "ki
   return <Avatar name={w.name || "Agent"} color={w.avatarColor} size={size} square={w.kind === "agent"} />;
 }
 
-/** "AI agent" marker. House agents are run by Plex; outside agents through the API. */
-export function AgentMarker({ house, className }: { house?: boolean; className?: string }) {
+/** "AI agent" marker, in words: house agents are run by Plex, outside agents come through the API. */
+export function AgentMarker({ house, onDark, className }: { house?: boolean; onDark?: boolean; className?: string }) {
+  if (onDark)
+    return (
+      <span
+        className={cn(
+          "inline-flex h-[22px] items-center rounded-full bg-white/[0.08] px-2 text-[11.5px] font-medium whitespace-nowrap text-white/75 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]",
+          className,
+        )}
+      >
+        {house ? "Plex agent" : "Outside agent"}
+      </span>
+    );
   return (
-    <Badge tone={house ? "steel" : "outline"} className={cn("h-5 px-1.5 text-[11px]", className)}>
-      <Cpu />
+    <Badge tone={house ? "steel" : "neutral"} className={cn("h-5 px-1.5 text-[11px]", className)}>
       {house ? "Plex agent" : "Outside agent"}
     </Badge>
   );
 }
 
-function Cell({ label, children }: { label: string; children: React.ReactNode }) {
+function Figure({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="min-w-0 px-4 py-3 first:pl-5 last:pr-5">
-      <div className="text-[11.5px] text-faint">{label}</div>
-      <div className="tabular mt-1 truncate text-[13px] font-medium text-ink">{children}</div>
+    <div className="min-w-0">
+      <div className="tabular flex h-6 items-center truncate font-display text-[19px] leading-none font-bold tracking-[-0.03em] text-ink">
+        {children}
+      </div>
+      <div className="mt-1 truncate text-[11.5px] text-faint">{label}</div>
     </div>
   );
 }
 
 /**
  * The marketplace card. One height everywhere: two lines of pitch, one line of
- * skills, a three-cell stat foot. `href` makes it a link; the builder's live
+ * skills, three figures at the foot. `href` makes it a link; the builder's live
  * preview renders it without one.
  */
 export function WorkerCard({ w, href, className }: { w: WorkerCardData; href?: string; className?: string }) {
@@ -83,18 +95,18 @@ export function WorkerCard({ w, href, className }: { w: WorkerCardData; href?: s
 
   const body = (
     <>
-      <div className="flex items-start gap-3 px-5 pt-5">
-        <WorkerAvatar w={w} size={44} />
-        <div className="min-w-0 flex-1">
+      <div className="flex items-start gap-3.5 px-5 pt-5">
+        <WorkerAvatar w={w} size={48} />
+        <div className="min-w-0 flex-1 pt-0.5">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-[15px] font-semibold tracking-[-0.012em] text-ink">{w.name || "Untitled agent"}</span>
+            <span className="truncate font-display text-[16px] font-bold tracking-[-0.025em] text-ink">{w.name || "Untitled agent"}</span>
             {isAgent ? <AgentMarker house={w.agent?.house} className="flex-none" /> : null}
           </div>
           <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[12.5px] text-muted">
             {isAgent ? (
               <>
                 <span className="truncate">{modelLabel(w.agent?.model)}</span>
-                <span className="text-line-strong">·</span>
+                <span className="text-faint">·</span>
                 <Clock className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
                 <span className="truncate">{w.agent?.turnaround ?? "—"}</span>
               </>
@@ -106,10 +118,10 @@ export function WorkerCard({ w, href, className }: { w: WorkerCardData; href?: s
             )}
           </div>
         </div>
-        {w.trust !== undefined ? <TrustRing score={w.trust} size={42} /> : <span className="size-[42px] flex-none rounded-full border border-dashed border-line-strong" aria-hidden />}
+        <TrustRing score={w.trust} size={44} />
       </div>
 
-      <p className={cn("mt-3 line-clamp-2 min-h-[42px] px-5 text-[13.5px] leading-[1.55] text-pretty", pitch ? "text-ink-2" : "text-faint")}>
+      <p className={cn("mt-3.5 line-clamp-2 min-h-[42px] px-5 text-[13.5px] leading-[1.55] text-pretty", pitch ? "text-ink-2" : "text-faint")}>
         {pitch || "A one-line pitch posters read first."}
       </p>
 
@@ -117,7 +129,7 @@ export function WorkerCard({ w, href, className }: { w: WorkerCardData; href?: s
         {shown.length ? (
           <>
             {shown.map((s) => (
-              <Badge key={s} tone="outline" className="max-w-[9rem] truncate text-muted">
+              <Badge key={s} tone="neutral" className="max-w-[9rem] truncate text-muted">
                 {capitalize(s)}
               </Badge>
             ))}
@@ -128,34 +140,33 @@ export function WorkerCard({ w, href, className }: { w: WorkerCardData; href?: s
         )}
       </div>
 
-      <div className="mt-4 grid grid-cols-3 divide-x divide-line border-t border-line bg-canvas/40">
-        <Cell label="Rating">
+      <div className="mt-auto grid grid-cols-3 gap-4 px-5 pt-6 pb-5">
+        <Figure label={w.reviewCount ? `Rating · ${w.reviewCount} review${w.reviewCount > 1 ? "s" : ""}` : "Rating"}>
           {w.rating !== undefined ? (
             <span className="inline-flex items-center gap-1">
-              <Star className="size-3 fill-current text-refunded" strokeWidth={1.9} />
+              <Star className="size-3.5 fill-current text-refunded" strokeWidth={1.9} />
               {w.rating.toFixed(2)}
-              {w.reviewCount ? <span className="text-[11.5px] font-normal text-faint">({w.reviewCount})</span> : null}
             </span>
           ) : (
-            <span className="font-normal text-muted">New</span>
+            <span className="text-faint">New</span>
           )}
-        </Cell>
-        <Cell label="Proofs pass">
-          {w.proofPassRate !== undefined ? `${Math.round(w.proofPassRate * 100)}%` : <span className="font-normal text-muted">—</span>}
-        </Cell>
-        <Cell label="Paid tasks">{w.tasksCompleted}</Cell>
+        </Figure>
+        <Figure label="Proofs pass">
+          {w.proofPassRate !== undefined ? `${Math.round(w.proofPassRate * 100)}%` : <span className="text-faint">—</span>}
+        </Figure>
+        <Figure label="Paid tasks">{w.tasksCompleted.toLocaleString("en-US")}</Figure>
       </div>
     </>
   );
 
-  const shell = "group flex flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-card";
+  const shell = "group flex flex-col rounded-lg bg-surface shadow-card";
   if (!href) return <div className={cn(shell, className)}>{body}</div>;
   return (
     <Link
       href={href}
       className={cn(
         shell,
-        "transition-[box-shadow,border-color] duration-200 hover:border-line-strong hover:shadow-hover focus-visible:ring-[3px] focus-visible:ring-green-200 focus-visible:outline-none",
+        "transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-hover focus-visible:ring-[3px] focus-visible:ring-green-200 focus-visible:outline-none",
         className,
       )}
     >
@@ -168,14 +179,14 @@ export function WorkerCard({ w, href, className }: { w: WorkerCardData; href?: s
 export function WorkerCardSkeleton({ i = 0 }: { i?: number }) {
   const name = ["w-[58%]", "w-[44%]", "w-[66%]", "w-[50%]"][i % 4];
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-card">
-      <div className="flex items-start gap-3 px-5 pt-5">
-        <Skeleton className="size-11 rounded-full" />
-        <div className="flex-1 space-y-2 pt-1">
-          <Skeleton className={cn("h-3.5", name)} />
+    <div className="flex flex-col rounded-lg bg-surface shadow-card">
+      <div className="flex items-start gap-3.5 px-5 pt-5">
+        <Skeleton className="size-12 rounded-full" />
+        <div className="flex-1 space-y-2 pt-1.5">
+          <Skeleton className={cn("h-4", name)} />
           <Skeleton className="h-3 w-24" />
         </div>
-        <Skeleton className="size-[42px] rounded-full" />
+        <Skeleton className="size-11 rounded-full" />
       </div>
       <div className="mt-4 space-y-2 px-5">
         <Skeleton className="h-3 w-[92%]" />
@@ -186,7 +197,14 @@ export function WorkerCardSkeleton({ i = 0 }: { i?: number }) {
         <Skeleton className="h-[22px] w-20 rounded-full" />
         <Skeleton className="h-[22px] w-14 rounded-full" />
       </div>
-      <div className="mt-4 h-[58px] border-t border-line bg-canvas/40" />
+      <div className="grid grid-cols-3 gap-4 px-5 pt-6 pb-5">
+        {[0, 1, 2].map((k) => (
+          <div key={k} className="space-y-1.5">
+            <Skeleton className="h-5 w-12" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

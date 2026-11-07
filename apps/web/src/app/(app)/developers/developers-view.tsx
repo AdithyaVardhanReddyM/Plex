@@ -5,9 +5,9 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
+  Check,
   Cpu,
   ChevronDown,
-  CodeXml,
   KeyRound,
   Loader2,
   Lock,
@@ -20,20 +20,17 @@ import { api } from "@/lib/convex";
 import type { Id } from "@/lib/convex";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
+  Avatar,
   Badge,
   Card,
   CardHeader,
   EmptyState,
-  IconTile,
   Input,
   Label,
-  Meter,
   PageHeader,
   Segmented,
   Skeleton,
-  StatusDot,
 } from "@/components/ui/primitives";
-import { Amount } from "@/components/ui/money";
 import { AgentArt } from "@/components/art/empty-art";
 import { CodeBlock, CopyButton } from "@/components/developers/code-block";
 import { errorMessage } from "@/components/tasks/task-ui";
@@ -51,7 +48,7 @@ export function DevelopersView() {
   return (
     <div className="animate-rise">
       <PageHeader
-        icon={<CodeXml />}
+        eyebrow="Agents pay inside your rules"
         title="Agents & API"
         description="Give Claude, or any agent, a key. A poster key posts and pays for tasks from one pot, inside that pot's rules. A worker key lets an AI agent bid on digital work and get paid on proof."
         actions={
@@ -60,14 +57,16 @@ export function DevelopersView() {
           </Link>
         }
       />
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <McpSpotlight base={apiBase()} />
+        <AutoPay />
+      </div>
+      <div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex min-w-0 flex-col gap-4">
-          <AutoPay />
           <Keys />
           <Reference base={base} />
         </div>
-        <aside className="flex min-w-0 flex-col gap-4">
-          <McpCard base={apiBase()} />
+        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
           <Safety />
         </aside>
       </div>
@@ -75,23 +74,67 @@ export function DevelopersView() {
   );
 }
 
-// ── Auto-pay ─────────────────────────────────────────────────────────────────
+// ── Claude, lit ──────────────────────────────────────────────────────────────
 
-function StateCapsule({ on, label }: { on: boolean; label: string }) {
+const GLASS = "rounded-full bg-white/[0.08] px-2.5 py-1 text-white/75 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]";
+
+function McpSpotlight({ base }: { base: string }) {
+  const config = JSON.stringify(
+    {
+      mcpServers: {
+        plex: { command: "node", args: ["<path to Plex>/apps/mcp/dist/index.js"], env: { PLEX_API_URL: base, PLEX_API_KEY: "plx_live_…" } },
+        paypal: {
+          command: "npx",
+          args: ["-y", "@paypal/mcp", "--tools=all"],
+          env: { PAYPAL_ACCESS_TOKEN: "<sandbox token>", PAYPAL_ENVIRONMENT: "SANDBOX" },
+        },
+      },
+    },
+    null,
+    2,
+  );
   return (
-    <span
-      className={cn(
-        "inline-flex h-[22px] items-center gap-1.5 rounded-full px-2 text-[11.5px] font-medium ring-1 ring-inset",
-        on ? "bg-green-50 text-green-800 ring-green-200/80" : "bg-surface text-muted ring-line",
-      )}
-    >
-      <StatusDot tone={on ? "green" : "faint"} />
-      {label}
-    </span>
+    <section className="@container spotlight flex min-w-0 flex-col rounded-xl p-6 sm:p-7">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
+          <Cpu className="size-4 text-green-300" strokeWidth={1.9} />
+          Plex + PayPal for Claude
+        </div>
+        <span className={cn(GLASS, "text-[11.5px] font-medium text-white/60")}>Two MCP servers</span>
+      </div>
+      <h2 className="mt-4 max-w-xl font-display text-[34px] leading-[1.04] font-extrabold tracking-[-0.045em] text-balance text-white @[520px]:text-[44px]">
+        Give Claude a key, not your wallet.
+      </h2>
+      <p className="mt-3 max-w-xl text-[13.5px] leading-relaxed text-white/60">
+        With Plex, Claude posts tasks, funds them, accepts bids and approves proof inside the key&apos;s pot. With PayPal&apos;s own server it
+        looks up the orders, disputes and invoices behind every receipt.
+      </p>
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] font-medium">
+        <span className={GLASS}>Posts and funds tasks</span>
+        <span className={GLASS}>Accepts bids</span>
+        <span className="flex items-center gap-1 rounded-full bg-green-300/15 px-2.5 py-1 text-green-200 shadow-[inset_0_0_0_1px_rgb(110_243_214/0.25)]">
+          <Check className="size-3" strokeWidth={2.6} />
+          Inside the pot&apos;s rules
+        </span>
+      </div>
+      <CodeBlock
+        code={config}
+        lang="json"
+        title="claude_desktop_config.json"
+        className="mt-6 bg-night/70"
+        bodyClassName="max-h-[200px] text-[12px]"
+      />
+      <p className="mt-4 text-[12px] leading-snug text-white/45">
+        The PayPal token comes from your sandbox app&apos;s client id and secret.{" "}
+        <code className="font-mono text-[11.5px] text-white/75">scripts/refresh-paypal-token.sh</code> writes a fresh one.
+      </p>
+    </section>
   );
 }
 
-/** Auto-pay: save a PayPal wallet once with PayPal Vault, so tasks are held without a popup. */
+// ── Auto-pay ─────────────────────────────────────────────────────────────────
+
+/** Auto-pay: save a PayPal wallet once with PayPal Vault, so tasks are held without a popup. A brushed-metal card: PayPal holds it. */
 function AutoPay() {
   const a = useQuery(api.autopay.mine, {});
   const start = useAction(api.autopay.start);
@@ -139,71 +182,73 @@ function AutoPay() {
   const dailyValue = daily ?? (a ? String(a.dailyLimitCents / 100) : "");
 
   return (
-    <Card className="overflow-hidden">
-      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start">
-        <IconTile tone={active ? "mint" : "neutral"}>
-          <Wallet />
-        </IconTile>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-[14.5px] font-semibold tracking-[-0.012em] text-ink">Auto-pay</span>
-            {a === undefined ? null : <StateCapsule on={active} label={active ? "On" : "Off"} />}
+    <section className="metal-card flex min-w-0 flex-col rounded-xl p-6 sm:p-7">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-[13px] font-semibold text-steel-800">
+            <Wallet className="size-4" strokeWidth={2} />
+            Auto-pay
           </div>
-          <p className="mt-0.5 max-w-xl text-[13px] leading-snug text-muted">
-            Save your PayPal once with PayPal Vault. Tasks you or your agents post are then held without a checkout popup, and still charged only when the proof passes.
-          </p>
+          <div className="mt-0.5 text-[12px] text-steel-800/70">Saved with PayPal Vault</div>
         </div>
-        {a && !active ? (
-          <Button
-            variant="brand"
-            className="self-start"
-            disabled={!!busy}
-            onClick={() =>
-              run("start", async () => {
-                const r = await start({ origin: window.location.origin });
-                window.location.assign(r.approveUrl);
-              })
-            }
-          >
-            {busy ? <Loader2 className="animate-spin" /> : <Wallet />} Turn on with PayPal
-          </Button>
-        ) : null}
+        <div className="flex items-center gap-2.5">
+          {a === undefined || a === null ? null : (
+            <span
+              className={cn(
+                "rounded-full px-2.5 py-1 text-[11.5px] font-semibold",
+                active ? "bg-green-100/90 text-green-800" : "bg-white/55 text-steel-800",
+              )}
+            >
+              {active ? "On" : "Off"}
+            </span>
+          )}
+          {/* the card's chip */}
+          <span className="h-7 w-9 flex-none rounded-[7px] bg-[linear-gradient(135deg,#f6f9fc,#b8c8dc_45%,#eef3f8)] shadow-[inset_0_0_0_1px_rgb(24_38_59/0.18)]" aria-hidden>
+            <span className="mx-auto mt-[9px] block h-px w-5 bg-steel-700/30" />
+            <span className="mx-auto mt-[5px] block h-px w-5 bg-steel-700/30" />
+          </span>
+        </div>
       </div>
 
       {a === undefined ? (
-        <div className="border-t border-line px-5 py-4">
-          <Skeleton className="h-10 w-full rounded-[10px]" />
+        <div className="mt-auto space-y-3 pt-10">
+          <Skeleton className="h-12 w-32" />
+          <Skeleton className="h-4 w-48" />
         </div>
       ) : a === null ? (
-        <div className="border-t border-line px-5 py-4 text-[12.5px] text-muted">Sign in to turn on auto-pay.</div>
+        <p className="mt-auto pt-10 text-[13px] text-steel-800">Sign in to turn on auto-pay.</p>
       ) : active ? (
-        <>
-          <dl className="grid border-t border-line bg-canvas/40 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-            <div className="min-w-0 px-5 py-4">
-              <dt className="text-[12px] text-muted">Saved PayPal</dt>
-              <dd className="mt-1.5 flex min-w-0 items-center gap-2 text-[13.5px] font-medium text-ink">
-                <ShieldCheck className="size-4 flex-none text-green-700" strokeWidth={1.9} />
-                <span className="truncate">{a.payerEmail ?? "PayPal wallet"}</span>
-              </dd>
-              <dd className="mt-1 text-[12px] text-faint">{a.lastUsedAt ? `Last used ${relativeTime(a.lastUsedAt)}` : "Not used yet"}</dd>
-            </div>
-            <div className="min-w-0 border-t border-line px-5 py-4 sm:border-t-0 sm:border-l">
-              <dt className="flex items-center justify-between text-[12px] text-muted">
-                <span>Held today</span>
-                <span className="tabular text-faint">of {formatCents(a.dailyLimitCents)}</span>
-              </dt>
-              <dd className="mt-1.5">
-                <Amount cents={a.usedTodayCents} size="md" />
-                <Meter value={a.dailyLimitCents ? a.usedTodayCents / a.dailyLimitCents : 0} tone="steel" size="sm" className="mt-2" label="Held today" />
-              </dd>
-            </div>
-          </dl>
-          <div className="border-t border-line px-5 py-4">
-            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+        <div className="mt-auto pt-8">
+          <div className="flex items-end justify-between gap-3">
+            <span className="tabular font-display text-[48px] leading-none font-extrabold tracking-[-0.045em] text-steel-900">
+              {formatCents(a.usedTodayCents)}
+            </span>
+            <span className="tabular pb-1 text-[12px] font-medium text-steel-800/80">of {formatCents(a.dailyLimitCents)} today</span>
+          </div>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/55" role="meter" aria-label="Held today" aria-valuenow={a.dailyLimitCents ? Math.round((a.usedTodayCents / a.dailyLimitCents) * 100) : 0}>
+            <div
+              className="h-full rounded-full bg-steel-800 transition-[width] duration-700"
+              style={{ width: `${a.dailyLimitCents ? Math.min(100, (a.usedTodayCents / a.dailyLimitCents) * 100) : 0}%` }}
+            />
+          </div>
+          <div className="mt-3 flex min-w-0 items-center gap-1.5 text-[12.5px] font-medium text-steel-800">
+            <ShieldCheck className="size-4 flex-none" strokeWidth={1.9} />
+            <span className="truncate">{a.payerEmail ?? "PayPal wallet"}</span>
+            <span className="flex-none text-steel-800/60">· {a.lastUsedAt ? `used ${relativeTime(a.lastUsedAt)}` : "not used yet"}</span>
+          </div>
+
+          <div className="mt-5 rounded-[14px] bg-white/55 p-4 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.6)] backdrop-blur-sm">
+            <div className="grid grid-cols-2 gap-3">
               <MoneyField id="ap-per" label="Up to, per task" value={perValue} onChange={setPer} />
               <MoneyField id="ap-daily" label="Up to, per day" value={dailyValue} onChange={setDaily} />
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <Button variant="danger" size="sm" disabled={!!busy} onClick={() => run("off", () => turnOff({}))}>
+                {busy === "off" ? <Loader2 className="animate-spin" /> : null} Turn off and remove
+              </Button>
               <Button
                 variant="secondary"
+                size="sm"
                 disabled={!!busy || (per === undefined && daily === undefined)}
                 onClick={() =>
                   run("limits", async () => {
@@ -216,30 +261,42 @@ function AutoPay() {
                 {busy === "limits" ? <Loader2 className="animate-spin" /> : null} Save limits
               </Button>
             </div>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <span className="text-[12.5px] text-muted">Over a limit, or over a pot rule, you approve at PayPal as before.</span>
-              <Button variant="danger" size="sm" disabled={!!busy} onClick={() => run("off", () => turnOff({}))}>
-                {busy === "off" ? <Loader2 className="animate-spin" /> : null} Turn off and remove
-              </Button>
+          </div>
+          <p className="mt-3 text-[12px] leading-relaxed text-steel-800/75">Over a limit, or over a pot rule, you approve at PayPal as before.</p>
+        </div>
+      ) : (
+        <>
+          <p className="mt-6 max-w-[300px] text-[13px] leading-relaxed text-steel-800/85">
+            Save your PayPal once. Tasks you or your agents post are then held without a checkout popup, and still charged only when the
+            proof passes.
+          </p>
+          <div className="mt-auto pt-8">
+            <span className="tabular font-display text-[48px] leading-none font-extrabold tracking-[-0.045em] text-steel-900">
+              {formatCents(a.limitCents)}
+            </span>
+            <div className="tabular mt-2 text-[12.5px] font-medium text-steel-800">
+              per task without a popup · up to {formatCents(a.dailyLimitCents)} a day
             </div>
+            <Button
+              variant="brand"
+              size="lg"
+              className="mt-5 w-full"
+              disabled={!!busy}
+              onClick={() =>
+                run("start", async () => {
+                  const r = await start({ origin: window.location.origin });
+                  window.location.assign(r.approveUrl);
+                })
+              }
+            >
+              {busy ? <Loader2 className="animate-spin" /> : <Wallet />} {busy === "finish" ? "Saving your PayPal…" : "Turn on with PayPal"}
+            </Button>
+            <p className="mt-2.5 text-center text-[12px] text-steel-800/70">One approval at PayPal, no charge.</p>
           </div>
         </>
-      ) : (
-        <dl className="grid grid-cols-1 border-t border-line bg-canvas/40 sm:grid-cols-3">
-          {[
-            { label: "To set up", value: busy === "finish" ? "Saving your PayPal…" : "One approval, no charge" },
-            { label: "Per task", value: `Up to ${formatCents(a.limitCents)}` },
-            { label: "Per day", value: `Up to ${formatCents(a.dailyLimitCents)}` },
-          ].map((f, i) => (
-            <div key={f.label} className={cn("px-5 py-3.5", i > 0 && "border-t border-line sm:border-t-0 sm:border-l")}>
-              <dt className="text-[12px] text-muted">{f.label}</dt>
-              <dd className="tabular mt-1 text-[13.5px] font-medium text-ink">{f.value}</dd>
-            </div>
-          ))}
-        </dl>
       )}
-      {error ? <p className="border-t border-line px-5 py-3 text-[12.5px] text-disputed">{error}</p> : null}
-    </Card>
+      {error ? <p className="mt-3 rounded-[10px] bg-white/70 px-3 py-2 text-[12.5px] text-disputed">{error}</p> : null}
+    </section>
   );
 }
 
@@ -257,7 +314,7 @@ function MoneyField({ id, label, value, onChange }: { id: string; label: string;
 
 // ── Keys ─────────────────────────────────────────────────────────────────────
 
-const KEY_GRID = "md:grid md:grid-cols-[minmax(0,1.5fr)_88px_minmax(0,1fr)_104px_80px] md:items-center md:gap-4";
+const KEY_GRID = "md:grid md:grid-cols-[minmax(0,1.5fr)_88px_minmax(0,1fr)_96px_80px] md:items-center md:gap-4";
 
 function Keys() {
   const keys = useQuery(api.apiKeys.list);
@@ -297,13 +354,16 @@ function Keys() {
       <CardHeader
         title="API keys"
         description="Each key acts as one agent. Revoke it any time."
-        action={keys?.length ? <Badge tone="outline" className="tabular">{live} active</Badge> : null}
+        action={keys?.length ? <Badge tone="neutral" className="tabular">{live} active</Badge> : null}
       />
 
-      <div className="px-5 pt-4 pb-5">
-        <div className="rounded-[12px] border border-line bg-canvas/50 p-4">
+      <div className="px-5 pt-4 pb-2">
+        <div className="rounded-[14px] bg-canvas/80 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="text-[13px] font-medium text-ink">New key</span>
+            <span className="flex items-center gap-2 text-[13.5px] font-semibold text-ink">
+              <KeyRound className="size-[18px] text-ink-2" strokeWidth={1.9} />
+              New key
+            </span>
             <Segmented
               size="sm"
               value={role}
@@ -361,10 +421,13 @@ function Keys() {
       </div>
 
       {keys === undefined ? (
-        <div className="border-t border-line">
+        <div className="px-2 pt-2 pb-2">
           {[0, 1].map((i) => (
-            <div key={i} className={cn(KEY_GRID, "px-5 py-3.5")}>
-              <Skeleton className={cn("h-4", i ? "w-28" : "w-40")} />
+            <div key={i} className={cn(KEY_GRID, "flex items-center gap-3 px-3 py-3")}>
+              <div className="flex items-center gap-3">
+                <Skeleton className="size-8 rounded-[10px]" />
+                <Skeleton className={cn("h-4", i ? "w-28" : "w-40")} />
+              </div>
               <Skeleton className="hidden h-[22px] w-16 rounded-full md:block" />
               <Skeleton className="hidden h-4 w-24 md:block" />
               <Skeleton className="hidden h-4 w-16 md:block" />
@@ -373,43 +436,44 @@ function Keys() {
           ))}
         </div>
       ) : keys.length === 0 ? (
-        <div className="border-t border-line">
-          <EmptyState
-            art={<AgentArt />}
-            title="No keys yet"
-            body="Create one above, then add the Plex MCP server to Claude. Every task it posts is checked against its pot's rules."
-            className="py-10"
-          />
-        </div>
+        <EmptyState
+          art={<AgentArt />}
+          title="No keys yet"
+          body="Create one above, then add the Plex MCP server to Claude. Every task it posts is checked against its pot's rules."
+          className="py-10"
+        />
       ) : (
-        <div className="border-t border-line">
-          <div className={cn(KEY_GRID, "hidden bg-canvas/40 px-5 py-2 text-[11.5px] text-faint")}>
+        <div className="px-2 pt-3 pb-2">
+          <div className={cn(KEY_GRID, "hidden px-3 pb-1 text-[11.5px] text-faint")}>
             <span>Agent</span>
             <span>Role</span>
             <span>Key</span>
             <span>Last used</span>
             <span />
           </div>
-          <ul className="divide-y divide-line border-t border-line">
+          <ul>
             {keys.map((k) => (
-              <li key={k._id} className={cn(KEY_GRID, "flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3")}>
-                <div className={cn("min-w-0 basis-full md:basis-auto", k.revoked && "opacity-55")}>
-                  <div className="truncate text-[13.5px] font-medium text-ink">{k.name}</div>
-                  <div className="truncate text-[12px] text-muted">
-                    {k.potName ? `Spends from ${k.potName}` : k.workerHandle ? (
-                      <Link href={`/hire/${k.workerHandle}`} className="inline-flex items-center gap-0.5 hover:text-ink">
-                        Profile in Hire <ArrowUpRight className="size-3" strokeWidth={2} />
-                      </Link>
-                    ) : (
-                      `Created ${relativeTime(k._creationTime)}`
-                    )}
+              <li
+                key={k._id}
+                className={cn(KEY_GRID, "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[12px] px-3 py-3 transition-colors hover:bg-sunken/70")}
+              >
+                <div className={cn("flex min-w-0 basis-full items-center gap-3 md:basis-auto", k.revoked && "opacity-55")}>
+                  <Avatar name={k.name.replace(/[^\p{L}\p{N}\s]/gu, "")} square size={32} color={k.role === "poster" ? "var(--color-steel-600)" : "var(--color-green-700)"} />
+                  <div className="min-w-0">
+                    <div className="truncate text-[13.5px] font-medium text-ink">{k.name}</div>
+                    <div className="truncate text-[12px] text-muted">
+                      {k.potName ? `Spends from ${k.potName}` : k.workerHandle ? (
+                        <Link href={`/hire/${k.workerHandle}`} className="inline-flex items-center gap-0.5 hover:text-ink">
+                          Profile in Hire <ArrowUpRight className="size-3" strokeWidth={2} />
+                        </Link>
+                      ) : (
+                        `Created ${relativeTime(k._creationTime)}`
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className={cn(k.revoked && "opacity-55")}>
-                  <Badge tone={k.role === "poster" ? "steel" : "green"}>
-                    {k.role === "poster" ? <Wallet /> : <Cpu />}
-                    {k.role === "poster" ? "Poster" : "Worker"}
-                  </Badge>
+                  <Badge tone={k.role === "poster" ? "steel" : "green"}>{k.role === "poster" ? "Poster" : "Worker"}</Badge>
                 </div>
                 <div className={cn("min-w-0", k.revoked && "opacity-55")}>
                   <code className="inline-block max-w-full truncate rounded-[6px] bg-sunken px-1.5 py-0.5 align-middle font-mono text-[12px] text-ink-2">
@@ -439,14 +503,14 @@ function Keys() {
 
 function FreshKey({ value, onDone }: { value: string; onDone: () => void }) {
   return (
-    <div className="mt-3 rounded-[12px] bg-green-50 p-4 ring-1 ring-green-200 ring-inset">
+    <div className="mt-3 rounded-[14px] bg-[linear-gradient(150deg,var(--color-green-50),var(--color-green-100))] p-4">
       <div className="flex items-center gap-2 text-[13px] font-medium text-green-800">
         <KeyRound className="size-4" strokeWidth={1.9} />
         Copy it now. Plex keeps only a hash, so it won&apos;t be shown again.
       </div>
       <div className="mt-3 flex items-center gap-2">
-        <code className="min-w-0 flex-1 truncate rounded-[10px] border border-green-200 bg-surface px-3 py-2 font-mono text-[12.5px] text-ink">{value}</code>
-        <CopyButton value={value} className="h-9 border border-line bg-surface px-3.5 shadow-card hover:bg-surface" />
+        <code className="min-w-0 flex-1 truncate rounded-[10px] bg-surface px-3 py-2 font-mono text-[12.5px] text-ink shadow-card">{value}</code>
+        <CopyButton value={value} className="h-9 bg-surface px-3.5 shadow-card hover:bg-surface" />
         <Button variant="ghost" size="sm" onClick={onDone}>
           Done
         </Button>
@@ -481,8 +545,8 @@ function MethodPill({ method }: { method: "GET" | "POST" }) {
   return (
     <span
       className={cn(
-        "inline-flex h-[22px] w-[46px] flex-none items-center justify-center rounded-[6px] font-mono text-[11px] font-semibold ring-1 ring-inset",
-        method === "GET" ? "bg-steel-50 text-steel-700 ring-steel-100" : "bg-green-50 text-green-800 ring-green-100",
+        "inline-flex h-[22px] w-[46px] flex-none items-center justify-center rounded-full font-mono text-[11px] font-semibold",
+        method === "GET" ? "bg-steel-100 text-steel-700" : "bg-green-100 text-green-800",
       )}
     >
       {method}
@@ -500,13 +564,13 @@ function Reference({ base }: { base: string }) {
     <Card className="overflow-hidden">
       <CardHeader title="API reference" description="REST over HTTPS. JSON in, JSON out. Every money move returns its receipt." />
 
-      <dl className="mx-5 mt-4 divide-y divide-line rounded-[12px] border border-line bg-canvas/50">
-        <div className="grid grid-cols-[88px_minmax(0,1fr)_auto] items-center gap-3 py-1.5 pr-1.5 pl-3.5">
+      <dl className="mx-5 mt-4 rounded-[14px] bg-canvas/80 py-2">
+        <div className="grid grid-cols-[88px_minmax(0,1fr)_auto] items-center gap-3 py-1 pr-2 pl-4">
           <dt className="text-[12px] text-muted">Base URL</dt>
           <dd className="truncate font-mono text-[12.5px] text-ink">{base}</dd>
           <CopyButton value={base} />
         </div>
-        <div className="grid grid-cols-[88px_minmax(0,1fr)_auto] items-center gap-3 py-1.5 pr-1.5 pl-3.5">
+        <div className="grid grid-cols-[88px_minmax(0,1fr)_auto] items-center gap-3 py-1 pr-2 pl-4">
           <dt className="text-[12px] text-muted">Auth header</dt>
           <dd className="truncate font-mono text-[12.5px] text-ink">
             X-API-Key: <span className="text-muted">plx_live_…</span>
@@ -517,14 +581,14 @@ function Reference({ base }: { base: string }) {
 
       <div className="mt-2">
         {GROUPS.map((g) => (
-          <section key={g.who} className="px-2 pt-3">
-            <div className="flex items-baseline gap-2 px-3 pb-1">
-              <h3 className="text-[13px] font-semibold text-ink">{g.title}</h3>
+          <section key={g.who} className="px-2 pt-5">
+            <div className="flex items-baseline gap-2 px-3 pb-1.5">
+              <h3 className="font-display text-[14.5px] font-bold tracking-[-0.02em] text-ink">{g.title}</h3>
               <span className="text-[12px] text-faint">{g.note}</span>
             </div>
             <ul>
               {ENDPOINTS.filter((e) => e.who === g.who).map((e) => (
-                <li key={e.method + e.path} className="grid grid-cols-[46px_minmax(0,1fr)] gap-x-3 rounded-[10px] px-3 py-2.5 transition-colors hover:bg-sunken/50">
+                <li key={e.method + e.path} className="grid grid-cols-[46px_minmax(0,1fr)] gap-x-3.5 rounded-[12px] px-3 py-3 transition-colors hover:bg-sunken/70">
                   <MethodPill method={e.method} />
                   <div className="min-w-0">
                     <code className="block truncate font-mono text-[13px] leading-[22px] text-ink">{e.path}</code>
@@ -538,7 +602,7 @@ function Reference({ base }: { base: string }) {
         ))}
       </div>
 
-      <div className="mt-3 border-t border-line p-5">
+      <div className="px-5 pt-4 pb-5">
         <CodeBlock code={curl} lang="curl" title="Create a task from a brief" />
       </div>
     </Card>
@@ -546,42 +610,6 @@ function Reference({ base }: { base: string }) {
 }
 
 // ── Aside ────────────────────────────────────────────────────────────────────
-
-function McpCard({ base }: { base: string }) {
-  const config = JSON.stringify(
-    {
-      mcpServers: {
-        plex: { command: "node", args: ["<path to Plex>/apps/mcp/dist/index.js"], env: { PLEX_API_URL: base, PLEX_API_KEY: "plx_live_…" } },
-        paypal: {
-          command: "npx",
-          args: ["-y", "@paypal/mcp", "--tools=all"],
-          env: { PAYPAL_ACCESS_TOKEN: "<sandbox token>", PAYPAL_ENVIRONMENT: "SANDBOX" },
-        },
-      },
-    },
-    null,
-    2,
-  );
-  return (
-    <Card className="overflow-hidden">
-      <CardHeader
-        icon={<Cpu />}
-        title="Plex + PayPal for Claude"
-        description="Two MCP servers for Claude Desktop."
-      />
-      <p className="px-5 pt-3 text-[12.5px] leading-relaxed text-muted">
-        With Plex, Claude posts tasks, funds them, accepts bids and approves proof inside the key&apos;s pot. With PayPal&apos;s own server it looks up the orders, disputes and invoices behind every receipt.
-      </p>
-      <div className="p-4">
-        <CodeBlock code={config} lang="json" title="claude_desktop_config.json" bodyClassName="max-h-[360px] text-[12px]" />
-      </div>
-      <p className="border-t border-line bg-canvas/40 px-5 py-3 text-[12px] leading-snug text-muted">
-        The PayPal token comes from your sandbox app&apos;s client id and secret.{" "}
-        <code className="font-mono text-[11.5px] text-ink-2">scripts/refresh-paypal-token.sh</code> writes a fresh one.
-      </p>
-    </Card>
-  );
-}
 
 const NEVER: { icon: React.ReactNode; title: string; body: React.ReactNode }[] = [
   {
@@ -601,21 +629,19 @@ const NEVER: { icon: React.ReactNode; title: string; body: React.ReactNode }[] =
 function Safety() {
   return (
     <Card>
-      <CardHeader icon={<ShieldCheck />} title="What a key can never do" description="Enforced in code, not by a prompt." />
-      <ul className="mt-2 px-5">
+      <CardHeader title="What a key can never do" description="Enforced in code, not by a prompt." />
+      <ul className="space-y-0.5 px-2 pt-3">
         {NEVER.map((n) => (
-          <li key={n.title} className="grid grid-cols-[28px_minmax(0,1fr)] gap-3 border-t border-line py-3 first:border-t-0">
-            <IconTile tone="neutral" size="sm">
-              {n.icon}
-            </IconTile>
+          <li key={n.title} className="grid grid-cols-[20px_minmax(0,1fr)] gap-3.5 rounded-[12px] px-3 py-3 transition-colors hover:bg-sunken/70">
+            <span className="mt-px text-ink-2 [&_svg]:size-[18px] [&_svg]:stroke-[1.9]">{n.icon}</span>
             <div className="min-w-0">
-              <div className="text-[13px] font-medium leading-snug text-ink">{n.title}</div>
+              <div className="text-[13.5px] font-medium leading-snug text-ink">{n.title}</div>
               <div className="mt-0.5 text-[12.5px] leading-snug text-muted">{n.body}</div>
             </div>
           </li>
         ))}
       </ul>
-      <p className="border-t border-line bg-canvas/40 px-5 py-3 text-[12px] leading-snug text-muted">
+      <p className="px-5 pt-2 pb-5 text-[12px] leading-snug text-faint">
         Keys are stored as SHA-256 hashes and shown once. The Pause switch stops every key at once.
       </p>
     </Card>
