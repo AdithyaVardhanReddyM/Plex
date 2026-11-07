@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAction, useMutation, useQuery } from "convex/react";
+import { ConvexError } from "convex/values";
 import { useMemo, useState } from "react";
 import {
   Check,
@@ -13,6 +14,7 @@ import {
   Pause,
   PencilLine,
   PiggyBank,
+  Plus,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -52,6 +54,7 @@ export function PotsView() {
   const pending = useQuery(api.pots.pendingApprovals);
   const [picked, setPicked] = useState<Id<"pots"> | null>(null);
   const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [creating, setCreating] = useState(false);
 
   // Open on the pot with something waiting (the demo's desk chair), else the
   // first, and stay there when that approval is decided.
@@ -72,7 +75,17 @@ export function PotsView() {
         icon={<PiggyBank />}
         title="Pots & limits"
         description="Write your limits in plain English. Plex turns them into rules once, and code checks every payment against them."
-        actions={<PauseControl paused={paused} ready={viewer !== undefined} />}
+        actions={
+          <div className="flex items-center gap-3">
+            {pots?.length && !creating ? (
+              <Button variant="secondary" onClick={() => setCreating(true)}>
+                <Plus strokeWidth={1.9} />
+                New pot
+              </Button>
+            ) : null}
+            <PauseControl paused={paused} ready={viewer !== undefined} />
+          </div>
+        }
       />
 
       {paused ? (
@@ -85,38 +98,197 @@ export function PotsView() {
         </div>
       ) : null}
 
-      {/* Pots */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" role="group" aria-label="Pots">
-        {pots
-          ? pots.map((p) => (
-              <PotTile
-                key={p._id}
-                pot={p}
-                waiting={pending?.filter((a) => a.potId === p._id).length ?? 0}
-                selected={p._id === selectedId}
-                onSelect={() => select(p._id)}
-              />
-            ))
-          : Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[172px] w-full rounded-xl" />)}
-      </div>
+      {pots?.length === 0 || creating ? (
+        <NewPot
+          first={pots?.length === 0}
+          taken={pots?.map((p) => p.name.toLowerCase()) ?? []}
+          onCancel={() => setCreating(false)}
+          onCreated={(id) => {
+            setCreating(false);
+            select(id);
+          }}
+        />
+      ) : null}
 
-      <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
-        {selected ? (
-          <RulesCard
-            key={selected._id}
-            pot={selected}
-            proposal={proposal}
-            onProposal={setProposal}
-            decided={trial.result ? { index: trial.result.ruleIndex, outcome: trial.result.outcome } : null}
-          />
-        ) : (
-          <Skeleton className="h-[420px] w-full rounded-lg" />
-        )}
-        {selected ? <TryIt pot={selected} draft={proposal} paused={paused} trial={trial} /> : <Skeleton className="h-[420px] w-full rounded-lg" />}
-      </div>
+      {/* Pots */}
+      {pots?.length === 0 ? null : (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" role="group" aria-label="Pots">
+          {pots
+            ? pots.map((p) => (
+                <PotTile
+                  key={p._id}
+                  pot={p}
+                  waiting={pending?.filter((a) => a.potId === p._id).length ?? 0}
+                  selected={p._id === selectedId}
+                  onSelect={() => select(p._id)}
+                />
+              ))
+            : Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[172px] w-full rounded-xl" />)}
+        </div>
+      )}
+
+      {pots?.length === 0 ? null : (
+        <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
+          {selected ? (
+            <RulesCard
+              key={selected._id}
+              pot={selected}
+              proposal={proposal}
+              onProposal={setProposal}
+              decided={trial.result ? { index: trial.result.ruleIndex, outcome: trial.result.outcome } : null}
+            />
+          ) : (
+            <Skeleton className="h-[420px] w-full rounded-lg" />
+          )}
+          {selected ? <TryIt pot={selected} draft={proposal} paused={paused} trial={trial} /> : <Skeleton className="h-[420px] w-full rounded-lg" />}
+        </div>
+      )}
 
       <Approvals pending={pending} pots={pots} />
     </div>
+  );
+}
+
+// ── New pot ──────────────────────────────────────────────────────────────────
+
+const POT_ICON_CHOICES = [
+  { icon: "coffee", label: "Food" },
+  { icon: "shopping-bag", label: "Shopping" },
+  { icon: "map-pin", label: "Errands" },
+  { icon: "heart-handshake", label: "Giving" },
+  { icon: "piggy-bank", label: "Anything else" },
+] as const;
+
+/** Name, monthly budget, icon. The rules come next, in the pot's own card. */
+function NewPot({
+  first,
+  taken,
+  onCancel,
+  onCreated,
+}: {
+  first: boolean;
+  taken: string[];
+  onCancel: () => void;
+  onCreated: (id: Id<"pots">) => void;
+}) {
+  const create = useMutation(api.pots.create);
+  const [name, setName] = useState("");
+  const [budget, setBudget] = useState("");
+  const [icon, setIcon] = useState<string>("coffee");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const budgetCents = Math.round(parseFloat(budget.replace(/[$,\s]/g, "")) * 100);
+  const ready = name.trim().length > 0 && Number.isFinite(budgetCents) && budgetCents > 0;
+  const suggestions = POT_ICON_CHOICES.slice(0, 4).filter((c) => !taken.includes(c.label.toLowerCase()));
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ready || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      onCreated(await create({ name, monthlyBudgetCents: budgetCents, icon }));
+    } catch (err) {
+      setError(err instanceof ConvexError ? String(err.data) : "Couldn't make the pot. Try again.");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card className="mb-4 overflow-hidden">
+      <form onSubmit={submit}>
+        <div className="px-6 pt-5">
+          <div className="font-display text-[16px] leading-6 font-bold tracking-[-0.02em] text-ink">
+            {first ? "Make your first pot" : "New pot"}
+          </div>
+          <div className="max-w-xl text-[13px] leading-snug text-faint">
+            A pot is what an agent can spend on one part of your life, each month. Name it and set the budget; you write
+            its limits next.
+          </div>
+        </div>
+
+        <div className="grid gap-4 px-6 pt-5 md:grid-cols-[minmax(0,1fr)_200px_auto]">
+          <div className="min-w-0">
+            <Label htmlFor="pot-name">Name</Label>
+            <Input
+              id="pot-name"
+              value={name}
+              maxLength={32}
+              autoFocus
+              placeholder="Food"
+              onChange={(e) => setName(e.target.value)}
+            />
+            {suggestions.length ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {suggestions.map((s) => (
+                  <button
+                    key={s.icon}
+                    type="button"
+                    onClick={() => {
+                      setName(s.label);
+                      setIcon(s.icon);
+                    }}
+                    className="flex h-7 items-center gap-1.5 rounded-full bg-sunken px-2.5 text-[12.5px] font-medium text-ink-2 transition-colors hover:bg-line/60 hover:text-ink"
+                  >
+                    <PotIcon pot={{ icon: s.icon, color: "green" }} size={16} />
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <div>
+            <Label htmlFor="pot-budget">Monthly budget</Label>
+            <div className="relative">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-faint">$</span>
+              <Input
+                id="pot-budget"
+                inputMode="decimal"
+                value={budget}
+                placeholder="400"
+                className="tabular pl-6"
+                onChange={(e) => setBudget(e.target.value.replace(/[^\d.,]/g, ""))}
+              />
+            </div>
+          </div>
+          <div>
+            <Label id="pot-icon-label">Icon</Label>
+            <div role="radiogroup" aria-labelledby="pot-icon-label" className="flex h-9 items-center gap-1">
+              {POT_ICON_CHOICES.map((c) => (
+                <button
+                  key={c.icon}
+                  type="button"
+                  role="radio"
+                  aria-checked={icon === c.icon}
+                  aria-label={c.label}
+                  title={c.label}
+                  onClick={() => setIcon(c.icon)}
+                  className={cn(
+                    "flex size-9 items-center justify-center rounded-[10px] transition-colors",
+                    icon === c.icon ? "bg-ink text-white" : "text-muted hover:bg-sunken hover:text-ink",
+                  )}
+                >
+                  <PotIcon pot={{ icon: c.icon, color: "" }} size={22} className="text-current" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-2 px-6 pb-5">
+          {error ? <span className="mr-auto text-[13px] text-disputed">{error}</span> : null}
+          {first ? null : (
+            <Button variant="ghost" size="sm" onClick={onCancel}>
+              Cancel
+            </Button>
+          )}
+          <Button type="submit" variant="primary" size="sm" disabled={!ready || busy}>
+            {busy ? "Making…" : "Make pot"}
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }
 
@@ -226,7 +398,7 @@ function RulesCard({
 }) {
   const propose = useAction(api.pots.proposeRules);
   const save = useMutation(api.pots.saveRules);
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(!pot.rulesText && pot.rules.length === 0);
   const [text, setText] = useState(pot.rulesText);
   const [busy, setBusy] = useState<"read" | "save" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -316,6 +488,10 @@ function RulesCard({
               </div>
             </div>
           </div>
+        ) : !pot.rulesText ? (
+          <p className="text-[14px] leading-relaxed text-muted">
+            No limits yet. Agents can spend up to what&apos;s left in this pot. Choose Edit to write your limits.
+          </p>
         ) : (
           <figure>
             <figcaption className="text-[12px] font-medium text-faint">In your words</figcaption>

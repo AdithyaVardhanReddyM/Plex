@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { action, mutation, query } from "./_generated/server";
 import { policyRule } from "./schema";
 import { getViewer, requireViewer } from "./lib/viewer";
@@ -110,6 +110,44 @@ export const proposeRules = action({
     if (!trimmed) return { rules: [], lines: [], unparsed: [], source: "heuristic" as const };
     const parsed = await parsePolicy(trimmed);
     return { ...parsed, lines: parsed.rules.map(describeRule) };
+  },
+});
+
+const POT_ICONS = ["coffee", "shopping-bag", "map-pin", "heart-handshake", "piggy-bank"] as const;
+const POT_COLORS = ["green", "blue", "teal", "steel"] as const;
+
+/**
+ * A new pot: a name and a monthly budget, with the whole budget left to
+ * spend. No money moves here (a pot is a limit agents spend against), and it
+ * starts with no rules until the user writes some.
+ */
+export const create = mutation({
+  args: { name: v.string(), monthlyBudgetCents: v.number(), icon: v.string() },
+  handler: async (ctx, { name, monthlyBudgetCents, icon }) => {
+    const { user } = await requireViewer(ctx);
+    const trimmed = name.trim().replace(/\s+/g, " ").slice(0, 32);
+    if (!trimmed) throw new ConvexError("Give the pot a name.");
+    if (!Number.isInteger(monthlyBudgetCents) || monthlyBudgetCents <= 0 || monthlyBudgetCents > 10_000_000)
+      throw new ConvexError("Budget must be between $0.01 and $100,000 a month.");
+    const mine = await ctx.db
+      .query("pots")
+      .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
+      .collect();
+    if (mine.length >= 8) throw new ConvexError("You can have up to 8 pots.");
+    if (mine.some((p) => p.name.toLowerCase() === trimmed.toLowerCase()))
+      throw new ConvexError(`You already have a ${trimmed} pot.`);
+    return ctx.db.insert("pots", {
+      ownerId: user._id,
+      name: trimmed,
+      icon: (POT_ICONS as readonly string[]).includes(icon) ? icon : "piggy-bank",
+      color: POT_COLORS[mine.length % POT_COLORS.length]!,
+      balanceCents: monthlyBudgetCents,
+      spentTodayCents: 0,
+      spentMonthCents: 0,
+      monthlyBudgetCents,
+      rulesText: "",
+      rules: [],
+    });
   },
 });
 
