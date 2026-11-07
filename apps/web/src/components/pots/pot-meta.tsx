@@ -119,9 +119,9 @@ export const RULE_EFFECT: Record<PolicyRule["kind"], { label: string; tone: "ste
 };
 
 const EFFECT_TONE = {
-  steel: "bg-steel-50 text-steel-700 ring-steel-200/70",
-  red: "bg-disputed-bg text-disputed ring-disputed/15",
-  green: "bg-green-50 text-green-800 ring-green-200/80",
+  steel: "bg-steel-50 text-steel-700",
+  red: "bg-disputed-bg text-disputed",
+  green: "bg-green-50 text-green-800",
 };
 
 /** One structured rule: kind, its plain sentence, the raw value the engine reads and what it does. */
@@ -141,29 +141,29 @@ export function RuleLine({
   return (
     <li
       className={cn(
-        "grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3 rounded-[10px] px-3 py-2.5 ring-1 ring-transparent ring-inset transition-[background-color,box-shadow] duration-300",
-        highlight === "allow" && "bg-green-50 ring-green-200",
-        highlight === "needs_approval" && "bg-steel-50 ring-steel-200",
-        highlight === "deny" && "bg-disputed-bg ring-disputed/20",
+        "grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-4 rounded-[12px] px-4 py-3 transition-[background-color,box-shadow] duration-300",
+        highlight === "allow" && "bg-green-50",
+        highlight === "needs_approval" && "bg-steel-50",
+        highlight === "deny" && "bg-disputed-bg",
+        !highlight && "hover:bg-sunken/60",
         className,
       )}
     >
-      <span
+      <Icon
         className={cn(
-          "flex size-[34px] items-center justify-center rounded-[10px] ring-1 ring-inset transition-colors",
+          "size-5 transition-colors",
           highlight === "needs_approval"
-            ? "bg-surface text-steel-600 ring-steel-200"
+            ? "text-steel-600"
             : highlight === "deny"
-              ? "bg-surface text-disputed ring-disputed/20"
+              ? "text-disputed"
               : highlight === "allow"
-                ? "bg-surface text-green-700 ring-green-200"
-                : "bg-sunken text-ink-2 ring-line/70",
+                ? "text-green-700"
+                : "text-ink-2",
         )}
-      >
-        <Icon className="size-4" strokeWidth={1.9} />
-      </span>
+        strokeWidth={1.9}
+      />
       <div className="min-w-0">
-        <div className="text-[13.5px] font-medium leading-snug text-ink">{line}</div>
+        <div className="text-[14px] font-medium leading-snug text-ink">{line}</div>
         <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11.5px] leading-snug">
           <span className="flex-none text-muted">{RULE_KIND[rule.kind]}</span>
           <span className="text-faint">·</span>
@@ -172,8 +172,9 @@ export function RuleLine({
       </div>
       <span
         className={cn(
-          "inline-flex h-[22px] items-center rounded-full px-2 text-[11.5px] font-medium whitespace-nowrap ring-1 ring-inset",
+          "inline-flex h-[22px] items-center rounded-full px-2 text-[11.5px] font-medium whitespace-nowrap",
           EFFECT_TONE[effect.tone],
+          highlight && "bg-ink text-white",
         )}
       >
         {highlight ? "Decided it" : effect.label}

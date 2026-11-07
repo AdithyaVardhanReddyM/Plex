@@ -4,11 +4,10 @@ import { useAction, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
 import type { FunctionReturnType } from "convex/server";
 import { useState } from "react";
-import { CalendarDays, Check, Info, Lock, Minus, Plus, ShieldCheck } from "lucide-react";
+import { CalendarDays, Info, Lock, Minus, Plus, ShieldCheck } from "lucide-react";
 import { api, type Id } from "@/lib/convex";
 import { Button } from "@/components/ui/button";
 import { Card, Input, Label, Segmented, Textarea } from "@/components/ui/primitives";
-import { Amount } from "@/components/ui/money";
 import { cn, formatCents } from "@/lib/utils";
 import { CauseCover, shortWindow } from "./parts";
 
@@ -127,10 +126,9 @@ export function DonatePanel({
           : `To ${data.cause.name}`;
 
   return (
-    <Card className="overflow-hidden shadow-raised">
-      <div className="h-1" style={{ backgroundImage: "var(--meter-brand)" }} aria-hidden />
-      <div className="px-5 pt-4">
-        <div className="text-[15px] font-semibold tracking-[-0.012em] text-ink">Donate</div>
+    <Card className="overflow-hidden rounded-xl shadow-hover">
+      <div className="px-5 pt-5">
+        <div className="font-display text-[22px] leading-tight font-bold tracking-[-0.03em] text-ink">Donate</div>
         <div className="mt-0.5 text-[13px] leading-snug text-muted">
           {data.unit ? (
             <>
@@ -166,40 +164,38 @@ export function DonatePanel({
                       setShifts(1);
                     }}
                     className={cn(
-                      "grid w-full grid-cols-[18px_minmax(0,1fr)_auto] items-start gap-3 rounded-[12px] border px-3 py-2.5 text-left transition-[border-color,background-color,box-shadow]",
+                      "grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-[12px] px-3.5 py-3 text-left transition-[background-color,box-shadow,color]",
                       "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-green-200",
-                      on ? "border-ink/70 bg-surface shadow-card" : "border-line hover:border-line-strong hover:bg-canvas/60",
+                      on ? "bg-ink text-white shadow-raised" : "bg-sunken/70 hover:bg-sunken",
                     )}
                   >
-                    <span
-                      className={cn(
-                        "mt-0.5 flex size-[18px] items-center justify-center rounded-full transition-colors",
-                        on ? "bg-ink text-white" : "ring-1 ring-inset ring-line-strong",
-                      )}
-                    >
-                      {on ? <Check className="size-3" strokeWidth={2.6} /> : null}
-                    </span>
                     <span className="min-w-0">
-                      <span className="block truncate text-[13.5px] font-medium leading-snug text-ink">{t.title}</span>
-                      <span className="mt-0.5 flex items-center gap-1.5 text-[12px] leading-snug text-muted">
-                        <CalendarDays className="size-3 flex-none text-faint" strokeWidth={2} />
+                      <span className={cn("block truncate text-[13.5px] font-medium leading-snug", on ? "text-white" : "text-ink")}>
+                        {t.title}
+                      </span>
+                      <span className={cn("mt-0.5 flex items-center gap-1.5 text-[12px] leading-snug", on ? "text-white/60" : "text-muted")}>
+                        <CalendarDays className="size-3 flex-none" strokeWidth={2} />
                         <span className="truncate">{shortWindow(t.windowStart, t.windowEnd)}</span>
                       </span>
                     </span>
                     <span className="text-right">
-                      <span className="tabular block text-[13px] font-semibold text-ink">{formatCents(t.perSpotCents)}</span>
-                      <span className="tabular block text-[11.5px] text-faint">{formatCents(t.costCents - t.fundedCents)} left</span>
+                      <span className={cn("tabular block text-[13.5px] font-semibold", on ? "text-green-300" : "text-ink")}>
+                        {formatCents(t.perSpotCents)}
+                      </span>
+                      <span className={cn("tabular block text-[11.5px]", on ? "text-white/50" : "text-faint")}>
+                        {formatCents(t.costCents - t.fundedCents)} left
+                      </span>
                     </span>
                   </button>
                 );
               })}
             </div>
-            <div className="flex items-center justify-between gap-3 rounded-[12px] bg-canvas/70 px-3 py-2 ring-1 ring-inset ring-line">
+            <div className="flex items-center justify-between gap-3 rounded-[12px] bg-sunken/70 px-3.5 py-2.5">
               <div className="text-[13px] font-medium text-ink-2">
                 People you pay for
                 <div className="tabular text-[12px] font-normal text-faint">{formatCents(task.perSpotCents)} each</div>
               </div>
-              <div className="flex items-center gap-0.5 rounded-full bg-surface p-0.5 ring-1 ring-inset ring-line">
+              <div className="flex items-center gap-0.5 rounded-full bg-surface p-0.5 shadow-card">
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -223,7 +219,7 @@ export function DonatePanel({
                 </Button>
               </div>
             </div>
-            <p className="flex gap-2 rounded-[10px] bg-steel-50 px-3 py-2 text-[12.5px] leading-relaxed text-steel-700 ring-1 ring-inset ring-steel-100">
+            <p className="flex gap-2 rounded-[12px] bg-steel-50 px-3.5 py-2.5 text-[12.5px] leading-relaxed text-steel-700">
               <Lock className="mt-0.5 size-3.5 flex-none" strokeWidth={2} />
               Plex holds it until the shift&apos;s proof passes, then pays the workers. You get the photos.
             </p>
@@ -232,7 +228,7 @@ export function DonatePanel({
 
         {mode === "once" ? (
           <div className="space-y-3">
-            <div className="grid grid-cols-4 gap-1 rounded-[12px] bg-sunken p-1 ring-1 ring-inset ring-line/60" role="radiogroup" aria-label="Amount">
+            <div className="grid grid-cols-4 gap-1 rounded-[14px] bg-sunken p-1" role="radiogroup" aria-label="Amount">
               {ONCE_CHIPS.map((c) => {
                 const on = onceCents === c && !custom;
                 return (
@@ -246,14 +242,14 @@ export function DonatePanel({
                       setCustom("");
                     }}
                     className={cn(
-                      "flex h-14 flex-col items-center justify-center rounded-[9px] transition-[background-color,color,box-shadow]",
+                      "flex h-16 flex-col items-center justify-center rounded-[11px] transition-[background-color,color,box-shadow]",
                       "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-green-200",
                       on
                         ? "bg-surface text-ink shadow-[0_1px_2px_rgb(12_21_18/0.08),0_0_0_1px_rgb(12_21_18/0.06)]"
                         : "text-ink-2 hover:bg-surface/60 hover:text-ink",
                     )}
                   >
-                    <span className="tabular text-[15px] font-semibold leading-none">{formatCents(c)}</span>
+                    <span className="tabular font-display text-[17px] leading-none font-bold tracking-[-0.03em]">{formatCents(c)}</span>
                     <span className={cn("mt-1.5 text-[11px] leading-none", on ? "text-green-700" : "text-faint")}>
                       {data.unit ? (c >= data.unit.cents ? shiftsIn(c, data.unit.cents) : "toward one") : " "}
                     </span>
@@ -309,8 +305,8 @@ export function DonatePanel({
                   <label
                     key={c._id}
                     className={cn(
-                      "grid cursor-pointer grid-cols-[16px_28px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-[12px] border px-3 py-2 transition-colors",
-                      on ? "border-line-strong bg-surface" : "border-line hover:bg-canvas/60",
+                      "grid cursor-pointer grid-cols-[16px_28px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-[12px] px-3 py-2 transition-[background-color,box-shadow]",
+                      on ? "bg-surface shadow-card" : "bg-sunken/60 hover:bg-sunken",
                     )}
                   >
                     <input
@@ -321,7 +317,7 @@ export function DonatePanel({
                         setSplitIds(on ? chosenSplit.filter((x) => x !== c._id) : [...chosenSplit, c._id])
                       }
                     />
-                    <CauseCover hue={c.coverHue} className="size-7 rounded-[8px] ring-1 ring-inset ring-line/60" />
+                    <CauseCover hue={c.coverHue} className="size-7 rounded-[8px]" />
                     <span className="min-w-0">
                       <span className="block truncate text-[13px] font-medium text-ink">{c.name}</span>
                       <span className="block truncate text-[12px] text-muted">{c.orgName}</span>
@@ -338,7 +334,7 @@ export function DonatePanel({
         ) : null}
       </div>
 
-      <div className="mt-4 space-y-3 border-t border-line px-5 pt-4">
+      <div className="mt-6 space-y-3 px-5">
         <div>
           <Label htmlFor="donor-name">Name on the donor wall</Label>
           <Input
@@ -373,13 +369,15 @@ export function DonatePanel({
         </div>
       </div>
 
-      <div className="mt-4 border-t border-line bg-canvas/50 px-5 pt-4 pb-5">
+      <div className="px-5 pt-6 pb-5">
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[12.5px] font-medium text-muted">Total</div>
             <div className="mt-0.5 truncate text-[12px] text-faint">{totalNote}</div>
           </div>
-          <Amount cents={total} size="lg" />
+          <span className="tabular font-display text-[34px] leading-none font-extrabold tracking-[-0.045em] text-ink">
+            {formatCents(total)}
+          </span>
         </div>
         {cancelled && !error ? (
           <p className="mt-3 flex gap-2 rounded-[10px] bg-sunken px-3 py-2 text-[12.5px] text-ink-2">

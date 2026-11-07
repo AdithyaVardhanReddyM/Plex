@@ -14,10 +14,9 @@ import {
   Lock,
   MapPin,
   Repeat,
-  Users,
 } from "lucide-react";
 import { api, type Id } from "@/lib/convex";
-import { Avatar, Badge, Card, CardHeader, EmptyState, Skeleton, Stat } from "@/components/ui/primitives";
+import { Avatar, Badge, Card, CardHeader, EmptyState, Skeleton } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
 import { Button } from "@/components/ui/button";
 import { cn, formatCents, relativeTime } from "@/lib/utils";
@@ -25,7 +24,10 @@ import { DonatePanel, type CausePage } from "./donate-panel";
 import { CampaignBoard } from "./campaign-board";
 import {
   CauseCover,
+  DarkMoney,
   DateTile,
+  FACE,
+  GLASS,
   LocationMap,
   PlaceChip,
   RaisedBar,
@@ -140,18 +142,18 @@ function Header({ data, variant }: { data: CausePage; variant: "app" | "public" 
   };
   return (
     <header>
-      <CauseCover hue={data.cause.coverHue} className="h-40 rounded-lg border border-line/70 sm:h-48">
+      <CauseCover hue={data.cause.coverHue} className="h-44 rounded-xl shadow-card sm:h-56">
         <div className="absolute top-4 right-4 flex items-center gap-2">
           {variant === "app" ? (
             <>
               <Link
                 href={`/c/${data.cause.slug}`}
                 target="_blank"
-                className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface/90 px-3 text-[13px] font-medium text-ink-2 shadow-card ring-1 ring-inset ring-line/70 backdrop-blur transition-colors hover:text-ink"
+                className="inline-flex h-8 items-center gap-1.5 rounded-full bg-white/80 px-3 text-[13px] font-medium text-ink-2 shadow-[0_6px_16px_-8px_rgb(12_21_18/0.3)] backdrop-blur transition-colors hover:bg-white hover:text-ink"
               >
                 Public page <ArrowUpRight className="size-3.5" strokeWidth={1.9} />
               </Link>
-              <Button variant="secondary" size="sm" onClick={share} className="bg-surface/90 backdrop-blur">
+              <Button variant="secondary" size="sm" onClick={share} className="bg-white/80 backdrop-blur">
                 <Link2 /> {copied ? "Link copied" : "Share"}
               </Button>
             </>
@@ -161,8 +163,8 @@ function Header({ data, variant }: { data: CausePage; variant: "app" | "public" 
       </CauseCover>
 
       <div className="relative px-1 sm:px-6">
-        <div className="-mt-8 inline-flex rounded-[16px] bg-panel p-1 shadow-raised">
-          <Avatar name={data.org.name} color={data.org.avatarColor} size={56} square />
+        <div className="-mt-9 inline-flex rounded-[20px] bg-panel p-1 shadow-raised">
+          <Avatar name={data.org.name} color={data.org.avatarColor} size={60} square />
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
           <span className="font-medium text-ink-2">{data.org.name}</span>
@@ -176,7 +178,7 @@ function Header({ data, variant }: { data: CausePage; variant: "app" | "public" 
             </>
           ) : null}
         </div>
-        <h1 className="mt-1.5 max-w-3xl font-display text-[30px] leading-[1.12] font-bold tracking-[-0.03em] text-ink sm:text-[34px]">
+        <h1 className="mt-1.5 max-w-3xl font-display text-[32px] leading-[1.08] font-extrabold tracking-[-0.035em] text-ink sm:text-[40px]">
           {data.cause.name}
         </h1>
         <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-pretty text-muted">{data.cause.tagline}</p>
@@ -190,33 +192,38 @@ function Header({ data, variant }: { data: CausePage; variant: "app" | "public" 
 function Raised({ data }: { data: CausePage }) {
   const open = data.tasks.filter((t) => t.open);
   const pct = data.cause.goalCents ? Math.min(100, Math.round((data.cause.raisedCents / data.cause.goalCents) * 100)) : 0;
-  const fig = (n: number) => <span className="tabular font-display text-[22px] leading-none font-bold tracking-[-0.025em] text-ink">{n}</span>;
+  const spots = open.reduce((s, t) => s + (t.spots - t.filled), 0);
+  const figs: Array<[number, string]> = [
+    [data.cause.workersPaidCount, "people paid"],
+    [data.cause.donorsCount, "donors"],
+    [spots, "open spots"],
+  ];
   return (
-    <Card className="p-5 sm:p-6">
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div>
-          <div className="text-[13px] font-medium text-muted">Raised so far</div>
-          <div className="mt-3 flex flex-wrap items-baseline gap-x-2.5">
-            <Amount cents={data.cause.raisedCents} size="xl" />
-            <span className="tabular text-[14px] text-muted">of {formatCents(data.cause.goalCents)} goal</span>
-          </div>
+    <div className="@container spotlight rounded-xl p-6 sm:p-7">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
+          <HeartHandshake className="size-4 text-green-300" strokeWidth={1.9} />
+          Raised so far
         </div>
-        <Badge tone="green" className="tabular mb-1">
+        <span className="tabular flex items-center gap-1 rounded-full bg-green-300/15 px-2.5 py-1 text-[12px] font-medium text-green-200 shadow-[inset_0_0_0_1px_rgb(110_243_214/0.25)]">
           {pct}% funded
-        </Badge>
+        </span>
       </div>
-      <RaisedBar raisedCents={data.cause.raisedCents} goalCents={data.cause.goalCents} className="mt-5" />
-      <div className="mt-5 grid grid-cols-3 divide-x divide-line border-t border-line pt-4">
-        <Stat label="People paid" icon={<BadgeCheck />} value={fig(data.cause.workersPaidCount)} className="pr-4" />
-        <Stat label="Donors" icon={<HeartHandshake />} value={fig(data.cause.donorsCount)} className="px-4" />
-        <Stat
-          label="Open spots"
-          icon={<Users />}
-          value={fig(open.reduce((s, t) => s + (t.spots - t.filled), 0))}
-          className="pl-4"
-        />
+      <div className="mt-4 flex flex-wrap items-end gap-x-3 gap-y-1">
+        <DarkMoney cents={data.cause.raisedCents} className="text-[52px] leading-none @[520px]:text-[64px]" />
+        <span className="tabular pb-1.5 text-[14px] text-white/55">of {formatCents(data.cause.goalCents)} goal</span>
       </div>
-    </Card>
+      <RaisedBar raisedCents={data.cause.raisedCents} goalCents={data.cause.goalCents} onDark className="mt-6" />
+      <div className="mt-6 flex flex-wrap items-end gap-x-10 gap-y-4">
+        {figs.map(([n, label]) => (
+          <div key={label}>
+            <div className="tabular font-display text-[28px] leading-none font-bold tracking-[-0.035em] text-white">{n}</div>
+            <div className="mt-1.5 text-[12.5px] text-white/55">{label}</div>
+          </div>
+        ))}
+        <span className={cn(GLASS, "ml-auto hidden @[520px]:inline-flex")}>Paid only after proof passes</span>
+      </div>
+    </div>
   );
 }
 
@@ -250,7 +257,7 @@ function Buys({
         }
         aside={fundable.length ? "Pick one to fund it" : "Every open shift is funded"}
       />
-      <div className={cn("grid gap-3 sm:grid-cols-2", tiles >= 3 && "xl:grid-cols-3")}>
+      <div className={cn("grid gap-4 sm:grid-cols-2", tiles >= 3 && "xl:grid-cols-3")}>
           {fundable.map((t) => {
             const on = t._id === selected;
             const left = t.spots - t.filled;
@@ -261,27 +268,31 @@ function Buys({
                 onClick={() => onFund(t._id)}
                 aria-pressed={on}
                 className={cn(
-                  "group flex min-w-0 flex-col rounded-[12px] border bg-surface p-4 text-left shadow-card transition-[border-color,box-shadow,background-color] duration-150",
+                  "group relative flex min-h-[176px] min-w-0 flex-col overflow-hidden rounded-xl p-5 text-left transition-[box-shadow,transform,opacity] duration-200",
                   "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-green-200",
-                  on ? "border-green-400/70 bg-green-50/40 shadow-raised" : "border-line hover:border-line-strong hover:shadow-hover",
+                  on ? FACE.aqua : FACE.mint,
+                  on ? "-translate-y-1 shadow-hover" : "shadow-card hover:-translate-y-0.5 hover:shadow-hover",
                 )}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <Amount cents={t.perSpotCents} size="lg" />
-                  <span
-                    className={cn(
-                      "flex size-6 flex-none items-center justify-center rounded-full ring-1 ring-inset transition-colors",
-                      on ? "bg-green-300 text-ink ring-green-400/40" : "bg-surface text-faint ring-line group-hover:text-ink-2",
-                    )}
-                  >
-                    <ArrowRight className="size-3.5" strokeWidth={2} />
+                <span className="pointer-events-none absolute -right-8 -bottom-10 size-32 rounded-full border-[16px] border-white/40" aria-hidden />
+                <div className="relative flex items-start justify-between gap-3">
+                  <span className="tabular font-display text-[34px] leading-none font-extrabold tracking-[-0.045em] text-ink">
+                    {formatCents(t.perSpotCents)}
                   </span>
+                  {on ? (
+                    <span className="rounded-full bg-ink px-2.5 py-1 text-[11.5px] font-semibold text-white">Selected</span>
+                  ) : (
+                    <ArrowRight
+                      className="size-[18px] flex-none text-ink-2/60 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-ink"
+                      strokeWidth={1.9}
+                    />
+                  )}
                 </div>
-                <div className="mt-1 text-[12.5px] text-muted">pays one person for</div>
-                <div className="mt-0.5 line-clamp-2 text-[13.5px] font-medium leading-snug text-ink">{t.title}</div>
-                <div className="mt-auto flex items-center justify-between gap-2 pt-3.5 text-[12px] text-muted">
+                <div className="relative mt-2 text-[12.5px] text-ink-2/75">pays one person for</div>
+                <div className="relative mt-0.5 line-clamp-2 text-[14px] font-semibold leading-snug text-ink">{t.title}</div>
+                <div className="relative mt-auto flex items-center justify-between gap-2 pt-4 text-[12px] font-medium text-ink-2/80">
                   <span className="inline-flex min-w-0 items-center gap-1.5">
-                    <Clock className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
+                    <Clock className="size-3.5 flex-none" strokeWidth={1.9} />
                     <span className="truncate">{shortWindow(t.windowStart, t.windowEnd)}</span>
                   </span>
                   <span className="tabular flex-none">
@@ -294,18 +305,23 @@ function Buys({
           <button
             type="button"
             onClick={onGiveOnce}
-            className="group flex min-w-0 flex-col rounded-[12px] border border-dashed border-line-strong bg-canvas/40 p-4 text-left transition-[border-color,background-color] duration-150 hover:border-ink/30 hover:bg-surface focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-green-200"
+            className={cn(
+              "group relative flex min-h-[176px] min-w-0 flex-col overflow-hidden rounded-xl p-5 text-left shadow-card transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-hover focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-green-200",
+              FACE.steel,
+            )}
           >
-            <div className="flex items-start justify-between gap-3">
-              <span className="font-display text-[22px] leading-[1.25] font-bold tracking-[-0.025em] text-ink">Any amount</span>
-              <span className="flex size-6 flex-none items-center justify-center rounded-full bg-surface text-faint ring-1 ring-inset ring-line transition-colors group-hover:text-ink-2">
-                <ArrowRight className="size-3.5" strokeWidth={2} />
-              </span>
+            <span className="pointer-events-none absolute -right-8 -bottom-10 size-32 rounded-full border-[16px] border-white/45" aria-hidden />
+            <div className="relative flex items-start justify-between gap-3">
+              <span className="font-display text-[28px] leading-[1.1] font-extrabold tracking-[-0.04em] text-steel-900">Any amount</span>
+              <ArrowRight
+                className="size-[18px] flex-none text-steel-700/70 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-steel-900"
+                strokeWidth={1.9}
+              />
             </div>
-            <div className="mt-1 text-[12.5px] text-muted">goes to</div>
-            <div className="mt-0.5 text-[13.5px] font-medium leading-snug text-ink">the next shift that needs it</div>
-            <div className="mt-auto flex items-center gap-1.5 pt-3.5 text-[12px] text-muted">
-              <HeartHandshake className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
+            <div className="relative mt-2 text-[12.5px] text-steel-800/75">goes to</div>
+            <div className="relative mt-0.5 text-[14px] font-semibold leading-snug text-steel-900">the next shift that needs it</div>
+            <div className="relative mt-auto flex items-center gap-1.5 pt-4 text-[12px] font-medium text-steel-800/80">
+              <HeartHandshake className="size-3.5 flex-none" strokeWidth={1.9} />
               Assigned by {data.org.name}
             </div>
           </button>
@@ -316,7 +332,7 @@ function Buys({
 
 function OrgNote({ data }: { data: CausePage }) {
   return (
-    <div className="mt-4 flex gap-3 rounded-[12px] border border-line bg-canvas/60 px-4 py-3.5">
+    <div className="mt-4 flex gap-3 rounded-[14px] bg-sunken/60 px-4 py-3.5">
       <Avatar name={data.org.name} color={data.org.avatarColor} size={28} square className="mt-0.5" />
       <p className="min-w-0 text-[12.5px] leading-relaxed text-muted">
         <span className="font-medium text-ink-2">{data.org.name}</span>
@@ -342,7 +358,7 @@ function Tasks({ data, onFund }: { data: CausePage; onFund: (id: Id<"tasks">) =>
         description="Paid local work. Each one is checked by photo proof before anyone is paid."
         aside={<span className="tabular">{done} done · {data.tasks.length - done} open</span>}
       />
-      <Card className="divide-y divide-line overflow-hidden">
+      <Card className="space-y-1 p-2">
         {sorted.map((t) => (
           <TaskRow key={t._id} task={t} onFund={onFund} />
         ))}
@@ -355,7 +371,7 @@ function TaskRow({ task: t, onFund }: { task: CauseTask; onFund: (id: Id<"tasks"
   const fullyFunded = t.fundedCents >= t.costCents;
   const fundable = isFundable(t);
   return (
-    <div className={cn("grid grid-cols-[44px_minmax(0,1fr)] gap-x-4 p-4 sm:p-5", t.done && "bg-canvas/40")}>
+    <div className={cn("grid grid-cols-[48px_minmax(0,1fr)] gap-x-4 rounded-[14px] p-4 transition-colors hover:bg-sunken/50", t.done && "opacity-80")}>
       <DateTile ms={t.windowStart} muted={t.done} />
       <div className="min-w-0">
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1.5">

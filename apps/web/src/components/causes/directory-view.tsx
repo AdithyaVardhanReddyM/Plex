@@ -3,15 +3,15 @@
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { ArrowRight, BadgeCheck, ChevronRight, HeartHandshake, Lock, Plus } from "lucide-react";
+import { ArrowRight, BadgeCheck, Check, ChevronRight, Clock, HeartHandshake, Lock, Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { api } from "@/lib/convex";
-import { Avatar, Card, EmptyState, IconTile, PageHeader, SectionHeading, Skeleton } from "@/components/ui/primitives";
+import { Avatar, Card, CardHeader, EmptyState, PageHeader, SectionHeading, Skeleton } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
 import { StatePill } from "@/components/receipt/receipt";
 import { HeldArt } from "@/components/art/empty-art";
 import { cn, formatCents, relativeTime } from "@/lib/utils";
-import { CauseCover, PlaceChip, RaisedBar } from "./parts";
+import { CauseCover, DarkMoney, GLASS, PlaceChip, RaisedBar } from "./parts";
 
 type CauseCard = FunctionReturnType<typeof api.causes.list>[number];
 type Giving = NonNullable<FunctionReturnType<typeof api.causes.myGiving>>;
@@ -34,11 +34,14 @@ export function DirectoryView() {
       />
 
       {giving === undefined ? (
-        <Skeleton className="mb-8 h-[296px] w-full rounded-lg" />
+        <div className="mb-10 grid gap-4 md:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_360px]">
+          <Skeleton className="h-[300px] w-full rounded-xl" />
+          <Skeleton className="h-[300px] w-full rounded-xl" />
+        </div>
       ) : giving && giving.rows.length ? (
         <YourGiving giving={giving} />
       ) : giving ? (
-        <Card className="mb-8">
+        <Card className="mb-10">
           <EmptyState
             art={<HeldArt />}
             title="You haven't given yet"
@@ -97,11 +100,14 @@ function CauseCardView({ cause: c }: { cause: CauseCard }) {
   return (
     <Link
       href={`/causes/${c.slug}`}
-      className="group block rounded-lg focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-green-200"
+      className="group block rounded-xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-green-200"
     >
-      <Card className="flex h-full flex-col overflow-hidden transition-[box-shadow,border-color] duration-200 group-hover:border-line-strong group-hover:shadow-hover">
-        <CauseCover hue={c.coverHue} className="h-[132px] border-b border-line/70">
+      <Card className="flex h-full flex-col overflow-hidden rounded-xl transition-[box-shadow,transform] duration-200 group-hover:-translate-y-0.5 group-hover:shadow-hover">
+        <CauseCover hue={c.coverHue} className="h-[150px]">
           <PlaceChip label={c.locationLabel} className="absolute bottom-3 left-3" />
+          <span className="tabular absolute top-3 right-3 rounded-full bg-ink px-2.5 py-1 text-[12px] font-semibold text-white shadow-[0_6px_16px_-8px_rgb(12_21_18/0.5)]">
+            {pct}%
+          </span>
         </CauseCover>
 
         <div className="flex flex-1 flex-col px-5 pt-4 pb-5">
@@ -109,36 +115,36 @@ function CauseCardView({ cause: c }: { cause: CauseCard }) {
             <Avatar name={c.org.name} color={c.org.avatarColor} size={20} square />
             <span className="truncate font-medium text-ink-2">{c.org.name}</span>
           </div>
-          <div className="mt-2.5 text-[16px] font-semibold leading-snug tracking-[-0.015em] text-ink">{c.name}</div>
+          <div className="mt-2.5 font-display text-[18px] leading-snug font-bold tracking-[-0.02em] text-ink">{c.name}</div>
           <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-muted">{c.tagline}</p>
 
-          <div className="mt-auto pt-5">
-            <div className="flex items-baseline justify-between gap-3">
-              <div className="flex items-baseline gap-1.5">
-                <Amount cents={c.raisedCents} size="lg" />
-                <span className="tabular text-[12.5px] text-muted">of {formatCents(c.goalCents)}</span>
-              </div>
-              <span className="tabular text-[12.5px] font-medium text-ink-2">{pct}%</span>
+          <div className="mt-auto pt-6">
+            <div className="flex items-end justify-between gap-3">
+              <span className="tabular font-display text-[34px] leading-none font-extrabold tracking-[-0.045em] text-ink">
+                {formatCents(c.raisedCents)}
+              </span>
+              <span className="tabular pb-0.5 text-[12.5px] text-muted">of {formatCents(c.goalCents)}</span>
             </div>
-            <RaisedBar raisedCents={c.raisedCents} goalCents={c.goalCents} className="mt-2.5" thin />
-            <div className="mt-3.5 grid grid-cols-3 gap-3 text-[12px]">
+            <RaisedBar raisedCents={c.raisedCents} goalCents={c.goalCents} className="mt-3" thin />
+            <div className="mt-5 grid grid-cols-3 gap-x-6">
               <Fig value={c.workersPaidCount} label="people paid" />
               <Fig value={c.donorsCount} label="donors" />
               <Fig value={c.openSpots} label="open spots" />
             </div>
           </div>
-        </div>
 
-        {c.unit ? (
-          <div className="flex items-center gap-3 border-t border-line bg-canvas/60 px-5 py-3 transition-colors group-hover:bg-green-50/60">
-            <span className="min-w-0 flex-1 truncate text-[13px] text-ink-2">
-              <span className="tabular font-semibold text-ink">{formatCents(c.unit.cents)}</span> {c.unit.label}
-            </span>
-            <span className="flex size-6 flex-none items-center justify-center rounded-full bg-surface text-muted ring-1 ring-inset ring-line transition-[background-color,color,box-shadow] group-hover:bg-green-300 group-hover:text-ink group-hover:ring-green-400/40">
-              <ArrowRight className="size-3.5" strokeWidth={2} />
-            </span>
-          </div>
-        ) : null}
+          {c.unit ? (
+            <div className="mt-5 flex items-center gap-3 rounded-[12px] bg-canvas/80 px-3.5 py-3 transition-colors group-hover:bg-green-50">
+              <span className="min-w-0 flex-1 truncate text-[13px] text-ink-2">
+                <span className="tabular font-semibold text-ink">{formatCents(c.unit.cents)}</span> {c.unit.label}
+              </span>
+              <ArrowRight
+                className="size-[18px] flex-none text-muted transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-ink"
+                strokeWidth={1.9}
+              />
+            </div>
+          ) : null}
+        </div>
       </Card>
     </Link>
   );
@@ -147,40 +153,29 @@ function CauseCardView({ cause: c }: { cause: CauseCard }) {
 function Fig({ value, label }: { value: number; label: string }) {
   return (
     <div className="min-w-0">
-      <div className="tabular text-[13.5px] font-semibold text-ink">{value}</div>
-      <div className="truncate text-muted">{label}</div>
-    </div>
-  );
-}
-
-function MiniStat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="min-w-0 border-l border-line pl-3">
-      <div className="tabular font-display text-[20px] leading-none font-bold tracking-[-0.02em] text-ink">{value}</div>
-      <div className="mt-1.5 line-clamp-2 text-[12px] leading-snug text-muted sm:truncate">{label}</div>
+      <div className="tabular font-display text-[20px] leading-none font-bold tracking-[-0.03em] text-ink">{value}</div>
+      <div className="mt-1.5 truncate text-[12px] text-muted">{label}</div>
     </div>
   );
 }
 
 function CauseCardSkeleton() {
   return (
-    <Card className="overflow-hidden">
-      <Skeleton className="h-[132px] w-full rounded-none" />
+    <Card className="overflow-hidden rounded-xl">
+      <Skeleton className="h-[150px] w-full rounded-none" />
       <div className="px-5 pt-4 pb-5">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="mt-3 h-5 w-56" />
         <Skeleton className="mt-2 h-3.5 w-full" />
         <Skeleton className="mt-1.5 h-3.5 w-3/4" />
-        <Skeleton className="mt-6 h-6 w-28" />
+        <Skeleton className="mt-7 h-8 w-32" />
         <Skeleton className="mt-3 h-1.5 w-full rounded-full" />
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          <Skeleton className="h-8" />
-          <Skeleton className="h-8" />
-          <Skeleton className="h-8" />
+        <div className="mt-5 grid grid-cols-3 gap-6">
+          <Skeleton className="h-9" />
+          <Skeleton className="h-9" />
+          <Skeleton className="h-9" />
         </div>
-      </div>
-      <div className="border-t border-line px-5 py-3.5">
-        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="mt-5 h-11 w-full rounded-[12px]" />
       </div>
     </Card>
   );
@@ -196,107 +191,118 @@ function YourGiving({ giving }: { giving: Giving }) {
   const reels = giving.rows.filter((r) => r.taskDone).length;
 
   return (
-    <Card className="@container mb-8 overflow-hidden">
-      <div className="grid @[680px]:grid-cols-[minmax(0,1fr)_280px]">
-        {/* Given and released */}
-        <div className="flex flex-col p-5 @[680px]:p-6">
-          <div className="flex items-center gap-2 text-[13px] font-medium text-muted">
-            <HeartHandshake className="size-4 text-faint" strokeWidth={1.9} />
-            You&apos;ve given
+    <div className="mb-10 space-y-4">
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_360px]">
+        {/* Spotlight: what you've given, lit */}
+        <div className="@container spotlight flex min-h-[300px] flex-col rounded-xl p-6 sm:p-7">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
+              <HeartHandshake className="size-4 text-green-300" strokeWidth={1.9} />
+              You&apos;ve given
+            </div>
+            <span className={cn(GLASS, "text-[11.5px] text-white/60")}>All time</span>
           </div>
-          <div className="mt-3">
-            <Amount cents={giving.totalCents} size="xl" />
+          <DarkMoney cents={giving.totalCents} className="mt-4 text-[56px] leading-none @[480px]:text-[68px]" />
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className={cn(GLASS, "tabular")}>
+              {gifts} {gifts === 1 ? "gift" : "gifts"}
+            </span>
+            <span className={cn(GLASS, "tabular")}>
+              {giving.causes} {giving.causes === 1 ? "cause" : "causes"}
+            </span>
+            <span className="tabular flex items-center gap-1 rounded-full bg-green-300/15 px-2.5 py-1 text-[12px] font-medium text-green-200 shadow-[inset_0_0_0_1px_rgb(110_243_214/0.25)]">
+              <Check className="size-3" strokeWidth={2.6} />
+              {reels} Proof {reels === 1 ? "Reel" : "Reels"} ready
+            </span>
           </div>
 
-          <div className="mt-5">
-            <div className="flex h-2 w-full gap-[3px] overflow-hidden rounded-full bg-sunken" aria-hidden>
+          <div className="mt-auto pt-8">
+            <div className="flex h-2.5 w-full gap-1 overflow-hidden rounded-full bg-white/10" aria-hidden>
               {releasedCents ? (
-                <div className="h-full rounded-full" style={{ width: `${releasedPct}%`, backgroundImage: "var(--meter-brand)" }} />
+                <div
+                  className="h-full rounded-full shadow-[0_0_18px_rgb(62_224_216/0.55)]"
+                  style={{ width: `${releasedPct}%`, backgroundImage: "var(--meter-brand)" }}
+                />
               ) : null}
               {giving.heldCents ? (
                 <div className="h-full flex-1 rounded-full" style={{ backgroundImage: "var(--meter-steel)" }} />
               ) : null}
             </div>
-            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-[12.5px]">
-              <span className="inline-flex items-center gap-2 text-muted">
-                <span className="size-2 rounded-full bg-green-400" />
-                Reached the work
-                <span className="tabular font-semibold text-ink">{formatCents(releasedCents)}</span>
-              </span>
-              <span className="inline-flex items-center gap-2 text-muted">
-                <span className="size-2 rounded-full bg-steel-400" />
-                Held until proof
-                <span className="tabular font-semibold text-ink">{formatCents(giving.heldCents)}</span>
-              </span>
+            <div className="mt-4 grid grid-cols-2 gap-x-8">
+              <div>
+                <div className="text-[12px] font-medium text-green-300">Reached the work</div>
+                <div className="tabular mt-1 font-display text-[22px] leading-none font-bold tracking-[-0.03em] text-white">
+                  {formatCents(releasedCents)}
+                </div>
+              </div>
+              <div>
+                <div className="text-[12px] font-medium text-steel-200">Held until proof</div>
+                <div className="tabular mt-1 font-display text-[22px] leading-none font-bold tracking-[-0.03em] text-white">
+                  {formatCents(giving.heldCents)}
+                </div>
+              </div>
             </div>
-          </div>
-
-          <div className="mt-auto grid grid-cols-3 gap-4 pt-6">
-            <MiniStat label={gifts === 1 ? "Gift" : "Gifts"} value={gifts} />
-            <MiniStat label={giving.causes === 1 ? "Cause" : "Causes"} value={giving.causes} />
-            <MiniStat label="Proof Reels ready" value={reels} />
           </div>
         </div>
 
-        {/* Held: the steel, foil-edged side */}
-        <div className="relative flex flex-col justify-between gap-5 border-t border-line bg-gradient-to-b from-steel-50 to-surface p-5 @[680px]:border-t-0 @[680px]:border-l @[680px]:p-6">
-          <div
-            className="absolute inset-x-0 top-0 h-1 @[680px]:inset-y-0 @[680px]:right-auto @[680px]:h-auto @[680px]:w-1"
-            style={{ background: "var(--metal)" }}
-            aria-hidden
-          />
+        {/* Held: a brushed-metal card */}
+        <div className="metal-card flex min-h-[220px] flex-col justify-between rounded-xl p-6 sm:p-7">
+          <div className="flex items-center gap-2 text-[13px] font-semibold text-steel-800">
+            <Lock className="size-4" strokeWidth={2} />
+            Held until proof passes
+          </div>
           <div>
-            <div className="flex items-center gap-2 text-[13px] font-medium text-steel-700">
-              <Lock className="size-4" strokeWidth={1.9} />
-              Held until proof passes
+            <span className="tabular font-display text-[48px] leading-none font-extrabold tracking-[-0.045em] text-steel-900">
+              {formatCents(giving.heldCents)}
+            </span>
+            <div className="mt-2 flex items-center gap-1.5 text-[12.5px] font-medium text-steel-800">
+              <Clock className="size-3.5" strokeWidth={2} />
+              {heldRows.length
+                ? `${heldRows.length} ${heldRows.length === 1 ? "shift" : "shifts"} waiting on proof`
+                : "Nothing waiting on proof"}
             </div>
-            <Amount cents={giving.heldCents} size="lg" className="mt-3 text-[30px] text-steel-900" />
-            <p className="mt-1.5 text-[12.5px] leading-relaxed text-steel-600">
+            <p className="mt-3 text-[12px] leading-relaxed text-steel-800/75">
               PayPal holds it. The workers are paid when their photos pass, and it comes back to you if they don&apos;t.
             </p>
-          </div>
-          <div className="tabular text-[12.5px] font-medium text-steel-700">
-            {heldRows.length ? `${heldRows.length} ${heldRows.length === 1 ? "shift" : "shifts"} waiting on proof` : "Nothing waiting on proof"}
           </div>
         </div>
       </div>
 
       {/* The gifts */}
-      <div className="border-t border-line">
-        <div className="flex items-center justify-between px-5 pt-3.5 pb-1.5">
-          <div className="text-[13px] font-semibold text-ink">Your gifts</div>
-          <div className="text-[12px] text-faint">Open one for its Proof Reel</div>
-        </div>
-        <ul className="px-2 pb-2">
+      <Card>
+        <CardHeader title="Your gifts" description="Open one for its Proof Reel: the photos, the checks and who was paid." />
+        <ul className="px-2 pt-2 pb-2">
           {giving.rows.slice(0, 5).map((r) => {
             const held = r.state === "held";
+            const Icon = held ? Lock : r.taskDone ? BadgeCheck : HeartHandshake;
             return (
               <li key={r._id}>
                 <Link
                   href={`/c/${r.causeSlug}/reel/${r._id}`}
-                  className="group grid grid-cols-[34px_minmax(0,1fr)_auto_16px] items-center gap-3 rounded-[10px] px-3 py-2.5 transition-colors hover:bg-sunken/70"
+                  className="group grid grid-cols-[20px_minmax(0,1fr)_auto_16px] items-center gap-4 rounded-[12px] px-4 py-3 transition-colors hover:bg-sunken/70"
                 >
-                  <IconTile tone={held ? "steel" : "mint"} size="md" className="size-[34px]">
-                    {held ? <Lock /> : r.taskDone ? <BadgeCheck /> : <HeartHandshake />}
-                  </IconTile>
+                  <Icon className={cn("size-5", held ? "text-steel-600" : "text-green-700")} strokeWidth={1.9} />
                   <div className="min-w-0">
-                    <div className="truncate text-[13.5px] font-medium text-ink">{r.taskTitle ?? r.causeName}</div>
-                    <div className="truncate text-[12px] text-muted">
+                    <div className="truncate text-[14px] font-medium text-ink">{r.taskTitle ?? r.causeName}</div>
+                    <div className="mt-0.5 truncate text-[12px] text-muted">
                       {r.taskDone ? "Proof passed · Proof Reel ready" : r.taskTitle ? r.causeName : "Given to the cause"} ·{" "}
                       {relativeTime(r.at)}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     {r.state ? <StatePill state={r.state} className="hidden sm:inline-flex" /> : null}
-                    <Amount cents={r.amountCents} size="sm" className="w-16 justify-end" />
+                    <Amount cents={r.amountCents} size="md" className="w-16 justify-end" />
                   </div>
-                  <ChevronRight className={cn("size-4 text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-ink-2")} strokeWidth={1.9} />
+                  <ChevronRight
+                    className="size-4 text-faint transition-transform group-hover:translate-x-0.5 group-hover:text-ink-2"
+                    strokeWidth={1.9}
+                  />
                 </Link>
               </li>
             );
           })}
         </ul>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 }

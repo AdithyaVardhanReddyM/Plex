@@ -5,10 +5,9 @@ import { ExternalLink, MapPin } from "lucide-react";
 import { cn, formatCents } from "@/lib/utils";
 
 /**
- * A cause's cover: generated from its `coverHue`, never an AI image. A soft
- * wash in the cause's own hue, pulled toward the brand's mint and aqua, with
- * contour rings that read as a map of the place without pretending to be one
- * and a fine dot grain so the color has a surface.
+ * A cause's cover: generated from its `coverHue`, never an AI image. Smooth
+ * washes only: the cause's own hue, pulled toward the brand's mint and aqua,
+ * with a soft light from the top left and a deeper pool at the bottom right.
  */
 export function CauseCover({
   hue,
@@ -20,22 +19,24 @@ export function CauseCover({
   children?: React.ReactNode;
 }) {
   const style: React.CSSProperties = {
-    backgroundColor: `hsl(${hue} 28% 91%)`,
+    backgroundColor: `hsl(${hue} 42% 84%)`,
     backgroundImage: [
-      // contour rings, off-center like a hill on a survey map
-      `repeating-radial-gradient(circle at 74% 70%, transparent 0 19px, hsl(${hue} 30% 36% / 0.05) 19px 20px)`,
       // a mint/aqua light from the top left, the brand under every cover
-      `radial-gradient(80% 120% at 0% 0%, color-mix(in oklab, var(--color-green-100) 70%, transparent) 0%, transparent 60%)`,
-      `radial-gradient(70% 110% at 100% 0%, hsl(${hue} 44% 82% / 0.95) 0%, transparent 62%)`,
-      `radial-gradient(90% 120% at 18% 110%, hsl(${(hue + 28) % 360} 36% 76% / 0.85) 0%, transparent 64%)`,
-      `linear-gradient(160deg, hsl(${hue} 32% 94%) 0%, hsl(${(hue + 14) % 360} 30% 85%) 100%)`,
+      `radial-gradient(70% 110% at 0% 0%, color-mix(in oklab, var(--color-green-100) 90%, transparent) 0%, transparent 60%)`,
+      `radial-gradient(60% 100% at 100% 0%, hsl(${hue} 62% 82% / 0.95) 0%, transparent 64%)`,
+      `radial-gradient(75% 120% at 94% 115%, hsl(${(hue + 24) % 360} 52% 62% / 0.85) 0%, transparent 62%)`,
+      `radial-gradient(65% 100% at 10% 120%, hsl(${(hue + 340) % 360} 46% 70% / 0.75) 0%, transparent 60%)`,
+      `linear-gradient(160deg, hsl(${hue} 44% 92%) 0%, hsl(${(hue + 14) % 360} 40% 76%) 100%)`,
     ].join(", "),
   };
   return (
     <div className={cn("relative isolate overflow-hidden", className)} style={style}>
-      <div className="dot-ground pointer-events-none absolute inset-0 -z-10 opacity-40 [mask-image:linear-gradient(90deg,transparent,black_60%)]" aria-hidden />
+      <span
+        className="pointer-events-none absolute -top-1/3 -right-[12%] -z-10 aspect-square w-[55%] rounded-full bg-white/25 blur-2xl"
+        aria-hidden
+      />
       <div
-        className="pointer-events-none absolute inset-0 -z-10 shadow-[inset_0_-40px_40px_-24px_rgb(12_21_18/0.06)]"
+        className="pointer-events-none absolute inset-0 -z-10 shadow-[inset_0_-48px_48px_-28px_rgb(12_21_18/0.08)]"
         aria-hidden
       />
       {children}
@@ -47,11 +48,11 @@ export function PlaceChip({ label, className }: { label: string; className?: str
   return (
     <span
       className={cn(
-        "inline-flex h-6 max-w-[calc(100%-1.5rem)] items-center gap-1 rounded-full bg-surface/92 pr-2.5 pl-2 text-[12px] font-medium text-ink-2 shadow-card ring-1 ring-inset ring-line/70 backdrop-blur",
+        "inline-flex h-7 max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-full bg-white/80 pr-3 pl-2.5 text-[12px] font-medium text-ink shadow-[0_6px_16px_-8px_rgb(12_21_18/0.3)] backdrop-blur",
         className,
       )}
     >
-      <MapPin className="size-3 flex-none text-green-700" strokeWidth={2.2} />
+      <MapPin className="size-3.5 flex-none text-green-700" strokeWidth={2} />
       <span className="truncate">{label}</span>
     </span>
   );
@@ -63,17 +64,25 @@ export function RaisedBar({
   goalCents,
   className,
   thin,
+  onDark,
 }: {
   raisedCents: number;
   goalCents: number;
   className?: string;
   thin?: boolean;
+  /** On a spotlight (night) card. */
+  onDark?: boolean;
 }) {
   const reduce = useReducedMotion();
   const pct = goalCents > 0 ? Math.min(100, (raisedCents / goalCents) * 100) : 0;
   return (
     <div
-      className={cn("relative w-full overflow-hidden rounded-full bg-sunken", thin ? "h-1.5" : "h-2", className)}
+      className={cn(
+        "relative w-full overflow-hidden rounded-full",
+        onDark ? "bg-white/10" : "bg-sunken",
+        thin ? "h-1.5" : "h-2",
+        className,
+      )}
       role="progressbar"
       aria-valuenow={Math.round(pct)}
       aria-valuemin={0}
@@ -81,7 +90,7 @@ export function RaisedBar({
       aria-label={`${formatCents(raisedCents)} of ${formatCents(goalCents)}`}
     >
       <motion.div
-        className="absolute inset-y-0 left-0 rounded-full"
+        className={cn("absolute inset-y-0 left-0 rounded-full", onDark && "shadow-[0_0_18px_rgb(62_224_216/0.55)]")}
         style={{ backgroundImage: "var(--meter-brand)" }}
         initial={reduce ? false : { width: 0 }}
         animate={{ width: `${pct}%` }}
@@ -91,15 +100,13 @@ export function RaisedBar({
   );
 }
 
-/** Spots on a shift: one capsule per person, filled when someone has it. */
+/** Spots on a shift: one segment per person, filled when someone has it. */
 export function SpotPips({ spots, filled, className }: { spots: number; filled: number; className?: string }) {
+  const n = Math.min(spots, 12);
   return (
-    <span className={cn("inline-flex items-center gap-[3px]", className)} aria-label={`${filled} of ${spots} spots filled`}>
-      {Array.from({ length: Math.min(spots, 12) }, (_, i) => (
-        <span
-          key={i}
-          className={cn("h-2 w-3.5 rounded-full", i < filled ? "bg-ink-2" : "bg-surface ring-1 ring-inset ring-line-strong")}
-        />
+    <span className={cn("flex w-full max-w-[220px] items-center gap-1", className)} aria-label={`${filled} of ${spots} spots filled`}>
+      {Array.from({ length: n }, (_, i) => (
+        <span key={i} className={cn("h-1.5 min-w-0 flex-1 rounded-full", i < filled ? "bg-ink" : "bg-sunken")} />
       ))}
     </span>
   );
@@ -176,24 +183,23 @@ export function LocationMap({
     ? `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`
     : `https://www.openstreetmap.org/search?query=${encodeURIComponent(label)}`;
   return (
-    <div className={cn("overflow-hidden rounded-lg border border-line bg-surface shadow-card", className)}>
+    <div className={cn("overflow-hidden rounded-lg bg-surface shadow-card", className)}>
       {hasPoint ? (
-        <div className="relative h-52 overflow-hidden border-b border-line bg-sunken">
+        <div className="relative h-56 overflow-hidden bg-sunken">
           <TileMap lat={lat!} lng={lng!} />
-          <span className="absolute top-1/2 left-1/2 size-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-green-300/25 ring-1 ring-green-500/30" aria-hidden />
-          <span className="absolute top-1/2 left-1/2 flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-green-300 text-ink shadow-raised ring-[3px] ring-surface">
-            <MapPin className="size-4" strokeWidth={1.9} />
-          </span>
+          <MapPin
+            className="absolute top-1/2 left-1/2 size-9 -translate-x-1/2 -translate-y-full fill-green-300 text-ink drop-shadow-[0_6px_10px_rgb(12_21_18/0.35)]"
+            strokeWidth={1.6}
+            aria-hidden
+          />
           <span className="absolute right-1.5 bottom-1 rounded-[4px] bg-surface/85 px-1.5 text-[10.5px] text-muted">
             © OpenStreetMap
           </span>
         </div>
       ) : null}
-      <div className="flex items-center justify-between gap-3 px-4 py-3">
+      <div className="flex items-center justify-between gap-3 px-5 py-4">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="flex size-8 flex-none items-center justify-center rounded-[9px] bg-green-50 text-green-700 ring-1 ring-inset ring-green-100">
-            <MapPin className="size-4" strokeWidth={1.9} />
-          </span>
+          <MapPin className="size-5 flex-none text-green-700" strokeWidth={1.9} />
           <div className="min-w-0">
             <div className="truncate text-[13.5px] font-medium text-ink">{label}</div>
             {hasPoint ? (
@@ -230,8 +236,8 @@ export function SectionTitle({
   return (
     <div className={cn("mb-3.5 flex items-end justify-between gap-4", className)}>
       <div className="min-w-0">
-        <h2 className="text-[15px] font-semibold tracking-[-0.012em] text-ink">{title}</h2>
-        {description ? <p className="mt-0.5 text-[13px] text-muted">{description}</p> : null}
+        <h2 className="font-display text-[19px] leading-tight font-bold tracking-[-0.025em] text-ink">{title}</h2>
+        {description ? <p className="mt-1 text-[13px] text-muted">{description}</p> : null}
       </div>
       {aside ? <div className="flex-none text-[12.5px] text-muted">{aside}</div> : null}
     </div>
@@ -291,15 +297,37 @@ export function DateTile({ ms, muted, className }: { ms: number; muted?: boolean
   return (
     <span
       className={cn(
-        "flex size-11 flex-none flex-col items-center justify-center overflow-hidden rounded-[12px] bg-surface ring-1 ring-inset ring-line shadow-card",
-        muted && "bg-canvas shadow-none",
+        "flex size-12 flex-none flex-col items-center justify-center overflow-hidden rounded-[14px] bg-[linear-gradient(160deg,var(--color-green-50),var(--color-green-100))] shadow-[0_6px_14px_-8px_rgb(13_150_158/0.5)]",
+        muted && "bg-none bg-sunken shadow-none",
         className,
       )}
     >
-      <span className={cn("text-[10.5px] leading-none font-semibold", muted ? "text-faint" : "text-green-700")}>{month}</span>
-      <span className={cn("tabular mt-1 font-display text-[17px] leading-none font-bold tracking-[-0.02em]", muted ? "text-muted" : "text-ink")}>
+      <span className={cn("text-[10.5px] leading-none font-semibold", muted ? "text-faint" : "text-green-800")}>{month}</span>
+      <span className={cn("tabular mt-1 font-display text-[19px] leading-none font-extrabold tracking-[-0.03em]", muted ? "text-muted" : "text-ink")}>
         {day}
       </span>
     </span>
   );
 }
+
+/** A glass chip for spotlight (night) cards. */
+export const GLASS =
+  "rounded-full bg-white/[0.08] px-2.5 py-1 text-[12px] font-medium text-white/75 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]";
+
+/** A big amount for dark grounds: the sign small and dim, the digits in the display face. */
+export function DarkMoney({ cents, className }: { cents: number; className?: string }) {
+  const f = formatCents(cents);
+  return (
+    <span className={cn("tabular inline-flex items-start font-display font-extrabold tracking-[-0.045em] text-white", className)}>
+      <span className="mt-[0.18em] mr-1 text-[0.42em] font-bold text-white/45">$</span>
+      {f.replace("$", "")}
+    </span>
+  );
+}
+
+/** A tinted card face, the way Home shows pots: mint for money that moves, steel for held. */
+export const FACE = {
+  mint: "bg-[linear-gradient(150deg,var(--color-green-50),var(--color-green-100)_70%,var(--color-green-200))]",
+  aqua: "bg-[linear-gradient(150deg,var(--color-green-50),var(--color-green-100)_60%,var(--color-green-300))]",
+  steel: "bg-[linear-gradient(150deg,var(--color-steel-50),var(--color-steel-100)_70%,var(--color-steel-200))]",
+} as const;

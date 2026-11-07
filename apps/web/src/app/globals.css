@@ -144,7 +144,7 @@ body {
 
 /*
  * Spotlight: the one dark, lit card on a screen. Night ink with mint and aqua
- * light pooling from the corners and a fine grain of dots.
+ * light pooling from the corners and a soft top light.
  */
 .spotlight {
   position: relative;
@@ -163,9 +163,7 @@ body {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background-image: radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1.2px);
-  background-size: 16px 16px;
-  mask-image: linear-gradient(180deg, black, transparent 85%);
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.05), transparent 40%);
 }
 
 /* A held-money card: brushed steel with a sheen, like a card in a wallet */

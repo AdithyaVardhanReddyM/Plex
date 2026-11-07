@@ -12,7 +12,7 @@ export const instant = false;
 export default function PublicCauseLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 border-b border-line bg-canvas/90 backdrop-blur">
+      <header className="sticky top-0 z-30 bg-canvas/85 backdrop-blur-md">
         <div className="mx-auto flex h-14 w-full max-w-[1120px] items-center justify-between gap-4 px-4 sm:px-6">
           <Link href="/" className="flex items-baseline gap-2">
             <Wordmark size={19} />
@@ -40,7 +40,7 @@ export default function PublicCauseLayout({ children }: { children: React.ReactN
 function PageSkeleton() {
   return (
     <div>
-      <Skeleton className="h-40 w-full rounded-lg" />
+      <Skeleton className="h-48 w-full rounded-xl" />
       <Skeleton className="mt-6 h-8 w-80 max-w-full" />
       <Skeleton className="mt-3 h-4 w-96 max-w-full" />
     </div>

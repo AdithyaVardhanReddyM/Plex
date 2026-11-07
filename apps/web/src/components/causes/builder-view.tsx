@@ -6,11 +6,10 @@ import { useAction, useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
 import type { FunctionReturnType } from "convex/server";
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, Camera, Eye, FileText, Plus, TriangleAlert, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Camera, Check, Eye, FileText, Plus, TriangleAlert, X } from "lucide-react";
 import { api } from "@/lib/convex";
 import { Button } from "@/components/ui/button";
 import { Avatar, Badge, Card, Input, Label, PageHeader, Skeleton, Textarea } from "@/components/ui/primitives";
-import { Amount } from "@/components/ui/money";
 import { cn, formatCents } from "@/lib/utils";
 import { CauseCover, PlaceChip, RaisedBar } from "./parts";
 
@@ -108,7 +107,7 @@ export function BuilderView() {
           {/* 1. Source */}
           <Card>
             <StepHeader n={1} title="Your text" description="Website copy, a flyer, a grant summary. Plain text is fine." done={Boolean(draft)} />
-            <div className="p-5 pt-4">
+            <div className="px-6 pt-4 pb-6">
               <Textarea
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
@@ -143,14 +142,10 @@ export function BuilderView() {
                 { n: 2, title: "The page", description: "Name, what a donation pays for, the story, where and the goal." },
                 { n: 3, title: "Paid tasks", description: "Shifts with pay per person, how many people, and the photo proof." },
               ].map((s) => (
-                <div key={s.n} className="flex items-start gap-3 rounded-lg border border-dashed border-line px-5 py-4">
-                  <span className="tabular mt-0.5 flex size-6 flex-none items-center justify-center rounded-full bg-sunken text-[12px] font-semibold text-faint ring-1 ring-inset ring-line">
-                    {s.n}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="text-[14.5px] font-semibold leading-6 tracking-[-0.012em] text-muted">{s.title}</div>
-                    <div className="text-[13px] leading-snug text-faint">{s.description} Fills in after the draft.</div>
-                  </div>
+                <div key={s.n} className="rounded-lg bg-sunken/60 px-6 py-5">
+                  <div className="text-[12px] font-medium text-faint">Step {s.n} of 3</div>
+                  <div className="mt-0.5 font-display text-[16px] leading-6 font-bold tracking-[-0.02em] text-muted">{s.title}</div>
+                  <div className="text-[13px] leading-snug text-faint">{s.description} Fills in after the draft.</div>
                 </div>
               ))}
             </div>
@@ -161,7 +156,7 @@ export function BuilderView() {
               {draft.invented.length || draft.missing.length ? (
                 <div className="space-y-2">
                   {draft.invented.length ? (
-                    <div className="flex gap-3 rounded-[12px] bg-refunded-bg px-4 py-3 text-[13px] leading-relaxed text-refunded ring-1 ring-inset ring-refunded/15">
+                    <div className="flex gap-3 rounded-[12px] bg-refunded-bg px-4 py-3 text-[13px] leading-relaxed text-refunded">
                       <TriangleAlert className="mt-0.5 size-4 flex-none" strokeWidth={1.9} />
                       <span>
                         These numbers aren&apos;t in your text: <strong className="font-semibold">{draft.invented.join(", ")}</strong>.
@@ -170,7 +165,7 @@ export function BuilderView() {
                     </div>
                   ) : null}
                   {draft.missing.length ? (
-                    <div className="rounded-[12px] border border-line bg-canvas/60 px-4 py-3 text-[13px] leading-relaxed text-ink-2">
+                    <div className="rounded-[12px] bg-sunken/70 px-4 py-3 text-[13px] leading-relaxed text-ink-2">
                       <span className="font-medium text-ink">Your text doesn&apos;t say:</span> {draft.missing.join("; ")}.
                     </div>
                   ) : null}
@@ -180,7 +175,7 @@ export function BuilderView() {
               {/* 2. Page */}
               <Card>
                 <StepHeader n={2} title="The page" description="What donors read first. Edit anything." />
-                <div className="grid gap-4 p-5 pt-4">
+                <div className="grid gap-4 px-6 pt-4 pb-6">
                   <div>
                     <Label htmlFor="b-name">Name</Label>
                     <Input id="b-name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
@@ -229,13 +224,10 @@ export function BuilderView() {
                   description="Shifts donors can fund. Workers are paid only after proof passes."
                   aside={<Badge tone="outline" className="tabular">{draft.tasks.length} {draft.tasks.length === 1 ? "task" : "tasks"}</Badge>}
                 />
-                <div className="space-y-3 p-5 pt-4">
+                <div className="space-y-3 px-6 pt-4 pb-6">
                   {draft.tasks.map((t, i) => (
-                    <div key={i} className="rounded-[12px] border border-line bg-canvas/40 p-3.5">
+                    <div key={i} className="rounded-[14px] bg-sunken/60 p-4">
                       <div className="flex items-start gap-2">
-                        <span className="tabular mt-2 flex size-5 flex-none items-center justify-center rounded-full bg-surface text-[11px] font-semibold text-muted ring-1 ring-inset ring-line">
-                          {i + 1}
-                        </span>
                         <Input
                           value={t.title}
                           onChange={(e) => setTask(i, { title: e.target.value })}
@@ -252,7 +244,7 @@ export function BuilderView() {
                           <X />
                         </Button>
                       </div>
-                      <div className="mt-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-3 pl-7 sm:pr-11">
+                      <div className="mt-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-3 sm:pr-11">
                         <div>
                           <Label htmlFor={`t-pay-${i}`}>Pay per person</Label>
                           <div className="relative">
@@ -278,10 +270,10 @@ export function BuilderView() {
                         </div>
                         <div className="pb-2 text-right">
                           <div className="text-[11.5px] text-faint">Funds in full at</div>
-                          <div className="tabular text-[13.5px] font-semibold text-ink">{formatCents(t.payoutCents * t.spots)}</div>
+                          <div className="tabular font-display text-[18px] leading-tight font-bold tracking-[-0.03em] text-ink">{formatCents(t.payoutCents * t.spots)}</div>
                         </div>
                       </div>
-                      <div className="mt-3 flex items-start gap-1.5 pl-7 text-[12.5px] text-muted">
+                      <div className="mt-3 flex items-start gap-1.5 text-[12.5px] text-muted">
                         <Camera className="mt-0.5 size-3.5 flex-none text-faint" strokeWidth={1.9} />
                         Proof: {t.proof.join(" · ")}
                       </div>
@@ -305,7 +297,7 @@ export function BuilderView() {
                 </div>
               </Card>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface px-5 py-3.5 shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-surface px-5 py-4 shadow-card">
                 <span className="text-[12.5px] text-muted">
                   {draft.by === "template" ? "Drafted by a template (no AI key set)." : `Drafted by ${draft.by}.`} Nothing is live
                   until you publish.
@@ -348,20 +340,14 @@ function StepHeader({
   done?: boolean;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 px-5 pt-4">
-      <div className="flex min-w-0 items-start gap-3">
-        <span
-          className={cn(
-            "tabular mt-0.5 flex size-6 flex-none items-center justify-center rounded-full text-[12px] font-semibold",
-            done ? "bg-green-300 text-ink" : "bg-ink text-white",
-          )}
-        >
-          {n}
-        </span>
-        <div className="min-w-0">
-          <div className="text-[14.5px] font-semibold leading-6 tracking-[-0.012em] text-ink">{title}</div>
-          <div className="text-[13px] leading-snug text-muted">{description}</div>
+    <div className="flex items-start justify-between gap-4 px-6 pt-5">
+      <div className="min-w-0">
+        <div className={cn("flex items-center gap-1 text-[12px] font-medium", done ? "text-green-700" : "text-faint")}>
+          {done ? <Check className="size-3.5" strokeWidth={2.4} /> : null}
+          Step {n} of 3{done ? " · done" : ""}
         </div>
+        <div className="mt-0.5 font-display text-[16px] leading-6 font-bold tracking-[-0.02em] text-ink">{title}</div>
+        <div className="text-[13px] leading-snug text-faint">{description}</div>
       </div>
       {aside ? <div className="flex-none pt-0.5">{aside}</div> : null}
     </div>
@@ -383,12 +369,12 @@ function Preview({
   const first = draft?.tasks.find((t) => t.payoutCents > 0);
   return (
     <div className="space-y-3">
-      <Card className={cn("overflow-hidden", !draft && "opacity-90")}>
-        <CauseCover hue={NEW_COVER_HUE} className="h-[120px] border-b border-line/70">
+      <Card className={cn("overflow-hidden rounded-xl", !draft && "opacity-90")}>
+        <CauseCover hue={NEW_COVER_HUE} className="h-[132px]">
           {draft?.locationLabel ? (
             <PlaceChip label={draft.locationLabel} className="absolute bottom-3 left-3" />
           ) : (
-            <span className="absolute bottom-3 left-3 h-6 w-28 rounded-full bg-surface/70" />
+            <span className="absolute bottom-3 left-3 h-7 w-28 rounded-full bg-white/60" />
           )}
         </CauseCover>
         <div className="px-5 pt-4 pb-5">
@@ -398,7 +384,7 @@ function Preview({
           </div>
           {draft ? (
             <>
-              <div className="mt-2.5 text-[16px] font-semibold leading-snug tracking-[-0.015em] text-ink">
+              <div className="mt-2.5 font-display text-[18px] leading-snug font-bold tracking-[-0.02em] text-ink">
                 {draft.name || <span className="text-faint">Name the cause</span>}
               </div>
               <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-muted">
@@ -412,27 +398,22 @@ function Preview({
               <div className="mt-1.5 h-3.5 w-2/3 rounded-full bg-sunken" />
             </>
           )}
-          <div className="mt-5 flex items-baseline justify-between gap-3">
-            <div className="flex items-baseline gap-1.5">
-              <Amount cents={0} size="lg" />
-              <span className="tabular text-[12.5px] text-muted">of {goalCents ? formatCents(goalCents) : "your goal"}</span>
-            </div>
-            <span className="tabular text-[12.5px] font-medium text-ink-2">0%</span>
+          <div className="mt-6 flex items-end justify-between gap-3">
+            <span className="tabular font-display text-[34px] leading-none font-extrabold tracking-[-0.045em] text-ink">$0</span>
+            <span className="tabular pb-0.5 text-[12.5px] text-muted">of {goalCents ? formatCents(goalCents) : "your goal"}</span>
           </div>
-          <RaisedBar raisedCents={0} goalCents={goalCents || 1} className="mt-2.5" thin />
-        </div>
-        <div className="flex items-center gap-3 border-t border-line bg-canvas/60 px-5 py-3 text-[13px] text-ink-2">
-          {first ? (
-            <span className="min-w-0 flex-1 truncate">
-              <span className="tabular font-semibold text-ink">{formatCents(first.payoutCents)}</span> pays one person for one
-              &ldquo;{first.title || "untitled"}&rdquo; shift
-            </span>
-          ) : (
-            <span className="flex-1 text-faint">The price of one shift goes here</span>
-          )}
-          <span className="flex size-6 flex-none items-center justify-center rounded-full bg-surface text-muted ring-1 ring-inset ring-line">
-            <ArrowRight className="size-3.5" strokeWidth={2} />
-          </span>
+          <RaisedBar raisedCents={0} goalCents={goalCents || 1} className="mt-3" thin />
+          <div className="mt-5 flex items-center gap-3 rounded-[12px] bg-canvas/80 px-3.5 py-3 text-[13px] text-ink-2">
+            {first ? (
+              <span className="min-w-0 flex-1 truncate">
+                <span className="tabular font-semibold text-ink">{formatCents(first.payoutCents)}</span> pays one person for one
+                &ldquo;{first.title || "untitled"}&rdquo; shift
+              </span>
+            ) : (
+              <span className="flex-1 text-faint">The price of one shift goes here</span>
+            )}
+            <ArrowRight className="size-[18px] flex-none text-muted" strokeWidth={1.9} />
+          </div>
         </div>
       </Card>
 
@@ -441,7 +422,7 @@ function Preview({
           <div className="px-4 pt-3.5 pb-1 text-[12.5px] font-medium text-muted">Donors can fund</div>
           <ul className="px-2 pb-2">
             {draft.tasks.map((t, i) => (
-              <li key={i} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-[10px] px-2 py-2">
+              <li key={i} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-[12px] px-2.5 py-2.5">
                 <div className="min-w-0">
                   <div className="truncate text-[13px] font-medium text-ink">{t.title || <span className="text-faint">Untitled task</span>}</div>
                   <div className="tabular text-[12px] text-muted">
@@ -454,7 +435,7 @@ function Preview({
           </ul>
         </Card>
       ) : !draft ? (
-        <div className="rounded-[12px] border border-dashed border-line px-4 py-4 text-[13px] leading-relaxed text-muted">
+        <div className="rounded-[14px] bg-sunken/60 px-4 py-4 text-[13px] leading-relaxed text-muted">
           The draft fills this in: a story in your own words, and paid tasks with pay, people and photo proof.
           {hasSource ? null : (
             <div className="mt-3">

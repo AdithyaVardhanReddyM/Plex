@@ -14,8 +14,6 @@ import {
   Pause,
   PencilLine,
   PiggyBank,
-  Play,
-  Quote,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -27,18 +25,17 @@ import {
   Card,
   CardHeader,
   EmptyState,
-  IconTile,
   Input,
   Label,
   PageHeader,
   Segmented,
   Skeleton,
-  StatusDot,
+  Switch,
   Textarea,
 } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
 import { HeldArt } from "@/components/art/empty-art";
-import { PotGauge, PotIcon, RuleLine, type PolicyRule, type Pot } from "@/components/pots/pot-meta";
+import { PotIcon, RuleLine, type PolicyRule, type Pot } from "@/components/pots/pot-meta";
 import { cn, formatCents, relativeTime } from "@/lib/utils";
 
 type Proposal = {
@@ -79,7 +76,7 @@ export function PotsView() {
       />
 
       {paused ? (
-        <div className="mb-4 flex items-start gap-3 rounded-[12px] bg-refunded-bg px-4 py-3 text-[13.5px] text-refunded ring-1 ring-inset ring-refunded/20">
+        <div className="mb-4 flex items-start gap-3 rounded-[14px] bg-refunded-bg px-4 py-3.5 text-[13.5px] text-refunded">
           <Pause className="mt-0.5 size-4 flex-none" strokeWidth={1.9} />
           <span>
             <span className="font-medium">All agent spending is paused.</span> Every check is blocked until you resume,
@@ -100,7 +97,7 @@ export function PotsView() {
                 onSelect={() => select(p._id)}
               />
             ))
-          : Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[150px] w-full rounded-lg" />)}
+          : Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[172px] w-full rounded-xl" />)}
       </div>
 
       <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
@@ -127,27 +124,33 @@ export function PotsView() {
 
 function PauseControl({ paused, ready }: { paused: boolean; ready: boolean }) {
   const setPaused = useMutation(api.users.setPaused);
-  if (!ready) return <Skeleton className="h-11 w-64 rounded-full" />;
+  if (!ready) return <Skeleton className="h-11 w-56 rounded-full" />;
   return (
-    <div className="flex items-center gap-3 rounded-full border border-line bg-surface py-1 pr-1 pl-3.5 shadow-card">
-      <span className={cn("inline-flex items-center gap-2 text-[13px] font-medium", paused ? "text-refunded" : "text-ink-2")}>
-        <StatusDot tone={paused ? "amber" : "green"} live={!paused} />
-        {paused ? "Spending paused" : "Agents active"}
+    <div className="flex h-11 items-center gap-3 rounded-full bg-surface pr-3 pl-4 shadow-card">
+      <span className="text-left leading-tight">
+        <span className={cn("block text-[13px] font-semibold", paused ? "text-refunded" : "text-ink")}>
+          {paused ? "Spending paused" : "Agents can spend"}
+        </span>
+        <span className="block text-[11.5px] text-muted">{paused ? "Every check is blocked" : "Inside your limits"}</span>
       </span>
-      <Button
-        variant={paused ? "primary" : "secondary"}
-        size="sm"
-        onClick={() => setPaused({ paused: !paused })}
-        aria-pressed={paused}
-      >
-        {paused ? <Play strokeWidth={1.9} /> : <Pause strokeWidth={1.9} />}
-        {paused ? "Resume spending" : "Pause all spending"}
-      </Button>
+      <Switch
+        checked={!paused}
+        onChange={(on) => setPaused({ paused: !on })}
+        label={paused ? "Resume agent spending" : "Pause all agent spending"}
+      />
     </div>
   );
 }
 
-// ── Pot tile ─────────────────────────────────────────────────────────────────
+// ── Pot face ─────────────────────────────────────────────────────────────────
+
+/** Tinted card faces, the same as Home's pot strip. */
+const POT_FACE: Record<string, string> = {
+  green: "bg-[linear-gradient(150deg,var(--color-green-50),var(--color-green-100)_70%,var(--color-green-200))]",
+  teal: "bg-[linear-gradient(150deg,var(--color-green-50),var(--color-green-100)_70%,var(--color-green-300))]",
+  blue: "bg-[linear-gradient(150deg,var(--color-steel-50),var(--color-steel-100)_70%,var(--color-steel-200))]",
+  steel: "bg-[linear-gradient(150deg,var(--color-steel-50),var(--color-steel-100)_70%,var(--color-steel-200))]",
+};
 
 function PotTile({
   pot,
@@ -160,40 +163,50 @@ function PotTile({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const pct = pot.monthlyBudgetCents ? Math.min(100, (pot.spentMonthCents / pot.monthlyBudgetCents) * 100) : 0;
   return (
     <button
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
       className={cn(
-        "group relative flex min-w-0 flex-col rounded-lg border p-4 text-left transition-[border-color,box-shadow,background-color,transform] duration-200 ease-out",
+        "group relative flex min-h-[172px] min-w-0 flex-col overflow-hidden rounded-xl p-5 text-left transition-[box-shadow,transform,filter] duration-200 ease-out",
         "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-green-200",
+        POT_FACE[pot.color] ?? POT_FACE.green,
         selected
-          ? "-translate-y-0.5 border-line-strong bg-surface shadow-raised"
-          : "border-line bg-surface/60 shadow-card hover:border-line-strong hover:bg-surface",
+          ? "-translate-y-1 shadow-[0_2px_4px_rgb(12_21_18/0.06),0_24px_44px_-18px_rgb(12_21_18/0.35)]"
+          : "shadow-card saturate-[0.7] hover:-translate-y-0.5 hover:shadow-hover hover:saturate-100",
       )}
     >
-      <div className="flex items-center justify-between gap-2">
+      <span className="pointer-events-none absolute -right-8 -bottom-10 size-36 rounded-full border-[18px] border-white/40" aria-hidden />
+      <div className="relative flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <PotIcon pot={pot} size={28} />
-          <span className={cn("truncate text-[13.5px] font-medium", selected ? "text-ink" : "text-ink-2")}>{pot.name}</span>
+          <PotIcon pot={pot} size={24} />
+          <span className="truncate text-[13.5px] font-semibold text-ink">{pot.name}</span>
         </div>
         {waiting ? (
-          <Badge tone="steel" className="tabular flex-none">
+          <span className="tabular flex-none rounded-full bg-ink px-2 py-0.5 text-[11.5px] font-semibold text-white">
             {waiting}
-            <span className="hidden sm:inline">waiting</span>
-          </Badge>
-        ) : selected ? (
-          <span className="flex size-5 flex-none items-center justify-center rounded-full bg-ink text-white">
-            <Check className="size-3" strokeWidth={2.6} />
+            <span className="hidden sm:inline"> waiting</span>
           </span>
+        ) : selected ? (
+          <Check className="size-[18px] flex-none text-ink" strokeWidth={2.4} />
         ) : null}
       </div>
-      <div className="mt-4">
-        <Amount cents={pot.balanceCents} size="lg" />
-        <div className="mt-0.5 text-[12px] text-muted">left in the pot</div>
+      <div className="relative mt-auto pt-6">
+        <span className="tabular font-display text-[30px] leading-none font-extrabold tracking-[-0.045em] text-ink">
+          {formatCents(pot.balanceCents)}
+        </span>
+        <div className="tabular mt-1.5 truncate text-[12px] font-medium text-ink-2/70">
+          left · {formatCents(pot.spentMonthCents)} of {formatCents(pot.monthlyBudgetCents)} spent
+        </div>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/60">
+          <div
+            className={cn("h-full rounded-full transition-[width,background-color] duration-700", selected ? "bg-ink" : "bg-ink/45")}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
       </div>
-      <PotGauge pot={pot} className="mt-3.5" />
     </button>
   );
 }
@@ -256,12 +269,12 @@ function RulesCard({
 
   return (
     <Card className="min-w-0 overflow-hidden">
-      <div className="flex items-start justify-between gap-4 px-5 pt-4">
-        <div className="flex min-w-0 items-start gap-3">
-          <PotIcon pot={pot} size={28} className="mt-px" />
+      <div className="flex items-start justify-between gap-4 px-6 pt-5">
+        <div className="flex min-w-0 items-start gap-2.5">
+          <PotIcon pot={pot} size={24} />
           <div className="min-w-0">
-            <div className="text-[14.5px] font-semibold leading-6 tracking-[-0.012em] text-ink">{pot.name} rules</div>
-            <div className="text-[13px] leading-snug text-muted">Your words on top. Below, the rules Plex actually enforces.</div>
+            <div className="font-display text-[16px] leading-6 font-bold tracking-[-0.02em] text-ink">{pot.name} rules</div>
+            <div className="text-[13px] leading-snug text-faint">Your words on top. Below, the rules Plex actually enforces.</div>
           </div>
         </div>
         {editing ? null : (
@@ -273,7 +286,7 @@ function RulesCard({
       </div>
 
       {/* In your words */}
-      <div className="px-5 pt-4">
+      <div className="px-6 pt-5">
         {editing ? (
           <div>
             <Label htmlFor="rules-text">In your words</Label>
@@ -304,22 +317,20 @@ function RulesCard({
             </div>
           </div>
         ) : (
-          <figure className="relative overflow-hidden rounded-[12px] bg-canvas/70 py-4 pr-5 pl-6 ring-1 ring-inset ring-line">
-            <span className="absolute inset-y-3 left-0 w-[3px] rounded-r-full" style={{ backgroundImage: "linear-gradient(180deg, var(--color-green-300), var(--color-green-500))" }} aria-hidden />
-            <figcaption className="flex items-center gap-1.5 text-[12px] font-medium text-faint">
-              <Quote className="size-3.5" strokeWidth={2} />
-              In your words
-            </figcaption>
-            <blockquote className="mt-2 text-[16px] leading-relaxed font-medium tracking-[-0.01em] text-pretty text-ink">
+          <figure>
+            <figcaption className="text-[12px] font-medium text-faint">In your words</figcaption>
+            <blockquote className="relative mt-2 font-display text-[24px] leading-[1.3] font-bold tracking-[-0.03em] text-pretty text-ink sm:text-[28px]">
+              <span className="text-green-500">&ldquo;</span>
               {pot.rulesText}
+              <span className="text-green-500">&rdquo;</span>
             </blockquote>
           </figure>
         )}
       </div>
 
       {/* Enforced as */}
-      <div className="flex items-center justify-between gap-3 px-5 pt-5">
-        <div className="flex items-center gap-2 text-[13px] font-semibold whitespace-nowrap text-ink">
+      <div className="flex items-center justify-between gap-3 px-6 pt-7">
+        <div className="flex items-center gap-2 text-[13.5px] font-semibold whitespace-nowrap text-ink">
           {proposal ? "Plex read this as" : "Enforced as"}
           <span className="tabular rounded-full bg-sunken px-1.5 text-[11px] leading-[18px] font-medium text-muted">
             {showing.rules.length}
@@ -336,7 +347,7 @@ function RulesCard({
           </span>
         )}
       </div>
-      <ul className="mt-2 space-y-0.5 px-2 pb-3">
+      <ul className="mt-2 space-y-0.5 px-2 pb-4">
         {showing.rules.length ? (
           showing.rules.map((r, i) => (
             <RuleLine
@@ -347,14 +358,14 @@ function RulesCard({
             />
           ))
         ) : (
-          <li className="mx-3 my-1 rounded-[10px] border border-dashed border-line px-4 py-4 text-[13px] text-muted">
+          <li className="mx-2 my-1 rounded-[12px] bg-sunken/60 px-4 py-4 text-[13px] text-muted">
             No limits found. Name an amount and a period, like “up to $40 a day”.
           </li>
         )}
       </ul>
 
       {proposal?.unparsed.length ? (
-        <div className="mx-5 mb-4 rounded-[12px] border border-dashed border-line px-4 py-3">
+        <div className="mx-4 mb-4 rounded-[14px] bg-sunken/60 px-4 py-3">
           <div className="text-[12px] font-medium text-faint">Kept as a note, not a limit</div>
           <ul className="mt-1.5 space-y-1">
             {proposal.unparsed.map((u) => (
@@ -367,7 +378,7 @@ function RulesCard({
       ) : null}
 
       {proposal ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-canvas/60 px-5 py-3.5">
+        <div className="mx-4 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[14px] bg-steel-50 px-4 py-3.5">
           <span className="text-[13px] text-muted">Nothing changes until you confirm. Try it on the right first.</span>
           <div className="flex gap-2">
             <Button variant="secondary" size="sm" onClick={() => onProposal(null)}>
@@ -379,7 +390,7 @@ function RulesCard({
           </div>
         </div>
       ) : null}
-      {error ? <div className="px-5 pb-4 text-[13px] text-disputed">{error}</div> : null}
+      {error ? <div className="px-6 pb-4 text-[13px] text-disputed">{error}</div> : null}
     </Card>
   );
 }
@@ -412,27 +423,24 @@ const OUTCOME = {
     label: "Allowed",
     sub: "The agent can pay, and the Receipt cites",
     icon: CircleCheck,
-    tile: "mint" as const,
-    well: "bg-green-50/70 ring-green-200/80",
-    text: "text-green-800",
+    text: "text-green-300",
   },
   needs_approval: {
     label: "Needs your OK",
     sub: "The agent stops and asks you, because of",
     icon: CircleAlert,
-    tile: "steel" as const,
-    well: "bg-steel-50 ring-steel-200/80",
-    text: "text-steel-700",
+    text: "text-steel-200",
   },
   deny: {
     label: "Blocked",
     sub: "No money moves, because of",
     icon: CircleX,
-    tile: "red" as const,
-    well: "bg-disputed-bg ring-disputed/20",
-    text: "text-disputed",
+    text: "text-[color-mix(in_oklab,var(--color-disputed)_45%,white)]",
   },
 };
+
+const GLASS =
+  "rounded-full bg-white/[0.08] px-2.5 py-1 text-[11.5px] font-medium text-white/60 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]";
 
 /** The try-it state lives with the page, so the rules list can light up the rule that decided. */
 function useTrial(pot: Pot | undefined, draft: Proposal | null) {
@@ -496,40 +504,36 @@ function TryIt({ pot, draft, paused, trial }: { pot: Pot; draft: Proposal | null
 
         <div className="mt-4" aria-live="polite">
           {!sample.amountCents ? (
-            <div className="flex h-[188px] flex-col items-center justify-center rounded-[12px] border border-dashed border-line px-4 text-center text-[13px] text-muted">
-              Include an amount, like “$60”.
+            <div className="flex h-[264px] flex-col items-center justify-center rounded-xl bg-sunken/60 px-4 text-center text-[13px] text-muted">
+              Include an amount, like &ldquo;$60&rdquo;.
             </div>
           ) : !outcome || !result ? (
-            <Skeleton className="h-[188px] w-full rounded-[12px]" />
+            <Skeleton className="h-[264px] w-full rounded-xl" />
           ) : (
-            <div className={cn("overflow-hidden rounded-[12px] ring-1 ring-inset", outcome.well)}>
-              <div className="px-4 pt-4 pb-3.5">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <IconTile tone={outcome.tile} size="sm" className="bg-surface">
-                      <outcome.icon />
-                    </IconTile>
-                    <span className={cn("font-display text-[19px] leading-none font-bold tracking-[-0.02em]", outcome.text)}>
-                      {outcome.label}
-                    </span>
-                  </div>
-                  <Amount cents={sample.amountCents} size="md" />
+            <div className="spotlight flex min-h-[264px] flex-col rounded-xl p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className={cn("flex items-center gap-2", outcome.text)}>
+                  <outcome.icon className="size-5" strokeWidth={2} />
+                  <span className="font-display text-[22px] leading-none font-bold tracking-[-0.025em]">{outcome.label}</span>
                 </div>
-                <div className="mt-3 text-[12.5px] text-muted">{outcome.sub}</div>
-                <div className="mt-0.5 text-[14px] font-medium leading-snug text-ink">{result.ruleText}</div>
+                <span className={GLASS}>evaluate()</span>
               </div>
-              <dl className="grid grid-cols-2 gap-px border-t border-line bg-line sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,0.8fr)]">
+              <span className="tabular mt-4 inline-flex items-start font-display text-[44px] leading-none font-extrabold tracking-[-0.045em] text-white">
+                <span className="mt-[0.18em] mr-1 text-[0.42em] font-bold text-white/45">$</span>
+                {formatCents(sample.amountCents).replace("$", "")}
+              </span>
+              <div className="mt-4 text-[12.5px] text-white/55">{outcome.sub}</div>
+              <div className="mt-0.5 text-[14.5px] font-medium leading-snug text-white">{result.ruleText}</div>
+              <dl className="mt-auto grid grid-cols-2 gap-x-6 gap-y-3 pt-5">
                 {facts.map(([k, v]) => (
-                  <div key={k} className="min-w-0 bg-surface px-3 py-2.5">
-                    <dt className="text-[11px] text-faint">{k}</dt>
-                    <dd className="mt-0.5 truncate text-[12.5px] font-medium text-ink-2">{v}</dd>
+                  <div key={k} className="min-w-0">
+                    <dt className="text-[11.5px] text-white/45">{k}</dt>
+                    <dd className="mt-0.5 truncate text-[13.5px] font-medium text-white/90">{v}</dd>
                   </div>
                 ))}
               </dl>
               {paused ? (
-                <div className="border-t border-refunded/15 bg-refunded-bg px-4 py-2 text-[12px] font-medium text-refunded">
-                  Spending is paused, so every check is blocked.
-                </div>
+                <div className="mt-4 text-[12.5px] font-medium text-refunded-bg">Spending is paused, so every check is blocked.</div>
               ) : null}
             </div>
           )}
@@ -557,17 +561,16 @@ function Approvals({ pending, pots }: { pending: Doc<"approvals">[] | undefined;
   const pot = (id: Id<"pots">) => pots?.find((p) => p._id === id);
 
   return (
-    <Card className="mt-4 overflow-hidden">
+    <Card className="mt-4">
       <CardHeader
         title="Approvals"
         description="Purchases a rule sent to you, and what you decided."
         action={pending?.length ? <Badge tone="steel">{pending.length} waiting</Badge> : null}
-        divider
       />
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:divide-x lg:divide-line">
+      <div className="grid gap-6 p-4 pt-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {/* Waiting */}
-        <div className="min-w-0 p-4">
-          <div className="mb-2.5 px-1 text-[12.5px] font-medium text-muted">Waiting for you</div>
+        <div className="min-w-0">
+          <div className="mb-2.5 px-2 text-[12.5px] font-medium text-muted">Waiting for you</div>
           {pending === undefined ? (
             <Skeleton className="h-[220px] w-full rounded-[14px]" />
           ) : pending.length ? (
@@ -575,13 +578,13 @@ function Approvals({ pending, pots }: { pending: Doc<"approvals">[] | undefined;
               {pending.map((a) => {
                 const p = pot(a.potId);
                 return (
-                  <div key={a._id} className="overflow-hidden rounded-[14px] border border-line bg-surface shadow-raised">
-                    <div className="flex items-center gap-2 border-b border-line bg-canvas/70 px-4 py-2.5 text-[12px] font-medium text-muted">
-                      <Cpu className="size-3.5 flex-none" strokeWidth={2} />
+                  <div key={a._id} className="rounded-[16px] bg-sunken/60">
+                    <div className="flex items-center gap-2 px-4 pt-4 text-[12px] font-medium text-muted">
+                      <Cpu className="size-4 flex-none" strokeWidth={1.9} />
                       <span className="truncate">{a.agentLabel} wants to buy</span>
                       <span className="ml-auto flex-none text-faint">{relativeTime(a._creationTime)}</span>
                     </div>
-                    <div className="px-4 pt-3.5 pb-4">
+                    <div className="px-4 pt-2 pb-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
                           <div className="text-[15px] font-semibold leading-snug tracking-[-0.01em] text-ink">{a.description}</div>
@@ -592,9 +595,9 @@ function Approvals({ pending, pots }: { pending: Doc<"approvals">[] | undefined;
                             </span>
                           </div>
                         </div>
-                        <Amount cents={a.amountCents} size="lg" className="flex-none" />
+                        <Amount cents={a.amountCents} size="lg" className="flex-none text-[30px]" />
                       </div>
-                      <div className="mt-3 flex items-start gap-2 rounded-[10px] bg-steel-50 px-3 py-2 text-[12.5px] leading-snug text-steel-700 ring-1 ring-inset ring-steel-100">
+                      <div className="mt-3 flex items-start gap-2 rounded-[12px] bg-steel-50 px-3 py-2.5 text-[12.5px] leading-snug text-steel-700">
                         <ShieldCheck className="mt-px size-3.5 flex-none" strokeWidth={2} />
                         <span>
                           Paused by your rule: <span className="font-medium">{a.ruleText}</span>
@@ -618,14 +621,14 @@ function Approvals({ pending, pots }: { pending: Doc<"approvals">[] | undefined;
               art={<HeldArt />}
               title="Nothing waiting"
               body="When a purchase goes over one of your limits, the agent stops and it waits here for you."
-              className="rounded-[14px] border border-dashed border-line py-8"
+              className="rounded-[16px] bg-sunken/50 py-8"
             />
           )}
         </div>
 
         {/* History */}
-        <div className="flex min-w-0 flex-col border-t border-line p-4 lg:border-t-0">
-          <div className="mb-1.5 flex items-center justify-between px-1">
+        <div className="flex min-w-0 flex-col">
+          <div className="mb-1.5 flex items-center justify-between px-2">
             <span className="text-[12.5px] font-medium text-muted">History</span>
             {history?.length ? <span className="text-[12px] text-faint">Approved ones open their receipt</span> : null}
           </div>
@@ -633,21 +636,23 @@ function Approvals({ pending, pots }: { pending: Doc<"approvals">[] | undefined;
             <div className="space-y-1">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3 px-2 py-2.5">
-                  <Skeleton className="size-[34px] rounded-[10px]" />
+                  <Skeleton className="size-5 rounded-full" />
                   <Skeleton className="h-4 flex-1" />
                   <Skeleton className="h-4 w-14" />
                 </div>
               ))}
             </div>
           ) : history.length ? (
-            <ul className="-mx-1">
+            <ul>
               {history.map((a) => {
                 const approved = a.status === "approved";
                 const row = (
-                  <div className="grid grid-cols-[34px_minmax(0,1fr)_auto_14px] items-center gap-3 rounded-[10px] px-3 py-2.5 transition-colors group-hover:bg-sunken/70">
-                    <IconTile tone={approved ? "mint" : "neutral"} size="md" className="size-[34px]">
-                      {approved ? <Check /> : <X />}
-                    </IconTile>
+                  <div className="grid grid-cols-[20px_minmax(0,1fr)_auto_14px] items-center gap-4 rounded-[12px] px-3 py-3 transition-colors group-hover:bg-sunken/70">
+                    {approved ? (
+                      <Check className="size-5 text-green-700" strokeWidth={2.2} />
+                    ) : (
+                      <X className="size-5 text-faint" strokeWidth={2.2} />
+                    )}
                     <div className="min-w-0">
                       <div className="truncate text-[13.5px] font-medium text-ink">{a.description}</div>
                       <div className="mt-0.5 truncate text-[12px] text-muted">
@@ -667,7 +672,7 @@ function Approvals({ pending, pots }: { pending: Doc<"approvals">[] | undefined;
                     {a.receiptId ? (
                       <Link
                         href={`/receipts/${a.receiptId}`}
-                        className="group block rounded-[10px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-green-200"
+                        className="group block rounded-[12px] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-green-200"
                       >
                         {row}
                       </Link>
@@ -679,7 +684,7 @@ function Approvals({ pending, pots }: { pending: Doc<"approvals">[] | undefined;
               })}
             </ul>
           ) : (
-            <div className="flex flex-1 items-center justify-center rounded-[12px] border border-dashed border-line px-4 py-6 text-center text-[13px] text-muted">
+            <div className="flex flex-1 items-center justify-center rounded-[16px] bg-sunken/50 px-4 py-6 text-center text-[13px] text-muted">
               Nothing decided yet. What you approve or decline lands here.
             </div>
           )}

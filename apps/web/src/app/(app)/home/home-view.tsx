@@ -307,7 +307,7 @@ function PotStrip({ pots }: { pots: Pot[] | undefined }) {
             <span className="pointer-events-none absolute -right-8 -bottom-10 size-36 rounded-full border-[18px] border-white/40" aria-hidden />
             <div className="relative flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
-                <PotIcon pot={p} size={28} className="bg-white/70 ring-white" />
+                <PotIcon pot={p} size={24} />
                 <span className="truncate text-[13.5px] font-semibold text-ink">{p.name}</span>
               </div>
               <span className="tabular hidden text-[12px] font-semibold text-ink-2 sm:inline">

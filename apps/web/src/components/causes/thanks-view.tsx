@@ -10,7 +10,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, EmptyState, Skeleton } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
 import { ReceiptCard } from "@/components/receipt/receipt";
-import { cn, formatCents } from "@/lib/utils";
+import { formatCents } from "@/lib/utils";
 
 type Phase = { kind: "capturing" } | { kind: "done" } | { kind: "error"; message: string };
 
@@ -101,38 +101,37 @@ export function ThanksView({ slug, checkoutId, token }: { slug: string; checkout
 
   return (
     <div className="mx-auto max-w-xl animate-rise">
-      <div className="flex size-12 items-center justify-center rounded-full bg-green-300 text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.55),0_6px_16px_-6px_rgb(13_206_218/0.6)] ring-4 ring-green-100">
-        <Check className="size-5" strokeWidth={2.4} />
+      <div className="spotlight rounded-xl p-6 sm:p-7">
+        <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
+          <Check className="size-4 text-green-300" strokeWidth={2.4} />
+          Donation confirmed by PayPal
+        </div>
+        <h1 className="mt-4 font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.04em] text-white sm:text-[48px]">
+          Thank you{firstName ? `, ${firstName}` : ""}.
+        </h1>
+        <p className="mt-3 text-[15px] leading-relaxed text-white/70">{headline}</p>
       </div>
-      <h1 className="mt-5 font-display text-[30px] leading-tight font-bold tracking-[-0.03em] text-ink">
-        Thank you{firstName ? `, ${firstName}` : ""}.
-      </h1>
-      <p className="mt-2 text-[15px] leading-relaxed text-ink-2">{headline}</p>
 
-      <Card className="mt-6 p-5">
-        <div className="mb-3.5 text-[12.5px] font-medium text-muted">What happens to your money</div>
-        <ol className="space-y-3">
-          {steps.map((s, i) => (
-            <li key={i} className="grid grid-cols-[22px_minmax(0,1fr)] items-center gap-3 text-[14px]">
-              <span
-                className={cn(
-                  "flex size-[22px] items-center justify-center rounded-full",
-                  s.done
-                    ? "steel" in s && s.steel
-                      ? "bg-steel-50 text-steel-600 ring-1 ring-inset ring-steel-200"
-                      : "bg-green-50 text-green-700 ring-1 ring-inset ring-green-200"
-                    : "bg-surface text-faint ring-1 ring-inset ring-line-strong",
-                )}
-              >
+      <Card className="mt-4 p-6">
+        <div className="font-display text-[16px] font-bold tracking-[-0.02em] text-ink">What happens to your money</div>
+        <ol className="mt-4 space-y-3.5">
+          {steps.map((s, i) => {
+            const steel = "steel" in s && s.steel;
+            return (
+              <li key={i} className="grid grid-cols-[20px_minmax(0,1fr)] items-center gap-3 text-[14px]">
                 {s.done ? (
-                  "steel" in s && s.steel ? <Lock className="size-3" strokeWidth={2.2} /> : <Check className="size-3" strokeWidth={2.6} />
+                  steel ? (
+                    <Lock className="size-[18px] text-steel-600" strokeWidth={2} />
+                  ) : (
+                    <Check className="size-[18px] text-green-700" strokeWidth={2.4} />
+                  )
                 ) : (
-                  <span className="tabular text-[11px] font-semibold">{i + 1}</span>
+                  <span className="tabular text-center font-display text-[14px] font-bold text-faint">{i + 1}</span>
                 )}
-              </span>
-              <span className={s.done ? "text-ink" : "text-muted"}>{s.label}</span>
-            </li>
-          ))}
+                <span className={s.done ? "text-ink" : "text-muted"}>{s.label}</span>
+              </li>
+            );
+          })}
         </ol>
       </Card>
 
