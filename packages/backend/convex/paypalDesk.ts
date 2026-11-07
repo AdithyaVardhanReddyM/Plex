@@ -109,7 +109,14 @@ async function runDesk(ctx: ActionCtx, taskId: Id<"tasks">, as: string | undefin
             ? `Captured payment id: ${captureId}. Call list_disputes with disputed_transaction_id set to it; if there is one, read it with get_dispute.`
             : "Nothing has been captured, so there can't be a dispute yet.",
           `Plex's receipts say: held ${(c.heldCents / 100).toFixed(2)} USD${c.paidCents !== undefined ? `, paid ${(c.paidCents / 100).toFixed(2)} USD to ${c.worker ?? "the worker"} (payout ${c.payoutState ?? "pending"})` : ""}.`,
-        ].join("\n"),
+          c.split?.some((l) => l.via === "kept")
+            ? `The capture was split in code: ${c.split
+                .map((l) => `${(l.cents / 100).toFixed(2)} USD ${l.via === "payout" ? `sent to ${l.label} by Payouts` : `kept by ${l.label}`}`)
+                .join(", ")}. So the payout is smaller than the capture by Plex's share; that is expected.`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
       });
       clearTimeout(timer);
       summary = res.text.trim();

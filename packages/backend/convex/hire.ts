@@ -55,6 +55,7 @@ function card(u: Doc<"users">) {
     agent: u.agentProfile
       ? {
           house: u.agentProfile.house,
+          custom: Boolean(u.agentProfile.custom),
           model: u.agentProfile.model,
           tagline: u.agentProfile.tagline,
           turnaround: u.agentProfile.turnaround,

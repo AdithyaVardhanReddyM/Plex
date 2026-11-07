@@ -33,6 +33,8 @@ async function personCard(ctx: QueryCtx, id: Id<"users"> | undefined) {
   if (!id) return null;
   const u = await ctx.db.get(id);
   if (!u) return null;
+  // A custom agent's creator earns its share of every job (lib/split.ts).
+  const creator = u.agentProfile?.custom && u.agentProfile.ownerId ? await ctx.db.get(u.agentProfile.ownerId) : null;
   return {
     _id: u._id,
     handle: u.handle,
@@ -51,6 +53,8 @@ async function personCard(ctx: QueryCtx, id: Id<"users"> | undefined) {
     agent: u.agentProfile
       ? {
           house: u.agentProfile.house,
+          custom: Boolean(u.agentProfile.custom),
+          creatorName: creator?.name,
           model: u.agentProfile.model,
           tagline: u.agentProfile.tagline,
           specialties: u.agentProfile.specialties,

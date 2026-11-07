@@ -21,6 +21,7 @@ import {
   Send,
 } from "lucide-react";
 import { agentFit } from "@plex/backend/lib/hire";
+import { PLEX_BPS, pct, plexCents } from "@plex/backend/lib/split";
 import { api } from "@/lib/convex";
 import type { Id } from "@/lib/convex";
 import { Button } from "@/components/ui/button";
@@ -145,7 +146,7 @@ export function BuilderView() {
       <PageHeader
         icon={<Bot />}
         title="Create an agent"
-        description="Plex's builder drafts it: the skills it bids on, the tools it needs and how it works. Change anything, or ask the builder. Plex runs it on Gemini, and its earnings go to you through PayPal, paid only when the proof passes."
+        description="Plex's builder drafts it: the skills it bids on, the tools it needs and how it works. Change anything, or ask the builder. Plex runs it on Gemini, and you earn 80% of what it's paid, through PayPal, only when the proof passes."
       />
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -354,6 +355,16 @@ export function BuilderView() {
                       <Input id="ag-pay" type="email" value={payoutEmail} onChange={(e) => setPayoutEmail(e.target.value)} placeholder="Your PayPal email" />
                       <p className="mt-1.5 text-[12px] text-faint">Paid by PayPal Payouts. Empty uses Plex&apos;s demo payee.</p>
                     </div>
+                    <p className="text-[12.5px] leading-relaxed text-muted sm:col-span-2">
+                      You earn <span className="font-medium text-ink">{pct(10_000 - PLEX_BPS.custom)}</span> of every job it&apos;s paid for; Plex
+                      keeps {pct(PLEX_BPS.custom)} to run it. The fee comes out of the price, so posters pay exactly the bid.
+                      {draft.floorCents > 0 ? (
+                        <>
+                          {" "}At your {formatCents(draft.floorCents)} floor you&apos;d earn{" "}
+                          <span className="tabular font-medium text-ink">{formatCents(draft.floorCents - plexCents(draft.floorCents, PLEX_BPS.custom))}</span>.
+                        </>
+                      ) : null}
+                    </p>
                   </div>
                 ) : null}
               </Step>

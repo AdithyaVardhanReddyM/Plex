@@ -19,6 +19,7 @@ import { requireActor } from "./lib/actor";
 import { formatCents } from "./lib/money";
 import { evaluate } from "./lib/policy";
 import { advanceReceipt, writeReceipt } from "./lib/receipts";
+import { pct, splitLines, splitTermsFor } from "./lib/split";
 import { fundingCents, isSeedId } from "./lib/taskRules";
 import { isDigitalTask } from "./lib/hire";
 import { errandsPot } from "./tasks";
@@ -29,9 +30,11 @@ import { errandsPot } from "./tasks";
  *
  *  fund     Orders v2 with intent AUTHORIZE → buyer approves → authorize.
  *           Task goes `open`; the task_funding receipt is `held`.
- *  release  capture the authorization (only the payout amount) → Payouts
- *           batch to the worker's PayPal email → payout receipt `released`,
- *           then `paid` when PayPal says the item succeeded.
+ *  release  capture the authorization (only the accepted ask) → split it in
+ *           code (lib/split.ts) → Payouts batch for the earner's or the agent
+ *           creator's share; Plex's fee is what stays after the capture →
+ *           payout receipt `released`, then `paid` when PayPal says the item
+ *           succeeded. A Plex house agent's work is all Plex's: no payout.
  *  refund   void the authorization (never charged), or refund the capture.
  *
  * Seeded demo rows carry `SEED-…` placeholder ids. They never reach the API;
@@ -360,8 +363,20 @@ export const beginRelease = internalMutation({
     }
     if (!t.assigneeId) fail("Nobody is assigned to this task.");
     const worker = await ctx.db.get(t.assigneeId!);
-    if (!worker?.paypalEmail) fail("The worker hasn't connected a PayPal account.");
+    if (!worker) fail("The worker no longer exists.");
     const poster = await ctx.db.get(t.posterId);
+
+    // Who gets what: terms locked at acceptance (older tasks get today's terms).
+    const terms = t.split ?? splitTermsFor(worker!, Date.now());
+    const creator = terms.kind === "custom" && worker!.agentProfile?.ownerId ? await ctx.db.get(worker!.agentProfile.ownerId) : null;
+    const amountForSplit = await payoutCentsFor(ctx, t);
+    const split = splitLines(amountForSplit, terms, worker!, creator?.name).map((l) => ({
+      ...l,
+      payeeId: l.role === "earner" ? worker!._id : l.role === "creator" ? creator?._id : undefined,
+    }));
+    const sent = split.find((l) => l.via === "payout");
+    if (sent && !worker!.paypalEmail)
+      fail(terms.kind === "custom" ? "This agent has no PayPal email for its creator's earnings." : "The worker hasn't connected a PayPal account.");
 
     const proof = await ctx.db
       .query("proofs")
@@ -372,7 +387,7 @@ export const beginRelease = internalMutation({
     await ctx.db.patch(proof!._id, { decision: "approved" });
     await ctx.db.patch(taskId, { status: "approved" });
 
-    const amountCents = await payoutCentsFor(ctx, t);
+    const amountCents = amountForSplit;
     const verdict = proof!.verdict;
     const checks = verdict?.checks ?? [];
     const verdictLine = verdict
@@ -411,16 +426,30 @@ export const beginRelease = internalMutation({
         causeId: t.causeId,
         state: "pending",
         timelineLabel: "Approved; capturing the held funds",
+        split,
       });
-      await ctx.db.patch(taskId, { payoutReceiptId });
+      await ctx.db.patch(taskId, { payoutReceiptId, split: terms });
+    } else {
+      // A retry after a failed capture or payout: the receipt keeps the split it was written with.
+      await ctx.db.patch(payoutReceiptId, { split });
     }
     return {
       payoutReceiptId,
       amountCents,
       currency: t.currency,
       authorizationId: t.funding.state === "authorized" ? t.funding.authorizationId : undefined,
-      receiver: worker!.paypalEmail!,
-      workerName: worker!.name,
+      payout: sent
+        ? {
+            receiver: worker!.paypalEmail!,
+            cents: sent.cents,
+            name: sent.label,
+            note:
+              terms.kind === "custom"
+                ? `Plex task: ${t.title} · your agent ${worker!.name} (${pct(10_000 - terms.plexBps)})`
+                : `Plex task: ${t.title}`,
+          }
+        : null,
+      keptNote: split.find((l) => l.role === "plex")?.note,
       title: t.title,
     };
   },
@@ -471,34 +500,60 @@ export const recordPayout = internalMutation({
     const task = await ctx.db.get(taskId);
     if (!task) return;
     const worker = task.assigneeId ? await ctx.db.get(task.assigneeId) : null;
+    const r = await ctx.db.get(payoutReceiptId);
+    const sent = r?.split?.find((l) => l.via === "payout");
+    const kept = r?.split?.find((l) => l.role === "plex");
+    const to = sent ? sent.label.split(" ")[0] : (worker?.name.split(" ")[0] ?? "the worker");
     await advanceReceipt(
       ctx,
       payoutReceiptId,
       "released",
-      `Sent to ${worker?.name.split(" ")[0] ?? "the worker"} by PayPal Payouts (${batchStatus.toLowerCase()})`,
+      sent && kept
+        ? `Sent ${formatCents(sent.cents)} to ${to} by PayPal Payouts (${batchStatus.toLowerCase()}); Plex kept ${formatCents(kept.cents)}`
+        : `Sent to ${to} by PayPal Payouts (${batchStatus.toLowerCase()})`,
       { paypal: { payoutBatchId: batchId, payoutItemId: itemId } },
     );
-    await ctx.db.patch(taskId, { status: "paid", funding: { ...task.funding, state: "released" } });
-    // The PayPal desk reads PayPal's records once the payout has settled.
-    await ctx.scheduler.runAfter(20_000, internal.paypalDesk.checkInternal, { taskId });
-    // The job is done: any account tokens the poster lent it are deleted.
-    await ctx.scheduler.runAfter(0, internal.connections.wipe, { taskId });
-    const receipt = await fundingReceipt(ctx, task);
-    if (receipt && receipt.state !== "released")
-      await advanceReceipt(ctx, receipt._id, "released", `Released to ${worker?.name ?? "the worker"}`);
-    if (worker) await ctx.db.patch(worker._id, { tasksCompleted: (worker.tasksCompleted ?? 0) + 1 });
-    // Impact task: the donations that funded this shift are released on the
-    // same proof, so every donor's receipt shows the work was done.
-    if (task.causeId) {
-      const payout = await ctx.db.get(payoutReceiptId);
-      await ctx.scheduler.runAfter(0, internal.donations.releaseForTask, {
-        taskId,
-        proofId: payout?.evidence?.proofId,
-        verdict: payout?.evidence?.verdict,
-      });
-    }
+    if (r?.split && itemId)
+      await ctx.db.patch(payoutReceiptId, { split: r.split.map((l) => (l.via === "payout" ? { ...l, payoutItemId: itemId } : l)) });
+    await finishRelease(ctx, task, payoutReceiptId);
   },
 });
+
+/** A Plex house agent did the work: the capture is Plex's, so nothing is paid out. */
+export const recordKept = internalMutation({
+  args: { taskId: v.id("tasks"), payoutReceiptId: v.id("receipts"), note: v.optional(v.string()) },
+  handler: async (ctx, { taskId, payoutReceiptId, note }) => {
+    const task = await ctx.db.get(taskId);
+    if (!task) return;
+    await advanceReceipt(ctx, payoutReceiptId, "paid", `Kept by Plex${note ? `: ${note}` : ""}`);
+    await finishRelease(ctx, task, payoutReceiptId);
+  },
+});
+
+/** Everything after the money moved: the task is paid, the funding receipt released, follow-ups scheduled. */
+async function finishRelease(ctx: MutationCtx, task: Doc<"tasks">, payoutReceiptId: Id<"receipts">) {
+  const taskId = task._id;
+  const worker = task.assigneeId ? await ctx.db.get(task.assigneeId) : null;
+  await ctx.db.patch(taskId, { status: "paid", funding: { ...task.funding, state: "released" } });
+  // The PayPal desk reads PayPal's records once the payout has settled.
+  await ctx.scheduler.runAfter(20_000, internal.paypalDesk.checkInternal, { taskId });
+  // The job is done: any account tokens the poster lent it are deleted.
+  await ctx.scheduler.runAfter(0, internal.connections.wipe, { taskId });
+  const receipt = await fundingReceipt(ctx, task);
+  if (receipt && receipt.state !== "released")
+    await advanceReceipt(ctx, receipt._id, "released", `Released to ${worker?.name ?? "the worker"}`);
+  if (worker) await ctx.db.patch(worker._id, { tasksCompleted: (worker.tasksCompleted ?? 0) + 1 });
+  // Impact task: the donations that funded this shift are released on the
+  // same proof, so every donor's receipt shows the work was done.
+  if (task.causeId) {
+    const payout = await ctx.db.get(payoutReceiptId);
+    await ctx.scheduler.runAfter(0, internal.donations.releaseForTask, {
+      taskId,
+      proofId: payout?.evidence?.proofId,
+      verdict: payout?.evidence?.verdict,
+    });
+  }
+}
 
 export const releaseFailed = internalMutation({
   args: { taskId: v.id("tasks"), payoutReceiptId: v.id("receipts"), message: v.string() },
@@ -515,8 +570,9 @@ type ReleasePlan = {
   amountCents: number;
   currency: string;
   authorizationId?: string;
-  receiver: string;
-  workerName: string;
+  /** The earner's or the agent creator's share. null: a Plex house agent, so Plex keeps it all. */
+  payout: { receiver: string; cents: number; name: string; note: string } | null;
+  keptNote?: string;
   title: string;
 };
 
@@ -547,18 +603,25 @@ async function runRelease(ctx: ActionCtx, taskId: Id<"tasks">, as: string | unde
     throw new ConvexError(message);
   }
 
-  // 2. Pay the worker with Payouts. sender_item_id is the payout receipt.
+  // 2. Plex's own agent did it: the capture is Plex's revenue, nothing to send.
+  if (!r.payout) {
+    await ctx.runMutation(internal.taskMoney.recordKept, { taskId, payoutReceiptId: r.payoutReceiptId, note: r.keptNote });
+    return;
+  }
+
+  // 3. Pay the earner's share with Payouts; Plex's fee stays from the capture.
+  //    sender_item_id is the payout receipt (webhooks find it by that).
   try {
     const batch = await createPayout(pp, {
       senderBatchId: `plex-${r.payoutReceiptId}`,
       subject: `You were paid for “${r.title}” on Plex`,
-      message: "Your proof passed. The receipt is on the task page.",
+      message: "The proof passed. The receipt is on the task page.",
       items: [
         {
-          receiver: r.receiver,
-          amountCents: r.amountCents,
+          receiver: r.payout.receiver,
+          amountCents: r.payout.cents,
           currency: r.currency,
-          note: `Plex task: ${r.title}`,
+          note: r.payout.note,
           senderItemId: r.payoutReceiptId,
         },
       ],
@@ -615,7 +678,8 @@ export const applyPayoutStatus = internalMutation({
     const r = await ctx.db.get(receiptId);
     if (!r || r.kind !== "payout") return;
     const s = status.toUpperCase();
-    const worker = r.payeeLabel.split(" ")[0];
+    // Whoever the money went to: the worker, or a custom agent's creator.
+    const worker = (r.split?.find((l) => l.via === "payout")?.label ?? r.payeeLabel).split(" ")[0];
     const already = (label: string) => r.timeline.some((t) => t.label === label);
     const patch = itemId ? { paypal: { payoutItemId: itemId } } : {};
     if (s === "SUCCESS" || s === "SUCCEEDED") {

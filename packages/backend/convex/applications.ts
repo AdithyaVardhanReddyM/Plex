@@ -7,6 +7,7 @@ import { requireActor } from "./lib/actor";
 import { generateStructured } from "./lib/ai";
 import { canTake, specialtyHits } from "./lib/hire";
 import { formatCents } from "./lib/money";
+import { splitTermsFor } from "./lib/split";
 import { distanceM, formatDistance, fundingCents, lookupPlace } from "./lib/taskRules";
 
 /**
@@ -111,10 +112,12 @@ async function decideAs(ctx: MutationCtx, posterId: Id<"users">, applicationId: 
   }
   if (task.status !== "open") throw new ConvexError("This task isn't open.");
   if (task.funding.state === "unfunded") throw new ConvexError("Fund the task before accepting someone.");
-  await ctx.db.patch(applicationId, { status: "accepted" });
-  await ctx.db.patch(task._id, { status: "assigned", assigneeId: app.applicantId });
-  // A Plex house agent starts on the work the moment it's hired.
   const worker = await ctx.db.get(app.applicantId);
+  if (!worker) throw new ConvexError("That applicant no longer exists.");
+  await ctx.db.patch(applicationId, { status: "accepted" });
+  // The fee terms are locked now, so a later rate change never touches agreed work.
+  await ctx.db.patch(task._id, { status: "assigned", assigneeId: app.applicantId, split: splitTermsFor(worker, Date.now()) });
+  // A Plex house agent starts on the work the moment it's hired.
   if (worker?.kind === "agent" && worker.agentProfile?.house)
     await ctx.scheduler.runAfter(1500, internal.houseAgents.work, { taskId: task._id, agentId: worker._id });
   if ((task.spots ?? 1) <= 1) {

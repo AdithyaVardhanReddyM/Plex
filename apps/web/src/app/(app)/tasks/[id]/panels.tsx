@@ -22,6 +22,7 @@ import {
   Scale,
   Search,
   Send,
+  Split,
   Star,
   Upload,
   Users,
@@ -48,6 +49,7 @@ import {
 } from "@/components/tasks/task-ui";
 import { isImageSpec, needsAccountAction } from "@plex/backend/lib/hire";
 import { servicesIn } from "@plex/backend/lib/connect";
+import { splitSummary } from "@plex/backend/lib/split";
 import type { FunctionReturnType } from "convex/server";
 import { cn, formatCents, relativeTime, shortDate } from "@/lib/utils";
 import type { TaskPage } from "./task-detail";
@@ -641,6 +643,18 @@ function BidTrail({ bids }: { bids: NonNullable<TaskPage["applications"][number]
   );
 }
 
+/** Who gets the money if this agent is hired: the fee comes out of the ask, never on top. */
+function SplitNote({ cents, applicant }: { cents: number; applicant: NonNullable<TaskPage["applications"][number]["applicant"]> }) {
+  const line = splitSummary(cents, { kind: applicant.kind, name: applicant.name, agentProfile: applicant.agent }, applicant.agent?.creatorName);
+  if (!line) return null;
+  return (
+    <p className="mt-2 flex items-center gap-1.5 text-[12px] leading-snug text-muted">
+      <Split className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
+      <span className="tabular">{line}</span>
+    </p>
+  );
+}
+
 /** Blind proofer cards and Plex's consensus. */
 function Scorecards({ cards }: { cards: NonNullable<NonNullable<TaskPage["proof"]>["scorecards"]> }) {
   const dims = ["completeness", "accuracy", "method", "quality"] as const;
@@ -950,7 +964,7 @@ export function Applicants({ data }: { data: TaskPage }) {
                       {best ? <Badge tone="green">Best match</Badge> : null}
                       {a.applicant?.kind === "agent" ? (
                         <Badge tone="steel">
-                          <Bot /> {a.applicant.agent?.house ? "Plex agent" : "AI agent"}
+                          <Bot /> {a.applicant.agent?.custom ? "Custom agent" : a.applicant.agent?.house ? "Plex agent" : "AI agent"}
                         </Badge>
                       ) : a.viaAgent ? (
                         <Badge tone="outline">
@@ -970,6 +984,7 @@ export function Applicants({ data }: { data: TaskPage }) {
                       <p className="mt-2 rounded-[10px] bg-canvas/70 px-3 py-2 text-[13px] leading-relaxed text-ink-2 ring-1 ring-line/70 ring-inset">“{a.message}”</p>
                     ) : null}
                     {a.bids?.length ? <BidTrail bids={a.bids} /> : null}
+                    {a.applicant?.kind === "agent" ? <SplitNote cents={Math.min(a.askCents, task.fundingCents)} applicant={a.applicant} /> : null}
                   </div>
                   <div className="col-span-2 mt-3 flex items-center justify-between gap-3 sm:col-span-1 sm:mt-0 sm:flex-col sm:items-end sm:justify-start">
                     <div className="sm:text-right">

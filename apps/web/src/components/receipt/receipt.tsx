@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   Repeat,
+  Split,
   TriangleAlert,
   Check,
 } from "lucide-react";
@@ -189,6 +190,24 @@ export function ReceiptCard({ receipt, className }: { receipt: Receipt; classNam
           <Line icon={<ShieldCheck />} label={RULE_SOURCE[receipt.rule.source]}>
             {receipt.rule.text}
           </Line>
+          {/* Who got what: shown when the payment didn't all go to one person */}
+          {receipt.split?.some((l) => l.via === "kept") ? (
+            <Line icon={<Split />} label="Who got what">
+              <ul className="mt-1 space-y-1.5">
+                {receipt.split.map((l, i) => (
+                  <li key={i} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-3 text-[13px] leading-snug">
+                    <span className="min-w-0">
+                      <span className="font-medium text-ink">{l.label}</span>
+                      <span className="text-muted">
+                        {l.note ? ` · ${l.note}` : ""} · {l.via === "payout" ? "PayPal Payouts" : "kept from the capture"}
+                      </span>
+                    </span>
+                    <span className="tabular font-medium text-ink">{formatCents(l.cents, receipt.currency)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Line>
+          ) : null}
           {receipt.agentLabel ? (
             <Line icon={<Bot />} label="Agent">
               {receipt.agentLabel}

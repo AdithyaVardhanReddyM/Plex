@@ -50,6 +50,17 @@ export const proofSpecItem = v.object({
   ),
 });
 
+/** One share of a released task payment (lib/split.ts). */
+export const splitLine = v.object({
+  role: v.union(v.literal("earner"), v.literal("creator"), v.literal("plex")),
+  label: v.string(),
+  note: v.optional(v.string()),
+  cents: v.number(),
+  via: v.union(v.literal("payout"), v.literal("kept")),
+  payeeId: v.optional(v.id("users")),
+  payoutItemId: v.optional(v.string()),
+});
+
 export const receiptState = v.union(
   v.literal("pending"),
   v.literal("funded"),
@@ -299,6 +310,9 @@ export default defineSchema({
     // A merchant's order or booking number the payment settles ("CC-4821"): goes on the PayPal
     // payout note, and lets the merchant's page see that Plex paid it (merchants.paymentFor).
     reference: v.optional(v.string()),
+    // Added by the split: who got what when a task's payment was released (lib/split.ts).
+    // amountCents stays the whole capture; the lines add up to it.
+    split: v.optional(v.array(splitLine)),
   })
     .index("by_owner_time", ["ownerId", "occurredAt"])
     .index("by_task", ["taskId"])
@@ -382,6 +396,14 @@ export default defineSchema({
             why: v.string(),
           }),
         ),
+      }),
+    ),
+    // Added by the split: the fee terms, locked when the poster accepts someone (lib/split.ts)
+    split: v.optional(
+      v.object({
+        kind: v.union(v.literal("human"), v.literal("custom"), v.literal("house")),
+        plexBps: v.number(),
+        lockedAt: v.number(),
       }),
     ),
   })

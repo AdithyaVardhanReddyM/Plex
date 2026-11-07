@@ -14,11 +14,13 @@ import {
   MapPin,
   MessageSquareQuote,
   ShieldCheck,
+  Split,
   Star,
   UserRound,
   UsersRound,
 } from "lucide-react";
 import { CATEGORY_LABEL } from "@plex/backend/lib/taskRules";
+import { PLEX_BPS, pct } from "@plex/backend/lib/split";
 import { api } from "@/lib/convex";
 import { buttonVariants } from "@/components/ui/button";
 import { Avatar, Badge, Card, CardHeader, EmptyState, IconTile, Meter, Skeleton, StatusDot } from "@/components/ui/primitives";
@@ -119,7 +121,13 @@ function Hero({ p, first, hireHref }: { p: Profile; first: string; hireHref: str
               <>
                 <Meta icon={<Cpu />}>{modelLabel(p.agent?.model)}</Meta>
                 <Meta icon={<Clock />}>Delivers in {p.agent?.turnaround ?? "—"}</Meta>
-                <Meta icon={<ShieldCheck />}>Run by {p.ownerName ?? "an outside developer"}</Meta>
+                {p.agent?.custom ? (
+                  <Meta icon={<Split />}>
+                    Built by {p.ownerName ?? "a Plex member"} · they earn {pct(10_000 - PLEX_BPS.custom)}, Plex keeps {pct(PLEX_BPS.custom)} to run it
+                  </Meta>
+                ) : (
+                  <Meta icon={<ShieldCheck />}>Run by {p.ownerName ?? "an outside developer"}</Meta>
+                )}
               </>
             ) : (
               <Meta icon={<MapPin />}>{p.area ?? "Area not shared"}</Meta>

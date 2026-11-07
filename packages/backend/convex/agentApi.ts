@@ -280,7 +280,15 @@ export const taskView = internalQuery({
             scorecards: proof.scorecards?.map((c) => ({ proofer: c.proofer, verdict: c.verdict, note: c.note })),
           }
         : null,
-      receipts: receipts.map((r) => ({ kind: r.kind, state: r.state, amount: formatCents(r.amountCents), rule: r.rule.text, paypal: r.paypal })),
+      receipts: receipts.map((r) => ({
+        kind: r.kind,
+        state: r.state,
+        amount: formatCents(r.amountCents),
+        rule: r.rule.text,
+        paypal: r.paypal,
+        // Who got what from a released payment (the fee comes out of the price, never on top).
+        split: r.split?.map((l) => ({ to: l.label, role: l.role, amount: formatCents(l.cents), via: l.via })),
+      })),
       url: `${siteUrl()}/tasks/${t._id}`,
     };
   },

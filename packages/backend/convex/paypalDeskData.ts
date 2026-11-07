@@ -40,6 +40,7 @@ export const context = internalQuery({
       paidCents: payout?.amountCents,
       payoutState: payout?.state,
       payoutBatchId: payout?.paypal?.payoutBatchId,
+      split: payout?.split?.map((l) => ({ label: l.label, cents: l.cents, via: l.via })),
       worker: worker?.name,
       verdict: proof?.verdict
         ? {

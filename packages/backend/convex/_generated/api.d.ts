@@ -38,6 +38,7 @@ import type * as lib_policy from "../lib/policy.js";
 import type * as lib_policyAi from "../lib/policyAi.js";
 import type * as lib_receipts from "../lib/receipts.js";
 import type * as lib_secrets from "../lib/secrets.js";
+import type * as lib_split from "../lib/split.js";
 import type * as lib_taskRules from "../lib/taskRules.js";
 import type * as lib_viewer from "../lib/viewer.js";
 import type * as merchants from "../merchants.js";
@@ -89,6 +90,7 @@ declare const fullApi: ApiFromModules<{
   "lib/policyAi": typeof lib_policyAi;
   "lib/receipts": typeof lib_receipts;
   "lib/secrets": typeof lib_secrets;
+  "lib/split": typeof lib_split;
   "lib/taskRules": typeof lib_taskRules;
   "lib/viewer": typeof lib_viewer;
   merchants: typeof merchants;
