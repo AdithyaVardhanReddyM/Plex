@@ -2,128 +2,192 @@
 
 import Link from "next/link";
 import { useQuery } from "convex/react";
-import { useState } from "react";
-import { Bot, MapPin, Search, Star, UsersRound } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { BadgeCheck, Bot, CircleCheck, Plus, Search, UserRound, UsersRound, X } from "lucide-react";
 import { api } from "@/lib/convex";
 import { buttonVariants } from "@/components/ui/button";
-import { Avatar, Badge, Card, EmptyState, Input, PageHeader, Skeleton } from "@/components/ui/primitives";
-import { TrustRing } from "@/components/hire/trust";
+import { Card, EmptyState, Input, Kbd, PageHeader, Segmented, Skeleton, Stat } from "@/components/ui/primitives";
+import { AgentArt } from "@/components/art/empty-art";
+import { WorkerCard, WorkerCardSkeleton } from "@/components/hire/worker-card";
 import { cn } from "@/lib/utils";
 
-type Kind = "person" | "agent" | undefined;
+type Kind = "all" | "person" | "agent";
+type Row = NonNullable<ReturnType<typeof useQuery<typeof api.hire.directory>>>[number];
 
-const KINDS: { value: Kind; label: string }[] = [
-  { value: undefined, label: "Everyone" },
-  { value: "person", label: "People" },
-  { value: "agent", label: "AI agents" },
-];
+function median(xs: number[]) {
+  if (!xs.length) return undefined;
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+}
 
 export function HireView() {
-  const [kind, setKind] = useState<Kind>();
+  const [kind, setKind] = useState<Kind>("all");
   const [q, setQ] = useState("");
-  const rows = useQuery(api.hire.directory, { kind, q: q.trim() || undefined });
+  const search = useRef<HTMLInputElement>(null);
+  const everyone = useQuery(api.hire.directory, {});
+  const matches = useQuery(api.hire.directory, { q: q.trim() || undefined });
+  const rows = useMemo(() => (kind === "all" ? matches : matches?.filter((r) => r.kind === kind)), [matches, kind]);
+
+  // "/" jumps to search, as in most directories.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const t = e.target as HTMLElement | null;
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || t?.closest("input, textarea, select, [contenteditable]")) return;
+      e.preventDefault();
+      search.current?.focus();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const count = (k: Kind) => (matches ? (k === "all" ? matches.length : matches.filter((r) => r.kind === k).length) : undefined);
 
   return (
     <div className="animate-rise">
       <PageHeader
+        icon={<UsersRound />}
         title="Hire"
-        description="People for work in the world, AI agents for work on a screen. Either way the money is held by PayPal and paid only when the proof passes."
+        description="People for work in the world, AI agents for work on a screen. Either way PayPal holds the money, and it's paid only when the proof passes."
         actions={
-          <div className="flex gap-2">
+          <>
             <Link href="/hire/new" className={buttonVariants({ variant: "secondary" })}>
               <Bot /> Create an agent
             </Link>
             <Link href="/tasks/new" className={buttonVariants({ variant: "primary" })}>
-              Post a task
+              <Plus /> Post a task
             </Link>
-          </div>
+          </>
         }
       />
 
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="inline-flex flex-none self-start rounded-sm bg-sunken p-0.5" role="group" aria-label="Who">
-          {KINDS.map((k) => (
-            <button
-              key={k.label}
-              type="button"
-              onClick={() => setKind(k.value)}
-              aria-pressed={kind === k.value}
-              className={cn(
-                "h-7 rounded-[6px] px-3 text-[13px] font-medium transition-colors",
-                kind === k.value ? "bg-surface text-ink shadow-card" : "text-muted hover:text-ink",
-              )}
-            >
-              {k.label}
-            </button>
-          ))}
-        </div>
-        <div className="relative w-full sm:w-72">
+      <Facts rows={everyone} />
+
+      <div className="mt-6 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Segmented<Kind>
+          value={kind}
+          onChange={setKind}
+          items={[
+            { value: "all", label: "Everyone", count: count("all") },
+            { value: "person", label: "People", icon: <UserRound />, count: count("person") },
+            { value: "agent", label: "AI agents", icon: <Bot />, count: count("agent") },
+          ]}
+        />
+        <div className="relative w-full sm:w-80">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" strokeWidth={1.9} />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Skill, place or name" className="pl-9" aria-label="Search" />
+          <Input
+            ref={search}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => e.key === "Escape" && (setQ(""), e.currentTarget.blur())}
+            placeholder="Search skills, places or names"
+            className="h-9 pr-10 pl-9"
+            aria-label="Search people and agents"
+          />
+          <span className="absolute top-1/2 right-2 -translate-y-1/2">
+            {q ? (
+              <button
+                type="button"
+                onClick={() => setQ("")}
+                className="flex size-6 items-center justify-center rounded-full text-faint hover:bg-sunken hover:text-ink"
+                aria-label="Clear search"
+              >
+                <X className="size-3.5" strokeWidth={2} />
+              </button>
+            ) : (
+              <Kbd>/</Kbd>
+            )}
+          </span>
         </div>
       </div>
 
       {rows === undefined ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-[214px] w-full rounded-lg" />
+            <WorkerCardSkeleton key={i} i={i} />
           ))}
         </div>
       ) : rows.length === 0 ? (
         <Card>
-          <EmptyState icon={<UsersRound />} title="Nobody matches that" body="Try a broader skill, or post the task and let people and agents apply." />
+          <EmptyState
+            art={<AgentArt />}
+            title={q ? `Nobody matches “${q.trim()}”` : kind === "agent" ? "No agents yet" : "Nobody here yet"}
+            body="Try a broader skill or place. Or post the task: people and agents who fit will bid, and PayPal holds the money until the proof passes."
+            action={
+              <div className="flex gap-2">
+                {q ? (
+                  <button type="button" onClick={() => setQ("")} className={buttonVariants({ variant: "secondary" })}>
+                    Clear search
+                  </button>
+                ) : null}
+                <Link href="/tasks/new" className={buttonVariants({ variant: "primary" })}>
+                  Post a task
+                </Link>
+              </div>
+            }
+            className="py-16"
+          />
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {rows.map((r) => (
-            <Link
-              key={r._id}
-              href={`/hire/${r.handle}`}
-              className="group flex flex-col rounded-lg border border-line bg-surface shadow-card transition-[box-shadow,border-color,transform] duration-200 hover:-translate-y-px hover:border-line-strong hover:shadow-raised focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:outline-none"
-            >
-              <div className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-3 px-5 pt-4">
-                <Avatar name={r.name} color={r.avatarColor} size={44} />
-                <div className="min-w-0">
-                  <div className="truncate text-[15px] font-semibold tracking-[-0.01em] text-ink">{r.name}</div>
-                  <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] text-muted">
-                    {r.kind === "agent" ? (
-                      <>
-                        <Bot className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
-                        <span className="truncate">{r.agent?.house ? "Plex house agent" : "Outside agent"}</span>
-                      </>
-                    ) : (
-                      <>
-                        <MapPin className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
-                        <span className="truncate">{r.area ?? "Plex"}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <TrustRing score={r.trust} />
-              </div>
-              <p className="mt-3 line-clamp-2 min-h-[40px] px-5 text-[13px] leading-relaxed text-ink-2">{r.agent?.tagline ?? r.bio}</p>
-              <div className="mt-3 flex flex-wrap gap-1.5 px-5">
-                {r.skills.slice(0, 4).map((s) => (
-                  <Badge key={s} tone="outline" className="capitalize">
-                    {s}
-                  </Badge>
-                ))}
-              </div>
-              <div className="mt-auto flex items-center justify-between gap-3 border-t border-line px-5 py-3 text-[12.5px] text-muted">
-                <span className="inline-flex items-center gap-1">
-                  <Star className="size-3.5 fill-current text-refunded" strokeWidth={1.9} />
-                  <span className="tabular font-medium text-ink">{r.rating?.toFixed(2) ?? "New"}</span>
-                  {r.reviewCount ? <span className="text-faint">· {r.reviewCount} verified</span> : null}
-                </span>
-                <span className="tabular">
-                  {r.proofPassRate !== undefined ? `${Math.round(r.proofPassRate * 100)}% proofs pass · ` : ""}
-                  {r.tasksCompleted} paid
-                </span>
-              </div>
-            </Link>
+            <WorkerCard key={r._id} w={r} href={`/hire/${r.handle}`} />
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+/** A few facts about the marketplace, from the directory itself. */
+function Facts({ rows }: { rows: Row[] | undefined }) {
+  const people = rows?.filter((r) => r.kind === "person") ?? [];
+  const agents = rows?.filter((r) => r.kind === "agent") ?? [];
+  const house = agents.filter((a) => a.agent?.house).length;
+  const pass = median(rows?.flatMap((r) => (r.proofPassRate !== undefined ? [r.proofPassRate] : [])) ?? []);
+  const paid = rows?.reduce((s, r) => s + r.tasksCompleted, 0) ?? 0;
+  const reviews = rows?.reduce((s, r) => s + (r.reviewCount ?? 0), 0) ?? 0;
+
+  const cells: { label: string; icon: React.ReactNode; value: React.ReactNode; foot: React.ReactNode }[] = [
+    { label: "People taking work", icon: <UserRound />, value: people.length, foot: "Photo proof, checked on time and place" },
+    {
+      label: "AI agents",
+      icon: <Bot />,
+      value: agents.length,
+      foot: `${house} run by Plex · ${agents.length - house} outside`,
+    },
+    {
+      label: "Median proof pass rate",
+      icon: <CircleCheck />,
+      value: pass !== undefined ? `${Math.round(pass * 100)}%` : "—",
+      foot: "Judged blind before PayPal pays",
+    },
+    { label: "Tasks paid on proof", icon: <BadgeCheck />, value: paid.toLocaleString("en-US"), foot: `${reviews} verified reviews` },
+  ];
+
+  return (
+    <Card className="grid grid-cols-2 lg:grid-cols-4">
+      {cells.map((c, i) => (
+        <Stat
+          key={c.label}
+          label={c.label}
+          icon={c.icon}
+          value={
+            rows ? (
+              <span className="tabular font-display text-[24px] leading-none font-bold tracking-[-0.03em] text-ink">{c.value}</span>
+            ) : (
+              <Skeleton className="h-6 w-14" />
+            )
+          }
+          foot={c.foot}
+          className={cn(
+            "px-5 py-4",
+            i % 2 === 1 && "border-l border-line",
+            i >= 2 && "border-t border-line lg:border-t-0",
+            i === 2 && "lg:border-l",
+          )}
+        />
+      ))}
+    </Card>
   );
 }
