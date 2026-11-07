@@ -3,7 +3,6 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   BadgeCheck,
-  Cpu,
   CircleDashed,
   FileText,
   HandCoins,
@@ -18,6 +17,7 @@ import {
   TriangleAlert,
   Check,
 } from "lucide-react";
+import { AiAgentIcon } from "@/components/ui/icons";
 import type { Doc } from "@plex/backend/dataModel";
 import { Badge, type BadgeTone } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
@@ -209,7 +209,7 @@ export function ReceiptCard({ receipt, className }: { receipt: Receipt; classNam
             </Line>
           ) : null}
           {receipt.agentLabel ? (
-            <Line icon={<Cpu />} label="Agent">
+            <Line icon={<AiAgentIcon />} label="Agent">
               {receipt.agentLabel}
             </Line>
           ) : null}

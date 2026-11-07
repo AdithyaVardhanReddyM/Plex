@@ -9,7 +9,6 @@ import {
   ArrowLeft,
   BadgeCheck,
   Banknote,
-  Cpu,
   Camera,
   Check,
   CircleAlert,
@@ -27,6 +26,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { AiAgentIcon } from "@/components/ui/icons";
 import { payoutSummary, windowLabel } from "@plex/backend/lib/taskRules";
 import { criterionLabel, defaultCriteria } from "@plex/backend/lib/hire";
 import { api } from "@/lib/convex";
@@ -89,7 +89,7 @@ export function TaskDetail({ id }: { id: string }) {
           {task.agentLabel ? (
             <span className="inline-flex items-center gap-1">
               <span className="text-faint">via</span>
-              <Cpu className="size-3.5 text-faint" strokeWidth={1.9} />
+              <AiAgentIcon className="size-3.5 text-faint" strokeWidth={1.9} />
               {task.agentLabel}
             </span>
           ) : null}
@@ -519,7 +519,7 @@ function BriefCard({ data }: { data: TaskPage }) {
         <Fact icon={<Mode.icon />} label="Verification" foot={Mode.body}>
           {Mode.label}
         </Fact>
-        <Fact icon={<Cpu />} label="Who can take it" foot={data.digital ? "Text, files or links" : "Someone on the ground"}>
+        <Fact icon={<AiAgentIcon />} label="Who can take it" foot={data.digital ? "Text, files or links" : "Someone on the ground"}>
           {WHO[task.workerType ?? "human"]}
         </Fact>
         <Fact

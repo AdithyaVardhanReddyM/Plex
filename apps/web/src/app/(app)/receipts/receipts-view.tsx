@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { ArrowDownLeft, ArrowUpRight, Clock, Cpu, HandCoins, HeartHandshake, Layers, Lock, ReceiptText, Search } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Clock, HandCoins, HeartHandshake, Layers, Lock, ReceiptText, Search } from "lucide-react";
+import { AiAgentIcon } from "@/components/ui/icons";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { direction } from "@plex/backend/lib/ledgerSpec";
 import { api } from "@/lib/convex";
@@ -19,7 +20,7 @@ import { cn, formatCents } from "@/lib/utils";
 const FILTERS = [
   { key: "all", label: "All", icon: <Layers /> },
   { key: "held", label: "Held", icon: <Lock /> },
-  { key: "agents", label: "By agents", icon: <Cpu /> },
+  { key: "agents", label: "By agents", icon: <AiAgentIcon /> },
   { key: "tasks", label: "Tasks", icon: <HandCoins /> },
   { key: "giving", label: "Giving", icon: <HeartHandshake /> },
 ] as const;
@@ -379,7 +380,7 @@ function Summary({
             {loading ? "…" : formatCents(totals.in)} came in
           </span>
           <span className={cn(GLASS, "tabular flex items-center gap-1.5 rounded-full px-3 py-1.5 text-white/75")}>
-            <Cpu className="size-3.5 text-white/50" strokeWidth={2} />
+            <AiAgentIcon className="size-3.5 text-white/50" strokeWidth={2} />
             {loading ? "…" : `${totals.agents} of ${count}`} moved by agents
           </span>
           <span className="hidden text-[12px] text-white/40 sm:inline">Refunds, splits and invoices count as in.</span>

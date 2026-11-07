@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
   Check,
-  Cpu,
   ChevronDown,
   KeyRound,
   Loader2,
@@ -16,6 +15,7 @@ import {
   SlidersHorizontal,
   Wallet,
 } from "lucide-react";
+import { AiAgentIcon } from "@/components/ui/icons";
 import { api } from "@/lib/convex";
 import type { Id } from "@/lib/convex";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -97,7 +97,7 @@ function McpSpotlight({ base }: { base: string }) {
     <section className="@container spotlight flex min-w-0 flex-col rounded-xl p-6 sm:p-7">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-[13px] font-medium text-white/60">
-          <Cpu className="size-4 text-green-300" strokeWidth={1.9} />
+          <AiAgentIcon className="size-4 text-green-300" strokeWidth={1.9} />
           Plex + PayPal for Claude
         </div>
         <span className={cn(GLASS, "text-[11.5px] font-medium text-white/60")}>Two MCP servers</span>
@@ -370,7 +370,7 @@ function Keys() {
               onChange={setRole}
               items={[
                 { value: "poster", label: "Poster key", icon: <Wallet /> },
-                { value: "worker", label: "Worker key", icon: <Cpu /> },
+                { value: "worker", label: "Worker key", icon: <AiAgentIcon /> },
               ]}
             />
           </div>

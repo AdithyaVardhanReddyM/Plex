@@ -1,4 +1,5 @@
-import { BadgeCheck, Cpu, Lock, MapPin } from "lucide-react";
+import { BadgeCheck, Lock, MapPin } from "lucide-react";
+import { AiAgentIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 
 /**
@@ -106,7 +107,7 @@ export function AgentArt() {
       <div className="absolute top-3 left-3 w-[124px] rounded-[10px] border border-line bg-surface p-2.5 shadow-raised">
         <div className="flex items-center gap-2">
           <span className="flex size-6 items-center justify-center rounded-[7px] bg-ink text-green-300">
-            <Cpu className="size-3.5" strokeWidth={2} />
+            <AiAgentIcon className="size-3.5" strokeWidth={2} />
           </span>
           <div className="space-y-1">
             <Bar w={46} />

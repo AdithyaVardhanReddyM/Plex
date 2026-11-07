@@ -5,7 +5,6 @@ import { useMutation, useQuery } from "convex/react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowRight,
-  Cpu,
   CornerDownLeft,
   HeartHandshake,
   KeyRound,
@@ -13,8 +12,8 @@ import {
   Play,
   Plus,
   Search,
-  type LucideIcon,
 } from "lucide-react";
+import { AiAgentIcon } from "@/components/ui/icons";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/convex";
 import { cn } from "@/lib/utils";
@@ -26,7 +25,7 @@ type Command = {
   group: "Go to" | "Create" | "Agents";
   label: string;
   hint?: string;
-  icon: LucideIcon;
+  icon: React.ComponentType<{ className?: string }>;
   run: () => void;
 };
 
@@ -79,7 +78,7 @@ function CommandMenu({ onClose }: { onClose: () => void }) {
     return [
       ...NAV.map((n) => ({ id: n.href, group: "Go to" as const, label: n.label, hint: n.hint, icon: n.icon, run: go(n.href) })),
       { id: "new-task", group: "Create", label: "Post a task", hint: "Pay a person or an agent on proof", icon: Plus, run: go("/tasks/new") },
-      { id: "new-agent", group: "Create", label: "Create an agent", hint: "List an AI worker on Hire", icon: Cpu, run: go("/hire/new") },
+      { id: "new-agent", group: "Create", label: "Create an agent", hint: "List an AI worker on Hire", icon: AiAgentIcon, run: go("/hire/new") },
       { id: "new-cause", group: "Create", label: "Build a cause page", hint: "Donations that pay for proven work", icon: HeartHandshake, run: go("/causes/new") },
       { id: "new-key", group: "Create", label: "Create an API key", hint: "Give Claude or any agent a key", icon: KeyRound, run: go("/developers") },
       {

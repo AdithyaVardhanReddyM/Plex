@@ -6,7 +6,6 @@ import type { ColDef, GridApi, GridReadyEvent, IRowNode, RowClickedEvent } from 
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  Cpu,
   CornerDownRight,
   FileText,
   HandCoins,
@@ -17,6 +16,7 @@ import {
   ShoppingBag,
   User,
 } from "lucide-react";
+import { AiAgentIcon } from "@/components/ui/icons";
 import { direction, kindLabel, partyOf, stateLabel, type ColumnKey } from "@plex/backend/lib/ledgerSpec";
 import { StatePill, type Receipt } from "@/components/receipt/receipt";
 import { Amount } from "@/components/ui/money";
@@ -118,7 +118,7 @@ function AgentCell({ data }: CellProps) {
   return (
     <div className="flex h-full items-center">
       <span className={cn("inline-flex min-w-0 items-center gap-1.5 text-[12.5px]", agent ? "font-medium text-ink-2" : "text-muted")}>
-        {agent ? <Cpu size={14} strokeWidth={1.9} className="flex-none text-steel-500" /> : <User size={14} strokeWidth={1.9} className="flex-none text-faint" />}
+        {agent ? <AiAgentIcon size={14} strokeWidth={1.9} className="flex-none text-steel-500" /> : <User size={14} strokeWidth={1.9} className="flex-none text-faint" />}
         <span className="truncate">{agent ?? "You"}</span>
       </span>
     </div>

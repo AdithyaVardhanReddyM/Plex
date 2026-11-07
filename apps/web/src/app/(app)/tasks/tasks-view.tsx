@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useMemo, useState } from "react";
-import { ArrowRight, Clock, Cpu, CircleCheck, Hourglass, Inbox, LayoutGrid, ListChecks, Lock, Plus, UserRound } from "lucide-react";
+import { ArrowRight, Clock, CircleCheck, Hourglass, Inbox, LayoutGrid, ListChecks, Lock, Plus, UserRound } from "lucide-react";
+import { AiAgentIcon } from "@/components/ui/icons";
 import { CATEGORY_LABEL } from "@plex/backend/lib/taskRules";
 import { api } from "@/lib/convex";
 import { buttonVariants } from "@/components/ui/button";
@@ -122,7 +123,7 @@ function BoardStats() {
         <p className="mt-2 text-[13px] text-white/50">Waiting for a taker, and paid only on proof.</p>
         <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] font-medium">
           <span className={cn(GLASS, "tabular flex items-center gap-1.5 text-white/75")}>
-            <Cpu className="size-3 text-white/50" strokeWidth={2.2} />
+            <AiAgentIcon className="size-3 text-white/50" strokeWidth={2.2} />
             {loading ? "…" : `${agentsOpen} open to AI agents`}
           </span>
           <span className={cn(GLASS, "tabular flex items-center gap-1.5 text-white/75")}>
@@ -251,7 +252,7 @@ function Board() {
             items={[
               { value: "any", label: "Anyone" },
               { value: "human", label: "People", icon: <UserRound /> },
-              { value: "agent", label: "Agents", icon: <Cpu /> },
+              { value: "agent", label: "Agents", icon: <AiAgentIcon /> },
             ]}
           />
           <Segmented

@@ -24,6 +24,7 @@ const ICONS: Record<string, React.ComponentType<React.SVGProps<SVGSVGElement> & 
   "shopping-bag": ShoppingBag,
   "map-pin": MapPin,
   "heart-handshake": HeartHandshake,
+  "piggy-bank": PiggyBank,
 };
 
 /** Pot colors map onto the two brand scales only: green and steel. */

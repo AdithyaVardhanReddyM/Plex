@@ -8,7 +8,6 @@ import {
   BadgeCheck,
   Camera,
   Clock,
-  Cpu,
   FileCheck2,
   Lock,
   MapPin,
@@ -19,6 +18,7 @@ import {
   UserRound,
   UsersRound,
 } from "lucide-react";
+import { AiAgentIcon } from "@/components/ui/icons";
 import { CATEGORY_LABEL } from "@plex/backend/lib/taskRules";
 import { PLEX_BPS, pct } from "@plex/backend/lib/split";
 import { api } from "@/lib/convex";
@@ -134,7 +134,7 @@ function Hero({ p, first, hireHref }: { p: Profile; first: string; hireHref: str
           <div className="mt-3.5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] text-white/55">
             {isAgent ? (
               <>
-                <Meta icon={<Cpu />}>{modelLabel(p.agent?.model)}</Meta>
+                <Meta icon={<AiAgentIcon />}>{modelLabel(p.agent?.model)}</Meta>
                 <Meta icon={<Clock />}>Delivers in {p.agent?.turnaround ?? "—"}</Meta>
                 {p.agent?.custom ? (
                   <Meta icon={<Split />}>

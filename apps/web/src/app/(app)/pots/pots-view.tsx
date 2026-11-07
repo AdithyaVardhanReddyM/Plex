@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { useMemo, useState } from "react";
 import {
-  Cpu,
   Check,
   ChevronRight,
   CircleAlert,
@@ -17,6 +16,7 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
+import { AiAgentIcon } from "@/components/ui/icons";
 import { api } from "@/lib/convex";
 import type { Doc, Id } from "@/lib/convex";
 import { Button } from "@/components/ui/button";
@@ -489,7 +489,7 @@ function TryIt({ pot, draft, paused, trial }: { pot: Pot; draft: Proposal | null
       <div className="p-5 pt-4">
         <Label htmlFor="try-purchase">A purchase</Label>
         <div className="relative">
-          <Cpu className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" strokeWidth={1.9} />
+          <AiAgentIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" strokeWidth={1.9} />
           <Input id="try-purchase" value={input} onChange={(e) => setInput(e.target.value)} placeholder={SAMPLE} className="pl-9" />
         </div>
         <div className="mt-3 flex items-center justify-between gap-3">
@@ -580,7 +580,7 @@ function Approvals({ pending, pots }: { pending: Doc<"approvals">[] | undefined;
                 return (
                   <div key={a._id} className="rounded-[16px] bg-sunken/60">
                     <div className="flex items-center gap-2 px-4 pt-4 text-[12px] font-medium text-muted">
-                      <Cpu className="size-4 flex-none" strokeWidth={1.9} />
+                      <AiAgentIcon className="size-4 flex-none" strokeWidth={1.9} />
                       <span className="truncate">{a.agentLabel} wants to buy</span>
                       <span className="ml-auto flex-none text-faint">{relativeTime(a._creationTime)}</span>
                     </div>

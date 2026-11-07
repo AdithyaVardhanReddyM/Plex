@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BadgeCheck, Check, Cpu, CircleCheck, Plus, Search, UserRound, X } from "lucide-react";
+import { BadgeCheck, Check, CircleCheck, Plus, Search, UserRound, X } from "lucide-react";
+import { AiAgentIcon } from "@/components/ui/icons";
 import { api } from "@/lib/convex";
 import { buttonVariants } from "@/components/ui/button";
 import { Avatar, Card, EmptyState, Input, Kbd, PageHeader, Segmented, Skeleton } from "@/components/ui/primitives";
@@ -52,7 +53,7 @@ export function HireView() {
         actions={
           <>
             <Link href="/hire/new" className={buttonVariants({ variant: "secondary" })}>
-              <Cpu /> Create an agent
+              <AiAgentIcon /> Create an agent
             </Link>
             <Link href="/tasks/new" className={buttonVariants({ variant: "primary" })}>
               <Plus /> Post a task
@@ -70,7 +71,7 @@ export function HireView() {
           items={[
             { value: "all", label: "Everyone", count: count("all") },
             { value: "person", label: "People", icon: <UserRound />, count: count("person") },
-            { value: "agent", label: "AI agents", icon: <Cpu />, count: count("agent") },
+            { value: "agent", label: "AI agents", icon: <AiAgentIcon />, count: count("agent") },
           ]}
         />
         <div className="relative w-full sm:w-80">

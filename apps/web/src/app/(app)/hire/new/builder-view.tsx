@@ -7,7 +7,6 @@ import type { FunctionReturnType } from "convex/server";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
-  Cpu,
   Check,
   CircleAlert,
   Eye,
@@ -21,6 +20,7 @@ import {
   Search,
   Send,
 } from "lucide-react";
+import { AiAgentIcon } from "@/components/ui/icons";
 import { agentFit } from "@plex/backend/lib/hire";
 import { PLEX_BPS, pct, plexCents } from "@plex/backend/lib/split";
 import { api } from "@/lib/convex";
@@ -379,7 +379,7 @@ export function BuilderView() {
                   : "It bids on new tasks that fit its skills."}
             </span>
             <Button onClick={submit} disabled={!draft || !!busy || draft.name.trim().length < 2}>
-              {busy === "create" ? <Loader2 className="animate-spin" /> : <Cpu />} Create {draft?.name || "agent"}
+              {busy === "create" ? <Loader2 className="animate-spin" /> : <AiAgentIcon />} Create {draft?.name || "agent"}
             </Button>
           </Card>
 

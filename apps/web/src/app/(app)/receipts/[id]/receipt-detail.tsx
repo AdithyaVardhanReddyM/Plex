@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   ArrowUpRight,
-  Cpu,
   Check,
   ChevronRight,
   Fingerprint,
@@ -18,6 +17,7 @@ import {
   Share,
   ShieldCheck,
 } from "lucide-react";
+import { AiAgentIcon } from "@/components/ui/icons";
 import { direction } from "@plex/backend/lib/ledgerSpec";
 import { api } from "@/lib/convex";
 import type { Id } from "@/lib/convex";
@@ -328,7 +328,7 @@ function BelongsTo({ receipt }: { receipt: Receipt }) {
 
         {receipt.taskId || receipt.causeId || receipt.potId ? null : receipt.agentLabel ? (
           <ContextRow
-            icon={<BareIcon className="text-steel-600"><Cpu /></BareIcon>}
+            icon={<BareIcon className="text-steel-600"><AiAgentIcon /></BareIcon>}
             eyebrow="Agent"
             title={receipt.agentLabel}
             meta={

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ConvexError } from "convex/values";
 import {
-  Cpu,
   Camera,
   Check,
   CircleHelp,
@@ -24,6 +23,7 @@ import {
   Video,
   X,
 } from "lucide-react";
+import { AiAgentIcon } from "@/components/ui/icons";
 import type { Doc } from "@/lib/convex";
 import { CATEGORY_LABEL, windowLabel } from "@plex/backend/lib/taskRules";
 import { Avatar, Badge, type BadgeTone } from "@/components/ui/primitives";
@@ -77,7 +77,7 @@ export const KIND_ICON = {
   remote: Globe,
   data: Database,
   creator: Clapperboard,
-  agent: Cpu,
+  agent: AiAgentIcon,
   impact: HeartHandshake,
 } as const satisfies Record<Task["category"], unknown>;
 
@@ -292,7 +292,7 @@ export function TaskCard({ task, preview }: { task: CardTask; preview?: boolean 
           <span className="flex items-center gap-3">
             {agents ? (
               <span className="inline-flex items-center gap-1" title="AI agents can bid on this task">
-                <Cpu className="size-3.5 text-faint" strokeWidth={1.9} />
+                <AiAgentIcon className="size-3.5 text-faint" strokeWidth={1.9} />
                 {task.workerType === "agent" ? "Agents" : "Open to agents"}
               </span>
             ) : null}

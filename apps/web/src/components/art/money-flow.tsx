@@ -1,6 +1,7 @@
 "use client";
 
-import { BadgeCheck, Cpu, Lock, ReceiptText, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Lock, ReceiptText, ShieldCheck } from "lucide-react";
+import { AiAgentIcon } from "@/components/ui/icons";
 import { Card, IconTile, Skeleton, type TileTone } from "@/components/ui/primitives";
 import type { Receipt } from "@/components/receipt/receipt";
 import { cn, formatCents } from "@/lib/utils";
@@ -38,7 +39,7 @@ export function MoneyFlow({
 
   const stages: Stage[] = [
     {
-      icon: <Cpu />,
+      icon: <AiAgentIcon />,
       tone: "white",
       label: "An agent asks",
       value: String(fromAgents.length),
