@@ -7,12 +7,14 @@ import {
   House,
   ListChecks,
   HeartHandshake,
+  KeyRound,
   LayoutDashboard,
   ReceiptText,
   PiggyBank,
   Pause,
   Play,
   Menu,
+  UsersRound,
   X,
 } from "lucide-react";
 import { Suspense, useState } from "react";
@@ -20,14 +22,17 @@ import { api } from "@/lib/convex";
 import { Avatar } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "./wordmark";
+import { AccountControl } from "./account";
 
 export const NAV = [
   { href: "/home", label: "Home", icon: House },
   { href: "/tasks", label: "Tasks", icon: ListChecks },
+  { href: "/hire", label: "Hire", icon: UsersRound },
   { href: "/causes", label: "Causes", icon: HeartHandshake },
   { href: "/ledger", label: "Ledger", icon: LayoutDashboard },
   { href: "/receipts", label: "Receipts", icon: ReceiptText },
   { href: "/pots", label: "Pots & limits", icon: PiggyBank },
+  { href: "/developers", label: "Agents & API", icon: KeyRound },
 ] as const;
 
 /** Pathname is request data on dynamic routes, so the active state streams in. */
@@ -118,6 +123,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <NavLinks />
         <div className="mt-auto flex flex-col gap-2 border-t border-line pt-3">
           <PauseSwitch />
+          <AccountControl />
           <ViewerCard />
         </div>
       </aside>
@@ -141,6 +147,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <NavLinks onNavigate={() => setOpen(false)} />
           <div className="mt-3 border-t border-line pt-3">
             <PauseSwitch />
+            <AccountControl />
           </div>
         </div>
       ) : null}

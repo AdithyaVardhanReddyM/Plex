@@ -19,7 +19,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   const app = <Providers>{children}</Providers>;
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full">{clerkEnabled ? <ClerkProvider dynamic>{app}</ClerkProvider> : app}</body>
+      {/* Client-side Clerk only: no `dynamic`, so pages still prerender (cacheComponents). */}
+      <body className="min-h-full">{clerkEnabled ? <ClerkProvider>{app}</ClerkProvider> : app}</body>
     </html>
   );
 }

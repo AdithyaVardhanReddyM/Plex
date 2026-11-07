@@ -1,28 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import {
   ArrowLeft,
+  Bot,
+  Check,
   CircleAlert,
   Crosshair,
   Hand,
+  ListChecks,
   Loader2,
   Lock,
   PenLine,
   Plus,
   Trash2,
   UserCheck,
+  UserRound,
+  UsersRound,
   Zap,
 } from "lucide-react";
 import type { TaskDraft } from "@plex/backend/tasks";
 import { CATEGORY_LABEL } from "@plex/backend/lib/taskRules";
+import { criterionLabel, defaultCriteria } from "@plex/backend/lib/hire";
 import { api } from "@/lib/convex";
 import type { Id } from "@/lib/convex";
 import { Button } from "@/components/ui/button";
-import { Badge, Card, Input, Label, PageHeader, Textarea } from "@/components/ui/primitives";
+import { Avatar, Badge, Card, Input, Label, PageHeader, Textarea } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
 import { PersonaSwitch, useAs } from "@/components/tasks/persona";
 import { PolicyLine, SpecIcon, TaskCard, errorMessage, type CardTask } from "@/components/tasks/task-ui";
@@ -33,13 +39,14 @@ const HOUR = 3_600_000;
 
 const EXAMPLES = [
   "Find someone to check if the café on 5th has a quiet corner, and photograph the menu.",
-  "Photograph the line at the Ferry Building farmers market around noon.",
-  "Test our signup flow on an older Android phone and record the screen. Budget $25.",
+  "Research three standing desks under $400 that fit a 100cm wall. Compare them, with sources.",
+  "Design a logo for Kettle Corner, a coffee cart in the Mission. Two colors, friendly.",
 ];
 
 type SpecItem = TaskDraft["proofSpec"][number];
 type Mode = TaskDraft["verificationMode"];
 type Category = TaskDraft["category"];
+type WorkerType = TaskDraft["workerType"];
 
 interface Form {
   title: string;
@@ -55,6 +62,8 @@ interface Form {
   proofSpec: SpecItem[];
   verificationMode: Mode;
   tags: string[];
+  workerType: WorkerType;
+  autoHire: boolean;
 }
 
 const REMOTE_KINDS: Category[] = ["remote", "data", "creator", "agent"];
@@ -82,12 +91,22 @@ function fromDraft(d: TaskDraft): Form {
     proofSpec: d.proofSpec,
     verificationMode: d.verificationMode,
     tags: d.tags,
+    workerType: d.workerType ?? "human",
+    autoHire: (d.workerType ?? "human") !== "human",
   };
+}
+
+/** Agents deliver text, files and links, and can't be anywhere. */
+function digitalForm(f: Pick<Form, "proofSpec" | "category" | "locationLabel">) {
+  const remote = REMOTE_KINDS.includes(f.category);
+  return (remote || !f.locationLabel.trim()) && f.proofSpec.every((s) => s.type === "text" || s.type === "link" || s.type === "file");
 }
 
 export function NewTaskView() {
   const router = useRouter();
   const as = useAs();
+  const invitedHandle = useSearchParams().get("for") ?? undefined;
+  const invited = useQuery(api.hire.profile, invitedHandle ? { handle: invitedHandle } : "skip");
   const write = useAction(api.tasks.write);
   const createDraft = useMutation(api.tasks.createDraft);
   const { fund, busy: funding, error: fundError } = useFund();
@@ -117,7 +136,13 @@ export function NewTaskView() {
     setWriting(true);
     try {
       const res = await write({ brief: text });
-      setForm(fromDraft(res.draft));
+      const next = fromDraft(res.draft);
+      // Hiring an agent directly: the task is open to agents if it can be.
+      if (invited?.kind === "agent" && next.workerType === "human" && digitalForm(next)) {
+        next.workerType = "either";
+        next.autoHire = true;
+      }
+      setForm(next);
       setModel(res.model);
     } catch (err) {
       setError(errorMessage(err));
@@ -149,6 +174,9 @@ export function NewTaskView() {
         verificationMode: form.verificationMode,
         tags: form.tags,
         writerModel: model,
+        workerType: digitalForm(form) ? form.workerType : "human",
+        invitedHandle: invited ? invitedHandle : undefined,
+        autoHire: digitalForm(form) && form.workerType !== "human" && form.autoHire,
       });
       if (andFund) await fund(id);
       else router.push(`/tasks/${id}`);
@@ -166,10 +194,30 @@ export function NewTaskView() {
         <ArrowLeft className="size-4" /> Tasks
       </Link>
       <PageHeader
-        title="Post a task"
+        title={invited ? `Hire ${invited.name}` : "Post a task"}
         description="Describe it the way you'd text a friend. The Task Writer turns it into a clear card with a proof spec; you edit, then fund it through PayPal."
         actions={<PersonaSwitch />}
       />
+
+      {invited ? (
+        <div className="mb-5 flex items-center gap-3 rounded-md bg-surface px-4 py-3 text-[13.5px] text-ink-2 shadow-card ring-1 ring-line ring-inset">
+          <Avatar name={invited.name} color={invited.avatarColor} size={28} />
+          <span className="min-w-0 flex-1">
+            {invited.kind === "agent" ? (
+              <>
+                <span className="font-medium text-ink">{invited.name}</span> bids first once you fund it. It takes work delivered as text, files or links.
+              </>
+            ) : (
+              <>
+                <span className="font-medium text-ink">{invited.name}</span> sees this task in their list and can take it first. Others can still apply.
+              </>
+            )}
+          </span>
+          <Link href="/tasks/new" className="flex-none text-[13px] font-medium text-muted underline-offset-2 hover:text-ink hover:underline">
+            Post to everyone
+          </Link>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="flex flex-col gap-5">
@@ -272,9 +320,9 @@ export function NewTaskView() {
               <ol className="mt-3 space-y-3">
                 {[
                   ["Fund", "PayPal holds the payout. Your pot's rules are checked first."],
-                  ["Match", "People apply; Match ranks them by distance, record and ask."],
-                  ["Proof", "The worker uploads photos with the challenge word. Plex checks each item."],
-                  ["Pay", "You approve, PayPal captures and pays the worker. Both get the receipt."],
+                  ["Match", "People apply, AI agents bid against each other; Match ranks them by record and ask."],
+                  ["Proof", "People upload photos with the challenge word. Agents' work is scored by three blind proofer agents."],
+                  ["Pay", "You approve, PayPal captures and pays out. Both sides get the receipt."],
                 ].map(([t, d], i) => (
                   <li key={t} className="grid grid-cols-[22px_minmax(0,1fr)] gap-3">
                     <span className="tabular flex size-[22px] items-center justify-center rounded-full bg-sunken text-[11.5px] font-semibold text-ink-2">
@@ -321,6 +369,7 @@ function previewTask(f: Form, cents: number): CardTask {
     status: "open",
     funding: { state: "authorized" },
     tags: f.tags,
+    workerType: digitalForm(f) ? f.workerType : "human",
     poster: null,
     applicantCount: 0,
     fundingCents: cents,
@@ -345,6 +394,49 @@ function WriterSkeleton() {
   );
 }
 
+/** What code checks before anyone is paid, and the hands-free switch. */
+function AcceptanceCriteria({ form, set }: { form: Form; set: <K extends keyof Form>(k: K, v: Form[K]) => void }) {
+  const criteria = defaultCriteria(form.proofSpec);
+  const agents = form.workerType !== "human";
+  return (
+    <div className="rounded-md bg-canvas p-3.5 ring-1 ring-line ring-inset">
+      <div className="flex items-center gap-2 text-[13px] font-medium text-ink">
+        <ListChecks className="size-4 text-faint" strokeWidth={1.9} /> Done means
+      </div>
+      <ul className="mt-2 space-y-1.5 text-[12.5px] text-ink-2">
+        {criteria.map((c, i) => (
+          <li key={i} className="flex items-start gap-2">
+            <Check className="mt-0.5 size-3.5 flex-none text-green-600" strokeWidth={2.2} />
+            <span>
+              {criterionLabel(c, form.proofSpec)} <span className="text-faint">· checked by code</span>
+            </span>
+          </li>
+        ))}
+        <li className="flex items-start gap-2">
+          <Check className="mt-0.5 size-3.5 flex-none text-green-600" strokeWidth={2.2} />
+          <span>Three blind proofer agents pass it, by Plex&apos;s majority rule</span>
+        </li>
+      </ul>
+      {agents ? (
+        <label className="mt-3 flex cursor-pointer items-start gap-2.5 border-t border-line pt-3">
+          <input
+            type="checkbox"
+            checked={form.autoHire}
+            onChange={(e) => set("autoHire", e.target.checked)}
+            className="mt-0.5 size-4 accent-green-500"
+          />
+          <span>
+            <span className="block text-[13px] font-medium text-ink">Hands-free</span>
+            <span className="block text-[12px] leading-snug text-muted">
+              Plex hires the best bid, the agent does the work, and PayPal pays only when every check above passes. A failed first try goes back to the agent once.
+            </span>
+          </span>
+        </label>
+      ) : null}
+    </div>
+  );
+}
+
 // ── Editor ───────────────────────────────────────────────────────────────────
 
 const MODES: { value: Mode; label: string; body: string; icon: React.ReactNode }[] = [
@@ -353,12 +445,19 @@ const MODES: { value: Mode; label: string; body: string; icon: React.ReactNode }
   { value: "manual", label: "Manual", body: "You review every item yourself.", icon: <UserCheck /> },
 ];
 
-const KINDS: Category[] = ["local", "remote", "data", "creator", "impact"];
+const KINDS: Category[] = ["local", "remote", "agent", "data", "creator", "impact"];
+
+const WHO: { value: WorkerType; label: string; body: string; icon: React.ReactNode }[] = [
+  { value: "human", label: "A person", body: "Real-world work with photo proof.", icon: <UserRound /> },
+  { value: "either", label: "Person or agent", body: "People apply, AI agents bid. Best ask wins.", icon: <UsersRound /> },
+  { value: "agent", label: "An AI agent", body: "Agents bid; three proofers score the work.", icon: <Bot /> },
+];
 
 function Editor({ form, set }: { form: Form; set: <K extends keyof Form>(k: K, v: Form[K]) => void }) {
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string>();
   const remote = REMOTE_KINDS.includes(form.category);
+  const digital = digitalForm(form);
 
   function pinMyLocation() {
     if (!navigator.geolocation) return setLocError("This browser can't share a location.");
@@ -420,6 +519,42 @@ function Editor({ form, set }: { form: Form; set: <K extends keyof Form>(k: K, v
             ))}
           </div>
         </div>
+
+        <div>
+          <Label>Who can take it</Label>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {WHO.map((w) => {
+              const blocked = w.value !== "human" && !digital;
+              const active = (digital ? form.workerType : "human") === w.value;
+              return (
+                <button
+                  key={w.value}
+                  type="button"
+                  disabled={blocked}
+                  onClick={() => set("workerType", w.value)}
+                  aria-pressed={active}
+                  className={cn(
+                    "grid grid-cols-[18px_minmax(0,1fr)] gap-x-2.5 rounded-md px-3 py-2.5 text-left ring-1 ring-inset transition-colors disabled:cursor-not-allowed disabled:opacity-45 [&_svg]:mt-0.5 [&_svg]:size-4 [&_svg]:stroke-[1.9]",
+                    active ? "bg-surface ring-ink" : "bg-surface ring-line hover:bg-sunken",
+                  )}
+                >
+                  <span className={active ? "text-ink" : "text-faint"}>{w.icon}</span>
+                  <span>
+                    <span className="block text-[13px] font-medium text-ink">{w.label}</span>
+                    <span className="block text-[12px] leading-snug text-muted">{w.body}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {!digital ? (
+            <p className="mt-1.5 text-[12.5px] text-muted">
+              Agents can take work delivered as text, files or links with no place to be. This one needs a person.
+            </p>
+          ) : null}
+        </div>
+
+        {digital ? <AcceptanceCriteria form={form} set={set} /> : null}
 
         {!remote ? (
           <div>

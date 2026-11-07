@@ -19,6 +19,7 @@ import {
   RotateCcw,
   Scale,
   Send,
+  Star,
   Upload,
   Users,
 } from "lucide-react";
@@ -31,12 +32,14 @@ import { useFund } from "@/components/tasks/use-fund";
 import { useRun } from "@/components/tasks/use-run";
 import {
   CheckList,
+  Deliverable,
   MatchScore,
   PolicyLine,
   SpecIcon,
   VerdictPill,
   verdictRows,
 } from "@/components/tasks/task-ui";
+import { isImageSpec } from "@plex/backend/lib/hire";
 import { cn, formatCents, relativeTime, shortDate } from "@/lib/utils";
 import type { TaskPage } from "./task-detail";
 
@@ -145,13 +148,18 @@ export function ActionPanel({ data }: { data: TaskPage }) {
           <Panel
             tone="green"
             icon={<Users />}
-            title={data.applications.length ? `${data.applications.length} ${data.applications.length === 1 ? "person has" : "people have"} applied` : "Open and funded"}
+            title={data.applications.length ? `${data.applications.length} ${data.applications.length === 1 ? "bid or application" : "bids and applications"}` : "Open and funded"}
             body={
               data.applications.length
-                ? "Match ranked them below. Accept one to start; the money stays held until the proof passes."
-                : "Your payout is held by PayPal. People nearby can apply now."
+                ? task.autoHire
+                  ? "Hands-free: Plex hires the best bid once the bidding settles. The money stays held until every check passes."
+                  : "Match ranked them below. Accept one to start; the money stays held until the proof passes."
+                : (task.workerType ?? "human") === "human"
+                  ? "Your payout is held by PayPal. People nearby can apply now."
+                  : "Your payout is held by PayPal. People can apply and AI agents are bidding."
             }
           >
+            {data.digital ? <AgentBidding data={data} /> : null}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="text-[12.5px] text-muted">Changed your mind? Cancelling voids the hold; you&apos;re never charged.</span>
               <Button variant="danger" size="sm" onClick={() => run("refund", () => refund({ taskId: task._id, as }))} disabled={!!busy}>
@@ -186,9 +194,15 @@ export function ActionPanel({ data }: { data: TaskPage }) {
       return (
         <Panel
           tone="steel"
-          icon={<Clock />}
-          title={isPoster ? `Waiting for ${workerFirst}'s proof` : `${workerFirst} is on it`}
-          body={isPoster ? `${workerFirst} has the challenge code. You'll see each check resolve here when the proof arrives.` : undefined}
+          icon={assignee?.kind === "agent" ? <Bot /> : <Clock />}
+          title={isPoster ? (assignee?.kind === "agent" ? `${workerFirst} is working on it` : `Waiting for ${workerFirst}'s proof`) : `${workerFirst} is on it`}
+          body={
+            isPoster
+              ? assignee?.kind === "agent"
+                ? `An AI agent delivers in ${assignee.agent?.turnaround ?? "a few minutes"}. Three proofer agents score it before you approve.`
+                : `${workerFirst} has the challenge code. You'll see each check resolve here when the proof arrives.`
+              : undefined
+          }
         />
       );
 
@@ -198,7 +212,11 @@ export function ActionPanel({ data }: { data: TaskPage }) {
           tone="steel"
           icon={<Loader2 className="animate-spin" />}
           title="Checking the proof"
-          body="Each item is checked against the spec, plus the time window, the place and the challenge code."
+          body={
+            data.digital
+              ? "Each item is checked, then three proofer agents score the work without seeing each other. Plex's rule decides."
+              : "Each item is checked against the spec, plus the time window, the place and the challenge code."
+          }
         />
       );
 
@@ -293,7 +311,9 @@ export function ActionPanel({ data }: { data: TaskPage }) {
               ? "PayPal confirmed the payout landed. Both sides have the receipt."
               : "Sent by PayPal Payouts. The receipt updates when PayPal confirms it landed."
           }
-        />
+        >
+          {isPoster || data.review ? <ReviewBox data={data} /> : null}
+        </Panel>
       );
     }
 
@@ -412,6 +432,145 @@ export function payoutFor(data: TaskPage) {
   return accepted ? Math.min(accepted.askCents, data.task.fundingCents) : data.task.fundingCents;
 }
 
+// ── Agents ──────────────────────────────────────────────────────────────────────────────
+
+/** The poster opens a digital task to AI agents, or asks them to bid again. */
+function AgentBidding({ data }: { data: TaskPage }) {
+  const as = useAs();
+  const invite = useMutation(api.houseAgents.invite);
+  const openToAgents = useMutation(api.houseAgents.openToAgents);
+  const { run, busy, errorFor } = useRun();
+  const { task } = data;
+  const human = (task.workerType ?? "human") === "human";
+  const agentBids = data.applications.filter((a) => a.applicant?.kind === "agent").length;
+  return (
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-md bg-surface px-3.5 py-3 ring-1 ring-line ring-inset">
+      <span className="flex min-w-0 items-center gap-2 text-[12.5px] leading-snug text-ink-2">
+        <Bot className="size-4 flex-none text-faint" strokeWidth={1.9} />
+        {human
+          ? "This is digital work, so an AI agent could do it too."
+          : agentBids
+            ? `${agentBids} agent${agentBids > 1 ? "s" : ""} bid. Prices stay between each agent's floor and what you hold.`
+            : "Scout, Quill and Tally bid when it fits their specialties."}
+      </span>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => run("agents", () => (human ? openToAgents({ taskId: task._id, as }) : invite({ taskId: task._id, as })))}
+        disabled={!!busy}
+      >
+        {busy === "agents" ? <Loader2 className="animate-spin" /> : <Bot />}
+        {human ? "Open to agents" : agentBids ? "Ask again" : "Ask agents to bid"}
+      </Button>
+      <ErrorLine message={errorFor("agents")} />
+    </div>
+  );
+}
+
+/** Round by round: what the agent asked, and when code moved its number. */
+function BidTrail({ bids }: { bids: NonNullable<TaskPage["applications"][number]["bids"]> }) {
+  return (
+    <ol className="mt-2.5 space-y-1.5 border-l border-line pl-3">
+      {bids.map((b, i) => (
+        <li key={i} className="text-[12.5px] leading-snug">
+          <span className="tabular font-medium text-ink">Round {b.round} · {formatCents(b.cents)}</span>
+          <span className="text-faint"> · {b.model === "code" ? "reverse auction, in code" : b.model === "external" ? "via API" : b.model === "heuristic" ? "heuristic" : b.model}</span>
+          {b.clamped ? <span className="text-refunded"> · clamped to the limits</span> : null}
+          {b.round > 1 ? <span className="block text-muted">{b.note}</span> : null}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** Blind proofer cards and Plex's consensus. */
+function Scorecards({ cards }: { cards: NonNullable<NonNullable<TaskPage["proof"]>["scorecards"]> }) {
+  const dims = ["completeness", "accuracy", "method", "quality"] as const;
+  return (
+    <div className="mt-4 border-t border-line px-5 pt-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="text-[13px] font-medium text-ink">Proofer scorecards</div>
+        <div className="text-[12px] text-faint">Scored blind · 1 to 5</div>
+      </div>
+      <div className="mt-2 overflow-x-auto">
+        <table className="w-full min-w-[520px] text-[12.5px]">
+          <thead>
+            <tr className="text-left text-faint">
+              <th className="py-1.5 pr-3 font-medium">Proofer</th>
+              {dims.map((d) => (
+                <th key={d} className="py-1.5 pr-3 font-medium capitalize">
+                  {d}
+                </th>
+              ))}
+              <th className="py-1.5 font-medium">Vote</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {cards.map((c) => (
+              <tr key={c.proofer} className="align-top">
+                <td className="py-2 pr-3">
+                  <span className="font-medium text-ink">{c.proofer}</span>
+                  <span className="mt-0.5 block max-w-[220px] text-muted">{c.note}</span>
+                </td>
+                {dims.map((d) => (
+                  <td key={d} className="tabular py-2 pr-3 text-ink">
+                    {c[d]}
+                  </td>
+                ))}
+                <td className="py-2">
+                  <VerdictPill result={c.verdict} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ReviewBox({ data }: { data: TaskPage }) {
+  const as = useAs();
+  const leave = useMutation(api.hire.leaveReview);
+  const { run, busy, errorFor } = useRun();
+  const [stars, setStars] = useState(5);
+  const [text, setText] = useState("");
+  const name = data.assignee?.name.split(" ")[0] ?? "them";
+  if (data.review)
+    return (
+      <div className="flex items-start gap-3 text-[13px]">
+        <span className="flex flex-none items-center gap-0.5 pt-0.5" aria-label={`${data.review.stars} of 5 stars`}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Star key={i} className={i < data.review!.stars ? "size-3.5 fill-current text-refunded" : "size-3.5 text-line-strong"} strokeWidth={1.9} />
+          ))}
+        </span>
+        <span className="text-ink-2">“{data.review.text}” · verified review on {name}&apos;s profile</span>
+      </div>
+    );
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <Label className="mb-0">Review {name}</Label>
+        <span className="flex items-center gap-0.5" role="radiogroup" aria-label="Stars">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <button key={i} type="button" role="radio" aria-checked={stars === i + 1} aria-label={`${i + 1} stars`} onClick={() => setStars(i + 1)} className="p-0.5">
+              <Star className={i < stars ? "size-4 fill-current text-refunded" : "size-4 text-line-strong"} strokeWidth={1.9} />
+            </button>
+          ))}
+        </span>
+      </div>
+      <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="What was good, what could be better." className="min-h-16 bg-surface" />
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[12px] text-muted">Tied to this paid task, so it shows as verified.</span>
+        <Button size="sm" onClick={() => run("review", () => leave({ taskId: data.task._id, stars, text, as }))} disabled={!!busy}>
+          {busy === "review" ? <Loader2 className="animate-spin" /> : null} Post review
+        </Button>
+      </div>
+      <ErrorLine message={errorFor("review")} />
+    </div>
+  );
+}
+
 // ── Proof ────────────────────────────────────────────────────────────────────
 
 export function ProofPanel({ data }: { data: TaskPage }) {
@@ -441,15 +600,42 @@ export function ProofPanel({ data }: { data: TaskPage }) {
                 <div className="flex items-center gap-1.5 text-[12px] font-medium text-faint">
                   <SpecIcon type={s.type} className="size-3.5" /> {s.label}
                 </div>
-                <div className="mt-1 text-[13.5px] leading-relaxed break-words text-ink-2">
+                <div className="mt-1 max-h-72 overflow-y-auto text-[13.5px] leading-relaxed break-words text-ink-2">
                   {s.type === "link" && it?.url ? (
                     <a href={it.url} target="_blank" rel="noreferrer" className="text-green-700 underline-offset-2 hover:underline">
                       {it.url}
                     </a>
+                  ) : it?.text ? (
+                    <Deliverable text={it.text} />
                   ) : (
-                    (it?.text ?? "—")
+                    "—"
                   )}
                 </div>
+              </div>
+            );
+          if (s.type === "file" && isImageSpec(s) && it?.imageUrl)
+            return (
+              <figure key={i} className="col-span-2 sm:col-span-1">
+                <a href={it.imageUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md bg-surface ring-1 ring-line ring-inset">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={it.imageUrl} alt={s.label} className="aspect-square size-full object-contain" />
+                </a>
+                <figcaption className="mt-1.5 text-[12px] font-medium text-ink-2">{s.label}</figcaption>
+              </figure>
+            );
+          if (s.type === "file")
+            return (
+              <div key={i} className="col-span-2 flex items-center justify-between gap-3 rounded-md bg-sunken p-3 sm:col-span-3">
+                <span className="flex items-center gap-1.5 text-[13px] font-medium text-ink-2">
+                  <SpecIcon type="file" className="size-4 text-faint" /> {s.label}
+                </span>
+                {it?.imageUrl ? (
+                  <a href={it.imageUrl} target="_blank" rel="noreferrer" className="text-[13px] font-medium text-green-700 underline-offset-2 hover:underline">
+                    Open file
+                  </a>
+                ) : (
+                  <span className="text-[12.5px] text-faint">{it ? "Seeded, no file" : "Missing"}</span>
+                )}
               </div>
             );
           return (
@@ -481,6 +667,7 @@ export function ProofPanel({ data }: { data: TaskPage }) {
       <div className="mt-4 border-t border-line px-5 pt-1 pb-3">
         <CheckList rows={rows} />
       </div>
+      {proof.scorecards?.length && !checking ? <Scorecards cards={proof.scorecards} /> : null}
       {v && !checking ? (
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line bg-canvas/60 px-5 py-3 text-[12.5px] text-muted">
           <span className="min-w-0 flex-1 basis-64 text-ink-2">{v.summary}</span>
@@ -531,9 +718,17 @@ export function Applicants({ data }: { data: TaskPage }) {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       {a.applicant ? <Avatar name={a.applicant.name} color={a.applicant.avatarColor} size={22} /> : null}
-                      <span className="text-[14px] font-medium text-ink">{a.applicant?.name}</span>
+                      {a.applicant ? (
+                        <Link href={`/hire/${a.applicant.handle}`} className="text-[14px] font-medium text-ink underline-offset-2 hover:underline">
+                          {a.applicant.name}
+                        </Link>
+                      ) : null}
                       {i === 0 && a.matchScore !== undefined && canDecide ? <Badge tone="green">Best match</Badge> : null}
-                      {a.viaAgent ? (
+                      {a.applicant?.kind === "agent" ? (
+                        <Badge tone="steel">
+                          <Bot /> {a.applicant.agent?.house ? "Plex agent" : "AI agent"}
+                        </Badge>
+                      ) : a.viaAgent ? (
                         <Badge tone="outline">
                           <Bot /> Their agent
                         </Badge>
@@ -544,6 +739,7 @@ export function Applicants({ data }: { data: TaskPage }) {
                       {a.matchReason ?? <span className="text-faint">Match is ranking…</span>}
                     </div>
                     {a.message ? <p className="mt-2 text-[13px] leading-relaxed text-ink-2">“{a.message}”</p> : null}
+                    {a.bids?.length ? <BidTrail bids={a.bids} /> : null}
                   </div>
                   <div className="col-span-2 mt-3 flex items-center justify-between gap-3 sm:col-span-1 sm:mt-0 sm:flex-col sm:items-end sm:justify-start">
                     <div className="sm:text-right">
