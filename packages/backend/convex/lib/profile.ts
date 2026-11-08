@@ -142,3 +142,46 @@ export function safeNext(next: string | null | undefined): string | undefined {
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return undefined;
   return next;
 }
+
+// ── Resume (no model) ────────────────────────────────────────────────────────
+
+export type ResumeFields = {
+  headline: string;
+  skills: string[];
+  experience: { title: string; company: string; years?: string }[];
+  languages: string[];
+  workInterests: string[];
+};
+
+/**
+ * Reads a plain-text resume without a model: a "Skills:" line, roles written
+ * "Title, Company — 3 years" or "Title at Company", languages it names, and
+ * the work its words point to. Only what the text says; never invents.
+ */
+export function parseResumeText(text: string): ResumeFields {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const lower = text.toLowerCase();
+
+  const skillLine = lines.find((l) => /^(skills|core skills|key skills|tools)\s*[:\-–—]/i.test(l));
+  const skills = skillLine
+    ? [...new Set(skillLine.replace(/^[^:\-–—]+[:\-–—]\s*/, "").split(/[,;•|·]/).map((s) => s.trim()).filter((s) => s && s.length <= 40))].slice(0, 15)
+    : [];
+
+  const experience: ResumeFields["experience"] = [];
+  for (const l of lines) {
+    if (experience.length >= 3) break;
+    if (/^(skills|languages|education)\b/i.test(l)) continue;
+    const m =
+      l.match(/^(.{2,60}?),\s*(.{2,60}?)\s*[—–-]\s*(.{1,30})$/) ??
+      l.match(/^(.{2,60}?)\s+at\s+(.{2,60}?)(?:\s*[—–(-]\s*(.{1,30}?)\)?)?$/i);
+    if (m && /[a-z]/i.test(m[1]!) && !/[.!?]$/.test(l)) {
+      experience.push({ title: m[1]!.trim(), company: m[2]!.trim(), ...(m[3] ? { years: m[3].trim() } : {}) });
+    }
+  }
+
+  const languages = LANGUAGES.filter((lang) => new RegExp(`\\b${lang}\\b`, "i").test(text)).slice(0, 8);
+  const workInterests = ALL_WORK_INTERESTS.filter((i) => i.words.some((w) => new RegExp(`\\b${w}`, "i").test(lower))).map((i) => i.id).slice(0, 6);
+  const headline = lines[1] && lines[1].length <= 80 && !/[:]/.test(lines[1]) ? lines[1] : "";
+
+  return { headline, skills, experience, languages, workInterests };
+}

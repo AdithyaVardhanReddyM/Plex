@@ -142,7 +142,7 @@ function Marquee({ children, reverse, seconds }: { children: React.ReactNode; re
   return (
     <div className="overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]">
       <motion.div
-        className="flex w-max gap-3"
+        className="flex w-max gap-4 pr-4"
         animate={reduced ? undefined : { x: reverse ? ["-50%", "0%"] : ["0%", "-50%"] }}
         transition={{ duration: seconds, ease: "linear", repeat: Infinity }}
       >
@@ -153,48 +153,77 @@ function Marquee({ children, reverse, seconds }: { children: React.ReactNode; re
   );
 }
 
+const rotate = <T,>(xs: T[], n: number) => [...xs.slice(n % xs.length), ...xs.slice(0, n % xs.length)];
+
+function PersonChip({ p }: { p: (typeof PEOPLE)[number] }) {
+  return (
+    <div className="flex flex-none items-center gap-3 rounded-[18px] bg-surface py-3.5 pr-6 pl-3.5 shadow-card">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={faceUrl(p.name)} alt="" className="size-11 rounded-full" />
+      <div>
+        <div className="text-[14.5px] font-semibold text-ink">{p.name}</div>
+        <div className="flex items-center gap-1.5 text-[12.5px] text-muted">
+          {p.what} <Star className="size-3 fill-current text-ink-2" strokeWidth={0} /> {p.rating}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AgentChip({ a }: { a: (typeof AGENTS)[number] }) {
+  return (
+    <div className="flex flex-none items-center gap-3 rounded-[18px] bg-surface py-3.5 pr-6 pl-4 shadow-card">
+      <AiAgentIcon className="size-5 text-green-700" strokeWidth={1.9} />
+      <div>
+        <div className="text-[14.5px] font-semibold text-ink">{a.name}</div>
+        <div className="text-[12.5px] text-muted">{a.what}</div>
+      </div>
+    </div>
+  );
+}
+
+function TaskChip({ t }: { t: (typeof TASKS)[number] }) {
+  return (
+    <div className="flex flex-none items-center gap-4 rounded-[18px] bg-surface px-5 py-4 shadow-card">
+      <span className="text-[14.5px] font-medium text-ink">{t.title}</span>
+      <span className="tabular text-[14px] font-semibold text-steel-700">{formatCents(t.cents)}</span>
+    </div>
+  );
+}
+
+/** Rows of the people, agents and tasks on Plex, drifting past each other and filling the panel. */
 export function PeopleArt({ highlight }: { highlight?: "human" | "agent" | "either" }) {
   const dimPeople = highlight === "agent";
   const dimAgents = highlight === "human";
+  // Enough rows to fill a tall panel; the edges fade, so extra rows cost nothing.
+  const kinds = ["tasks", "people", "agents"] as const;
+  const rows = Array.from({ length: 12 }, (_, i) => ({
+    kind: kinds[i % 3]!,
+    shift: Math.floor(i / 3) * 2 + (i % 3),
+    seconds: 32 + ((i * 11) % 23),
+    reverse: i % 2 === 0,
+  }));
   return (
-    <div className="flex w-full flex-col gap-3">
-      <div className={cn("transition-opacity duration-500", dimPeople && "opacity-35")}>
-        <Marquee seconds={38}>
-          {PEOPLE.map((p) => (
-            <div key={p.name} className="flex flex-none items-center gap-3 rounded-[16px] bg-surface py-3 pr-5 pl-3 shadow-card">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={faceUrl(p.name)} alt="" className="size-10 rounded-full" />
-              <div>
-                <div className="text-[13.5px] font-semibold text-ink">{p.name}</div>
-                <div className="flex items-center gap-1.5 text-[12px] text-muted">
-                  {p.what} <Star className="size-3 fill-current text-ink-2" strokeWidth={0} /> {p.rating}
-                </div>
-              </div>
-            </div>
-          ))}
-        </Marquee>
-      </div>
-      <div className={cn("transition-opacity duration-500", dimAgents && "opacity-35")}>
-        <Marquee seconds={32} reverse>
-          {AGENTS.map((a) => (
-            <div key={a.name} className="flex flex-none items-center gap-3 rounded-[16px] bg-surface py-3 pr-5 pl-4 shadow-card">
-              <AiAgentIcon className="size-5 text-green-700" strokeWidth={1.9} />
-              <div>
-                <div className="text-[13.5px] font-semibold text-ink">{a.name}</div>
-                <div className="text-[12px] text-muted">{a.what}</div>
-              </div>
-            </div>
-          ))}
-        </Marquee>
-      </div>
-      <Marquee seconds={44}>
-        {TASKS.map((t) => (
-          <div key={t.title} className="flex flex-none items-center gap-4 rounded-[16px] bg-surface px-4 py-3 shadow-card">
-            <span className="text-[13.5px] font-medium text-ink">{t.title}</span>
-            <span className="tabular text-[13px] font-semibold text-steel-700">{formatCents(t.cents)}</span>
-          </div>
-        ))}
-      </Marquee>
+    <div className="flex w-full flex-col gap-4 [mask-image:linear-gradient(180deg,transparent,#000_14%,#000_86%,transparent)]">
+      {rows.map((r, i) => (
+        <div
+          key={i}
+          // Each row starts at its own offset, so the chips don't stack into columns.
+          style={{ marginLeft: -((i * 61) % 170) }}
+          className={cn(
+            "transition-opacity duration-500",
+            ((r.kind === "people" && dimPeople) || (r.kind === "agents" && dimAgents)) && "opacity-30",
+          )}
+        >
+          <Marquee seconds={r.seconds} reverse={r.reverse}>
+            {r.kind === "people"
+              ? rotate(PEOPLE, r.shift).map((p) => <PersonChip key={p.name} p={p} />)
+              : r.kind === "agents"
+                ? rotate(AGENTS, r.shift).map((a) => <AgentChip key={a.name} a={a} />)
+                : rotate(TASKS, r.shift).map((t) => <TaskChip key={t.title} t={t} />)}
+          </Marquee>
+        </div>
+      ))}
     </div>
   );
 }

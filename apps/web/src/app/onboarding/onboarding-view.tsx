@@ -473,9 +473,10 @@ function ArtPanel({ art, d }: { art: Art; d: Draft }) {
     );
   const labels = ALL_WORK_INTERESTS.filter((x) => d.workInterests.includes(x.id)).map((x) => x.label);
   return (
-    <div className="relative flex size-full items-center justify-center overflow-hidden px-10">
+    <div className={cn("relative flex size-full items-center justify-center overflow-hidden", art.panel !== "people" && "px-10")}>
       <div className="aurora pointer-events-none absolute inset-x-0 top-0 h-full opacity-80" aria-hidden />
-      <div className="relative flex w-full justify-center">
+      {/* The product panels are drawn at card size; on a wide screen they grow to hold the panel. */}
+      <div className={cn("relative flex w-full justify-center", art.panel !== "people" && "xl:scale-[1.18] 2xl:scale-[1.3]")}>
         {art.panel === "writer" ? <WriterArt /> : null}
         {art.panel === "people" ? <PeopleArt highlight={d.workerType} /> : null}
         {art.panel === "hold" ? <HoldArt /> : null}
@@ -742,22 +743,27 @@ function ResumeStep({ d, set, hasResume }: { d: Draft; set: (p: Partial<Draft>) 
       setPhase({ kind: "reading" });
       const r = await read({ storageId: storageId as Id<"_storage"> });
       const found = r.skills.length + r.experience.length + r.languages.length;
-      if (r.model === "heuristic" || found === 0) {
+      if (found === 0) {
         setPhase({ kind: "read", summary: "Saved. We couldn't read it automatically, so add your skills on the next step." });
         return;
       }
+      const viaModel = r.model !== "heuristic";
       set({
         skills: [...new Set([...d.skills, ...r.skills])].slice(0, 20),
         experience: d.experience.length ? d.experience : r.experience.slice(0, 3),
         languages: [...new Set([...d.languages, ...r.languages])],
-        workInterests: [...new Set([...d.workInterests, ...r.workInterests])],
+        // A model's read of the work you'd suit; the plain reader only matches words, so it leaves your picks alone.
+        workInterests: viaModel ? [...new Set([...d.workInterests, ...r.workInterests])] : d.workInterests,
       });
       const parts = [
         r.skills.length ? `${r.skills.length} skills` : "",
         r.experience.length ? `${r.experience.length} ${r.experience.length === 1 ? "role" : "roles"}` : "",
         r.languages.length ? `${r.languages.length} ${r.languages.length === 1 ? "language" : "languages"}` : "",
       ].filter(Boolean);
-      setPhase({ kind: "read", summary: `Found ${parts.join(", ")}. You'll check them next.` });
+      setPhase({
+        kind: "read",
+        summary: `Found ${parts.join(", ")}${viaModel ? "" : " (read by a simple parser, no AI model is set up here)"}. You'll check them next.`,
+      });
     } catch (err) {
       setPhase({ kind: "error", message: errorMessage(err) });
     }
@@ -966,9 +972,20 @@ function Done({ s, d, add, next, finished }: { s: State; d: Draft; add: Add; nex
   const postHref = `/tasks/new${brief ? `?brief=${encodeURIComponent(brief)}` : ""}`;
   const first = d.name.trim().split(" ")[0];
 
-  const title = add === "poster" ? "Posting is set up" : add === "doer" ? "You're ready to take tasks" : `You're all set${first ? `, ${first}` : ""}`;
-  const sub =
-    add === "doer" || (!add && doer && !poster)
+  // `s` is how things stood on arrival: already having this side means they came to edit it.
+  const editing = (add === "poster" && s.roles.poster) || (add === "doer" && s.roles.doer);
+  const title = editing
+    ? "Saved"
+    : add === "poster"
+      ? "Posting is set up"
+      : add === "doer"
+        ? "You're ready to take tasks"
+        : `You're all set${first ? `, ${first}` : ""}`;
+  const sub = editing
+    ? add === "poster"
+      ? "Your defaults apply to new tasks. You can still change them on any task."
+      : "Matches on Home now follow your new answers."
+    : add === "doer" || (!add && doer && !poster)
       ? "Your profile is live. Tasks that fit you show up on Home, with the money already held."
       : add === "poster" || (!add && poster && !doer)
         ? "Post your first task. People and agents bid, and you pay only for work that checks out."

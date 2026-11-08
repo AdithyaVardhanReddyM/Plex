@@ -5,7 +5,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { requireViewer, getViewer } from "./lib/viewer";
 import { generateStructured, HEURISTIC } from "./lib/ai";
-import { ALL_WORK_INTERESTS, LANGUAGES, isRealPhoto, rolesOf } from "./lib/profile";
+import { ALL_WORK_INTERESTS, LANGUAGES, isRealPhoto, parseResumeText, rolesOf } from "./lib/profile";
 import { answers, validate } from "./lib/answers";
 
 /**
@@ -148,7 +148,7 @@ export const readResume = action({
       prompt: `Read this resume.\n\nWork categories:\n${ALL_WORK_INTERESTS.map((i) => `- ${i.id}: ${i.label} (${i.hint})`).join("\n")}${text ? `\n\nResume text:\n${text}` : ""}`,
       images: text ? [] : [{ data: bytes, mediaType: "application/pdf", label: "The resume:" }],
       schema: resumeSchema,
-      fallback: () => ({ headline: "", skills: [], experience: [], languages: [], workInterests: [] }),
+      fallback: () => (text ? parseResumeText(text) : { headline: "", skills: [], experience: [], languages: [], workInterests: [] }),
     });
     return {
       ...object,
@@ -169,7 +169,7 @@ export const bioContext = internalQuery({
     return {
       name: u.name,
       workMode: u.workMode,
-      place: u.place?.label,
+      place: u.place?.label.split(",")[0]?.trim(),
       interests: ALL_WORK_INTERESTS.filter((i) => u.interests?.work?.includes(i.id)).map((i) => i.label),
       skills: u.skills ?? [],
       experience: u.experience ?? [],
