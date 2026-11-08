@@ -172,8 +172,8 @@ export function Avatar({
   square?: boolean;
   className?: string;
 }) {
-  // People get a DiceBear face; agents, brands and organizations keep their initials on their color.
-  const image = square ? src : faceUrl(name);
+  // People get their own photo (or the face they picked), else a DiceBear face; agents, brands and organizations keep their initials on their color.
+  const image = square ? src : (src ?? faceUrl(name));
   const style: React.CSSProperties = {
     width: size,
     height: size,

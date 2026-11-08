@@ -1,19 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
+import { useMutation, useQuery } from "convex/react";
 import { useMemo, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
   Clock,
+  HandCoins,
   ListChecks,
   Lock,
+  ReceiptText,
 } from "lucide-react";
 import { AiAgentIcon } from "@/components/ui/icons";
 import { api } from "@/lib/convex";
-import { buttonVariants } from "@/components/ui/button";
-import { Badge, Card, CardHeader, EmptyState, PageHeader, Skeleton } from "@/components/ui/primitives";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Badge, Card, CardHeader, EmptyState, PageHeader, Segmented, Skeleton } from "@/components/ui/primitives";
+import { EarnHome } from "./earn-home";
 import { Amount } from "@/components/ui/money";
 import { DayBars } from "@/components/ui/viz";
 import { ReceiptRow, type Receipt } from "@/components/receipt/receipt";
@@ -29,6 +33,39 @@ function greeting() {
 
 export function HomeView() {
   const viewer = useQuery(api.users.viewer);
+  const setMode = useMutation(api.users.setHomeMode);
+  // The switch answers at once; the saved mode catches up.
+  const [picked, setPicked] = useState<"post" | "earn">();
+  const both = Boolean(viewer?.roles.poster && viewer?.roles.doer);
+  const mode = picked && both ? picked : (viewer?.mode ?? "post");
+  const name = viewer ? `${greeting()}, ${viewer.name.split(" ")[0]}` : <Skeleton className="h-9 w-72" />;
+  const date = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+
+  const switcher = both ? (
+    <Segmented
+      value={mode}
+      onChange={(m) => {
+        setPicked(m);
+        if (!viewer?.isGuest) void setMode({ mode: m });
+      }}
+      items={[
+        { value: "post", label: "Posting", icon: <ListChecks /> },
+        { value: "earn", label: "Earning", icon: <HandCoins /> },
+      ]}
+    />
+  ) : null;
+
+  if (mode === "earn")
+    return (
+      <div className="animate-rise">
+        <PageHeader eyebrow={date} title={name} description="Tasks that fit you, with the money already held at PayPal." actions={switcher} />
+        <EarnHome viewer={viewer ?? undefined} />
+      </div>
+    );
+  return <PostHome title={name} date={date} switcher={switcher} showAddEarn={Boolean(viewer && !viewer.isGuest && !viewer.roles.doer)} />;
+}
+
+function PostHome({ title, date, switcher, showAddEarn }: { title: React.ReactNode; date: string; switcher: React.ReactNode; showAddEarn: boolean }) {
   const receipts = useQuery(api.receipts.list, { limit: 80 });
   const tasks = useQuery(api.tasks.myOpenTasks);
 
@@ -37,23 +74,37 @@ export function HomeView() {
   const movedByAgents = week.filter((r) => r.agentLabel).reduce((s, r) => s + r.amountCents, 0);
   const held = receipts?.filter((r) => r.state === "held" || r.state === "funded") ?? [];
   const heldCents = held.reduce((s, r) => s + r.amountCents, 0);
+  const fresh = receipts !== undefined && receipts.length === 0;
 
   return (
     <div className="animate-rise">
       <PageHeader
-        eyebrow={new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-        title={viewer ? `${greeting()}, ${viewer.name.split(" ")[0]}` : <Skeleton className="h-9 w-72" />}
-        description="Your agents spent inside your limits this week. Everything they moved has a receipt."
+        eyebrow={date}
+        title={title}
+        description={
+          fresh
+            ? "Say what you need done. People or AI agents do it, and PayPal pays them only when the proof checks out."
+            : "Your agents spent inside your limits this week. Everything they moved has a receipt."
+        }
         actions={
-          <Link href="/ledger" className={buttonVariants({ variant: "secondary" })}>
-            Ask the Ledger <ArrowUpRight />
-          </Link>
+          switcher ?? (
+            <Link href="/ledger" className={buttonVariants({ variant: "secondary" })}>
+              Ask the Ledger <ArrowUpRight />
+            </Link>
+          )
         }
       />
 
-      <WeekCard week={week} movedCents={movedByAgents} heldCents={heldCents} heldCount={held.length} now={now} loading={!receipts} />
+      <Composer />
 
-      <MoneyFlow receipts={week} loading={!receipts} className="mt-4" />
+      {fresh ? null : (
+        <>
+          <div className="mt-4">
+            <WeekCard week={week} movedCents={movedByAgents} heldCents={heldCents} heldCount={held.length} now={now} loading={!receipts} />
+          </div>
+          <MoneyFlow receipts={week} loading={!receipts} className="mt-4" />
+        </>
+      )}
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <Card>
@@ -67,22 +118,73 @@ export function HomeView() {
             }
           />
           <div className="px-2 pt-2 pb-2">
-            {receipts
-              ? receipts.slice(0, 10).map((r) => <ReceiptRow key={r._id} receipt={r} href={`/receipts/${r._id}`} />)
-              : Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 px-3 py-3">
-                    <Skeleton className="size-[34px] rounded-[10px]" />
-                    <Skeleton className="h-4 flex-1" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                ))}
+            {receipts === undefined ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-3 py-3">
+                  <Skeleton className="size-[34px] rounded-[10px]" />
+                  <Skeleton className="h-4 flex-1" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))
+            ) : receipts.length ? (
+              receipts.slice(0, 10).map((r) => <ReceiptRow key={r._id} receipt={r} href={`/receipts/${r._id}`} />)
+            ) : (
+              <EmptyState icon={<ReceiptText />} title="No receipts yet" body="Every payment, hold and refund on your tasks writes one, with who, why and the rule that allowed it." className="py-10" />
+            )}
           </div>
         </Card>
         <div className="flex min-w-0 flex-col gap-4">
           <TasksCard tasks={tasks} />
+          {showAddEarn ? <AddEarnCard /> : null}
         </div>
       </div>
     </div>
+  );
+}
+
+/** Home's first move for a poster: say it in a line, the Task Writer does the rest on the next screen. */
+function Composer() {
+  const router = useRouter();
+  const [brief, setBrief] = useState("");
+  const go = () => router.push(`/tasks/new${brief.trim() ? `?brief=${encodeURIComponent(brief.trim())}` : ""}`);
+  return (
+    <Card className="p-5 sm:p-6">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          go();
+        }}
+        className="flex flex-col gap-3 sm:flex-row sm:items-center"
+      >
+        <label htmlFor="home-brief" className="sr-only">
+          What do you need done?
+        </label>
+        <input
+          id="home-brief"
+          value={brief}
+          onChange={(e) => setBrief(e.target.value)}
+          placeholder="What do you need done? Say it like a text…"
+          className="h-12 min-w-0 flex-1 rounded-[12px] bg-sunken px-4 text-[15px] text-ink outline-none placeholder:text-faint focus:ring-[3px] focus:ring-green-100"
+        />
+        <Button type="submit" size="lg">
+          {brief.trim() ? "Write it up" : "Post a task"} <ArrowRight />
+        </Button>
+      </form>
+    </Card>
+  );
+}
+
+function AddEarnCard() {
+  return (
+    <Card className="p-6">
+      <div className="flex items-center gap-2 text-[13px] font-medium text-ink-2">
+        <HandCoins className="size-[18px] text-green-700" strokeWidth={1.9} /> Earn on Plex too
+      </div>
+      <p className="mt-2 text-[13.5px] leading-relaxed text-muted">Take tasks near you or online. Set up the earning side in about two minutes.</p>
+      <Link href="/onboarding?add=doer&next=%2Fhome" className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "mt-4")}>
+        Set up earning <ArrowRight />
+      </Link>
+    </Card>
   );
 }
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useClerk } from "@clerk/nextjs";
 import { useConvexAuth, useQuery } from "convex/react";
 import { AnimatePresence, motion } from "motion/react";
-import { ChevronsUpDown, LogIn, LogOut, UserRound } from "lucide-react";
+import { ChevronsUpDown, LogIn, LogOut, Settings, UserRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/convex";
 import { CLERK_ENABLED } from "@/components/providers";
@@ -94,6 +94,9 @@ function ClerkMenu({ onDone }: { onDone: () => void }) {
     );
   return (
     <>
+      <Link href="/settings" className={item} onClick={onDone}>
+        <Settings /> Settings
+      </Link>
       <button
         type="button"
         className={item}
@@ -102,7 +105,7 @@ function ClerkMenu({ onDone }: { onDone: () => void }) {
           onDone();
         }}
       >
-        <UserRound /> Account settings
+        <UserRound /> Sign-in and security
       </button>
       <button type="button" className={item} onClick={() => void clerk.signOut({ redirectUrl: "/" })}>
         <LogOut /> Sign out

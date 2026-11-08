@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 import { ClientOnly } from "@/components/client-only";
 import { Skeleton } from "@/components/ui/primitives";
+import { OnboardingGate } from "@/components/shell/onboarding-gate";
 
 // App screens are live Convex data with relative times ("2 hours ago"), so
 // they render in the browser only; the shell and skeleton prerender. That
@@ -12,7 +13,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AppShell>
       <Suspense fallback={<PageSkeleton />}>
-        <ClientOnly fallback={<PageSkeleton />}>{children}</ClientOnly>
+        <ClientOnly fallback={<PageSkeleton />}>
+          <OnboardingGate fallback={<PageSkeleton />}>{children}</OnboardingGate>
+        </ClientOnly>
       </Suspense>
     </AppShell>
   );

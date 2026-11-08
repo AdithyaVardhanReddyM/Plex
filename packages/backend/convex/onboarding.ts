@@ -62,11 +62,12 @@ export const save = mutation({
 
 /** Finishes one side. Posting and earning are set up separately, so either can come later. */
 export const complete = mutation({
-  args: { role: v.union(v.literal("poster"), v.literal("doer")) },
-  handler: async (ctx, { role }) => {
+  // `step`: where to resume when the other side is still to come ("both").
+  args: { role: v.union(v.literal("poster"), v.literal("doer")), step: v.optional(v.string()) },
+  handler: async (ctx, { role, step }) => {
     const { user, isGuest } = await requireViewer(ctx);
     if (isGuest) return;
-    const onboarding = { ...user.onboarding, [role]: user.onboarding?.[role] ?? Date.now(), step: undefined };
+    const onboarding = { ...user.onboarding, [role]: user.onboarding?.[role] ?? Date.now(), step };
     const roles = { poster: Boolean(onboarding.poster), doer: Boolean(onboarding.doer) };
     // Someone who just added a side lands on it.
     const homeMode = roles.poster && roles.doer ? (role === "doer" ? "earn" : "post") : undefined;

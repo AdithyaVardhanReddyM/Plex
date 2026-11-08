@@ -12,7 +12,7 @@ import { cn, formatCents } from "@/lib/utils";
 import { Wordmark } from "./wordmark";
 import { UserRow } from "./account";
 import { CommandMenuProvider, useCommandMenu } from "./command-menu";
-import { NAV_GROUPS } from "./nav";
+import { navGroupsFor } from "./nav";
 
 /** Pathname is request data on dynamic routes, so anything that reads it streams in. */
 function usePath() {
@@ -42,9 +42,10 @@ function ActiveNav({ onNavigate }: { onNavigate?: () => void }) {
 
 function NavItems({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   const counts = useCounts();
+  const viewer = useQuery(api.users.viewer);
   return (
     <nav className="flex flex-col gap-4">
-      {NAV_GROUPS.map((group) => (
+      {navGroupsFor(viewer?.roles).map((group) => (
         <div key={group.label}>
           <div className="px-2.5 pb-1.5 text-[11.5px] font-medium text-white/30">{group.label}</div>
           <div className="flex flex-col gap-px">
@@ -153,6 +154,27 @@ function AgentsCard() {
   );
 }
 
+/** Posters see agent spending; someone who only takes tasks sees where they're paid. */
+function SideCard() {
+  const viewer = useQuery(api.users.viewer);
+  if (viewer && viewer.roles.doer && !viewer.roles.poster) return <PayoutCard hasPaypal={Boolean(viewer.paypalEmail)} email={viewer.paypalEmail} />;
+  return <AgentsCard />;
+}
+
+function PayoutCard({ hasPaypal, email }: { hasPaypal: boolean; email?: string }) {
+  return (
+    <Link
+      href="/settings#getting-paid"
+      className="block rounded-[14px] bg-white/[0.04] p-3.5 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)] transition-colors hover:bg-white/[0.07]"
+    >
+      <div className="text-[13px] font-semibold text-white">Getting paid</div>
+      <p className={cn("mt-1 truncate text-[11.5px] leading-relaxed", hasPaypal ? "text-white/50" : "text-amber-300")}>
+        {hasPaypal ? `PayPal · ${email}` : "Add your PayPal email to apply"}
+      </p>
+    </Link>
+  );
+}
+
 function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
@@ -160,7 +182,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         <NavList onNavigate={onNavigate} />
       </div>
       <div className="flex flex-col gap-2 pt-2">
-        <AgentsCard />
+        <SideCard />
         <UserRow />
       </div>
     </>

@@ -4,11 +4,20 @@ import {
   LayoutDashboard,
   ListChecks,
   ReceiptText,
+  Search,
+  Settings,
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
 
-export type NavItem = { href: string; label: string; icon: LucideIcon; hint: string };
+export type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  hint: string;
+  /** Shown only to people with this side set up. */
+  role?: "poster" | "doer";
+};
 
 /** The app's surfaces, grouped the way the sidebar shows them. */
 export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
@@ -23,7 +32,7 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Work",
     items: [
       { href: "/tasks", label: "Tasks", icon: ListChecks, hint: "Post work, pay on proof" },
-      { href: "/hire", label: "Hire", icon: UsersRound, hint: "People and AI agents for hire" },
+      { href: "/hire", label: "Hire", icon: UsersRound, hint: "People and AI agents for hire", role: "poster" },
     ],
   },
   {
@@ -34,9 +43,24 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
   {
     label: "Build",
-    items: [{ href: "/developers", label: "Agents & API", icon: KeyRound, hint: "Keys, MCP and the agent API" }],
+    items: [{ href: "/developers", label: "Agents & API", icon: KeyRound, hint: "Keys, MCP and the agent API", role: "poster" }],
+  },
+  {
+    label: "Account",
+    items: [{ href: "/settings", label: "Settings", icon: Settings, hint: "Profile, paying and getting paid" }],
   },
 ];
+
+/** The nav for someone's roles: a person who only takes tasks sees "Find tasks", no Hire, no keys. */
+export function navGroupsFor(roles: { poster: boolean; doer: boolean } | undefined) {
+  if (!roles) return NAV_GROUPS;
+  return NAV_GROUPS.map((g) => ({
+    ...g,
+    items: g.items
+      .filter((n) => !n.role || roles[n.role])
+      .map((n) => (n.href === "/tasks" && roles.doer && !roles.poster ? { ...n, label: "Find tasks", icon: Search, hint: "Tasks near you and online" } : n)),
+  })).filter((g) => g.items.length);
+}
 
 export const NAV: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
 

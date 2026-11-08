@@ -1039,6 +1039,7 @@ export function ApplyCard({ data }: { data: TaskPage }) {
   const { task, myApplication, me } = data;
   const [ask, setAsk] = useState(() => (task.fundingCents / 100).toFixed(task.fundingCents % 100 ? 2 : 0));
   const [message, setMessage] = useState("");
+  const viewer = useQuery(api.users.viewer);
 
   if (task.status === "draft") return null;
 
@@ -1069,6 +1070,34 @@ export function ApplyCard({ data }: { data: TaskPage }) {
 
   if (!me) return null;
   const poster = isPosterPersona(me);
+  // Signed-in people set up the earning side first, and need somewhere to be paid.
+  if (viewer && !viewer.isGuest && task.posterId !== viewer._id) {
+    const back = encodeURIComponent(`/tasks/${task._id}`);
+    if (!viewer.roles.doer)
+      return (
+        <Card className="p-5">
+          <div className="text-[15px] font-semibold text-ink">Want to take this task?</div>
+          <p className="mt-1 text-[13.5px] leading-relaxed text-muted">
+            Set up the earning side first: what work you take, where, and where we pay you. About two minutes.
+          </p>
+          <Link href={`/onboarding?add=doer&next=${back}`} className={cn(buttonVariants({ size: "sm" }), "mt-4")}>
+            Set up earning <ArrowRight />
+          </Link>
+        </Card>
+      );
+    if (!me.hasPaypal)
+      return (
+        <Card className="p-5">
+          <div className="text-[15px] font-semibold text-ink">Add where we pay you</div>
+          <p className="mt-1 text-[13.5px] leading-relaxed text-muted">
+            The payout for this task is held by PayPal. Add your PayPal email so it can reach you when the proof passes.
+          </p>
+          <Link href="/settings#getting-paid" className={cn(buttonVariants({ size: "sm" }), "mt-4")}>
+            Add PayPal email <ArrowRight />
+          </Link>
+        </Card>
+      );
+  }
   return (
     <Card>
       <CardHeader

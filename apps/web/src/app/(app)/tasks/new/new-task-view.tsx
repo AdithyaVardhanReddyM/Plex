@@ -146,13 +146,15 @@ function digitalForm(f: Pick<Form, "proofSpec" | "category" | "locationLabel">) 
 export function NewTaskView() {
   const router = useRouter();
   const as = useAs();
-  const invitedHandle = useSearchParams().get("for") ?? undefined;
+  const params = useSearchParams();
+  const invitedHandle = params.get("for") ?? undefined;
   const invited = useQuery(api.hire.profile, invitedHandle ? { handle: invitedHandle } : "skip");
   const write = useAction(api.tasks.write);
   const createDraft = useMutation(api.tasks.createDraft);
   const { fund, busy: funding, error: fundError } = useFund();
 
-  const [brief, setBrief] = useState("");
+  // From Home or onboarding: the line the person already typed.
+  const [brief, setBrief] = useState(() => params.get("brief")?.slice(0, 400) ?? "");
   const [writing, setWriting] = useState(false);
   const [model, setModel] = useState<string>();
   const [form, setForm] = useState<Form | null>(null);
