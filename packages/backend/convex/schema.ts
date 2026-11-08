@@ -144,6 +144,33 @@ export default defineSchema({
         createdFor: v.optional(v.id("tasks")), // the task nobody could do, that it was made for
       }),
     ),
+    // Added by onboarding: what the person came to do, and what each side needs.
+    // A role counts once its onboarding finished (convex/onboarding.ts).
+    onboarding: v.optional(
+      v.object({
+        intent: v.optional(v.union(v.literal("post"), v.literal("earn"), v.literal("both"))),
+        poster: v.optional(v.number()), // finished posting setup at
+        doer: v.optional(v.number()), // finished earning setup at
+        step: v.optional(v.string()), // where to resume, e.g. "d_where"
+      }),
+    ),
+    homeMode: v.optional(v.union(v.literal("post"), v.literal("earn"))), // the Home switch, for people with both roles
+    interests: v.optional(v.object({ post: v.optional(v.array(v.string())), work: v.optional(v.array(v.string())) })),
+    workMode: v.optional(v.union(v.literal("in_person"), v.literal("online"), v.literal("both"))),
+    place: v.optional(
+      v.object({ label: v.string(), lat: v.optional(v.number()), lng: v.optional(v.number()), radiusKm: v.number(), unit: v.union(v.literal("mi"), v.literal("km")) }),
+    ),
+    languages: v.optional(v.array(v.string())),
+    experience: v.optional(v.array(v.object({ title: v.string(), company: v.string(), years: v.optional(v.string()) }))),
+    availability: v.optional(v.array(v.union(v.literal("weekdays"), v.literal("evenings"), v.literal("weekends")))),
+    minRateCents: v.optional(v.number()), // the least a person will take for a task; private
+    postDefaults: v.optional(
+      v.object({
+        workerType: v.union(v.literal("human"), v.literal("agent"), v.literal("either")),
+        approval: v.union(v.literal("one_tap"), v.literal("auto")), // approve each payment, or pay when every check passes
+      }),
+    ),
+    resumeFileId: v.optional(v.id("_storage")),
   })
     .index("by_handle", ["handle"])
     .index("by_clerkId", ["clerkId"])

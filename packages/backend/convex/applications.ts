@@ -31,6 +31,9 @@ export const apply = mutation({
     const allowed = canTake(task, user);
     if (!allowed.ok) throw new ConvexError(allowed.reason);
     if (!Number.isInteger(askCents) || askCents < 100) throw new ConvexError("Ask at least $1.");
+    // Payouts go to a PayPal email; without one, a finished task couldn't be paid.
+    if (user.kind === "person" && !user.paypalEmail)
+      throw new ConvexError("Add the PayPal email you get paid at (Settings → Getting paid) before you apply.");
     const existing = await ctx.db
       .query("applications")
       .withIndex("by_task", (q) => q.eq("taskId", taskId))

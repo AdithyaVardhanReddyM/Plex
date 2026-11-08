@@ -1,6 +1,8 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { getViewer } from "./lib/viewer";
+import { getViewer, requireViewer } from "./lib/viewer";
+import { homeModeOf, isOnboarded, isRealPhoto, rolesOf } from "./lib/profile";
+import { validate } from "./lib/answers";
 
 /** The current viewer: the signed-in user, or Adi for a guest in guest mode. */
 export const viewer = query({
@@ -8,7 +10,16 @@ export const viewer = query({
   handler: async (ctx) => {
     const viewer = await getViewer(ctx);
     if (!viewer) return null;
-    return { ...viewer.user, isGuest: viewer.isGuest };
+    const roles = rolesOf(viewer.user, viewer.isGuest);
+    // The resume's storage id stays server-side.
+    const { resumeFileId: _resume, ...user } = viewer.user;
+    return {
+      ...user,
+      isGuest: viewer.isGuest,
+      roles,
+      onboarded: isOnboarded(roles),
+      mode: homeModeOf(viewer.user, roles),
+    };
   },
 });
 
@@ -31,7 +42,8 @@ export const ensureViewer = mutation({
       handle: `${base}-${identity.subject.slice(-4).toLowerCase()}`,
       name: identity.name ?? identity.givenName ?? "New member",
       kind: "person",
-      avatarUrl: identity.pictureUrl,
+      // Clerk's default image (no photo uploaded) would hide the face onboarding offers.
+      avatarUrl: isRealPhoto(identity.pictureUrl) ? identity.pictureUrl : undefined,
     });
   },
 });
@@ -65,5 +77,39 @@ export const setPaused = mutation({
     const viewer = await getViewer(ctx);
     if (!viewer) throw new Error("No viewer");
     await ctx.db.patch(viewer.user._id, { agentsPaused: paused });
+  },
+});
+
+/** Home's switch, for people who both post and earn. */
+export const setHomeMode = mutation({
+  args: { mode: v.union(v.literal("post"), v.literal("earn")) },
+  handler: async (ctx, { mode }) => {
+    const { user, isGuest } = await requireViewer(ctx);
+    if (isGuest) return;
+    const roles = rolesOf(user);
+    if (mode === "post" ? !roles.poster : !roles.doer) throw new ConvexError("Set that side up first.");
+    await ctx.db.patch(user._id, { homeMode: mode });
+  },
+});
+
+/** Settings: the profile people see, and where payouts go. Same checks as onboarding. */
+export const updateProfile = mutation({
+  args: {
+    name: v.optional(v.string()),
+    avatarUrl: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    paypalEmail: v.optional(v.union(v.null(), v.string())),
+    postDefaults: v.optional(
+      v.object({
+        workerType: v.union(v.literal("human"), v.literal("agent"), v.literal("either")),
+        approval: v.union(v.literal("one_tap"), v.literal("auto")),
+      }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const { user, isGuest } = await requireViewer(ctx);
+    if (isGuest) throw new ConvexError("Guests explore the demo as Adi. Sign in to edit your own profile.");
+    const { intent: _intent, ...fields } = validate(args);
+    await ctx.db.patch(user._id, fields);
   },
 });

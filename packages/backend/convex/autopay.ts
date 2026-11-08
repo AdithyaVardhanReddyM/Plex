@@ -111,15 +111,20 @@ export const saveOff = internalMutation({
 
 /** Step 1: PayPal asks the person to save their wallet for Plex. Nothing is charged. */
 export const start = action({
-  args: { origin: v.string(), as: v.optional(v.string()) },
-  handler: async (ctx, { origin, as }): Promise<{ approveUrl: string }> => {
+  args: {
+    origin: v.string(),
+    as: v.optional(v.string()),
+    // Where PayPal sends the person back: the page they turned it on from.
+    returnPath: v.optional(v.union(v.literal("/developers"), v.literal("/settings"), v.literal("/onboarding"))),
+  },
+  handler: async (ctx, { origin, as, returnPath = "/developers" }): Promise<{ approveUrl: string }> => {
     if (!/^https?:\/\/[^/]+$/.test(origin)) throw new ConvexError("Bad return origin");
     if (!PayPalClient.isConfigured()) throw new ConvexError("PayPal isn't configured on this deployment.");
     const userId: Id<"users"> = await ctx.runQuery(internal.autopay.actorId, { as });
     try {
       const token = await createSetupToken(PayPalClient.fromEnv(), {
-        returnUrl: `${origin}/developers?autopay=return`,
-        cancelUrl: `${origin}/developers?autopay=cancel`,
+        returnUrl: `${origin}${returnPath}?autopay=return`,
+        cancelUrl: `${origin}${returnPath}?autopay=cancel`,
         description: "Plex auto-pay: hold task payouts without a popup, charged only when proof passes",
         idempotencyKey: `setup-${userId}-${Date.now()}`,
       });

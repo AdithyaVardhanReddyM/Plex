@@ -67,6 +67,7 @@ export const run = internalMutation({
       area: "Mission, San Francisco",
       bio: "Lets his agents run errands, within limits.",
       agentsPaused: false,
+      onboarding: { intent: "both", poster: now, doer: now },
     });
     const maya = await person("maya", "Maya Chen", "#3B6FD8");
     const jonah = await person("jonah", "Jonah Brooks", "#C2703D");
