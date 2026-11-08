@@ -8,7 +8,8 @@ import { requireViewer } from "./lib/viewer";
  * Scoped API keys for outside agents (Claude through the Plex MCP server,
  * or any HTTP client). A key is stored only as a SHA-256 hash; the full key
  * is shown once. Each key is one of:
- *  - poster: posts and pays for tasks from one pot, inside that pot's rules
+ *  - poster: posts and pays for tasks; PayPal holds the money inside the
+ *    owner's auto-pay limits, or the owner approves at PayPal
  *  - worker: an AI agent that bids on and delivers digital work
  */
 
@@ -38,7 +39,6 @@ export const list = query({
       agents
         .filter((a) => a.keyPrefix)
         .map(async (a) => {
-          const pot = a.potId ? await ctx.db.get(a.potId) : null;
           const worker = a.workerId ? await ctx.db.get(a.workerId) : null;
           return {
             _id: a._id,
@@ -46,7 +46,6 @@ export const list = query({
             name: a.name,
             keyPrefix: a.keyPrefix!,
             role: worker ? ("worker" as const) : ("poster" as const),
-            potName: pot?.name,
             workerHandle: worker?.handle,
             revoked: Boolean(a.revoked),
             lastUsedAt: a.lastUsedAt,
@@ -61,7 +60,6 @@ export const create = action({
   args: {
     name: v.string(),
     role: v.union(v.literal("poster"), v.literal("worker")),
-    potId: v.optional(v.id("pots")),
     specialties: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args): Promise<{ key: string; agentId: Id<"agents"> }> => {
@@ -79,20 +77,15 @@ export const insertKey = internalMutation({
   args: {
     name: v.string(),
     role: v.union(v.literal("poster"), v.literal("worker")),
-    potId: v.optional(v.id("pots")),
     specialties: v.optional(v.array(v.string())),
     keyPrefix: v.string(),
     keyHash: v.string(),
   },
-  handler: async (ctx, { name, role, potId, specialties, keyPrefix, keyHash }) => {
+  handler: async (ctx, { name, role, specialties, keyPrefix, keyHash }) => {
     const { user } = await requireViewer(ctx);
     const label = name.trim().slice(0, 40);
     if (!label) throw new ConvexError("Name the agent that will use this key.");
-    if (role === "poster") {
-      const pot = potId ? await ctx.db.get(potId) : null;
-      if (!pot || pot.ownerId !== user._id) throw new ConvexError("Pick one of your pots for this key to spend from.");
-      return ctx.db.insert("agents", { ownerId: user._id, name: label, kind: "mcp", potId, keyPrefix, keyHash });
-    }
+    if (role === "poster") return ctx.db.insert("agents", { ownerId: user._id, name: label, kind: "mcp", keyPrefix, keyHash });
     // A worker key gets its own profile in the Hire directory.
     const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 24) || "agent";
     const handle = `${slug}-${keyPrefix.slice(-4).toLowerCase()}`;
@@ -140,9 +133,8 @@ export const authenticate = internalQuery({
     if (!agent || agent.revoked) return null;
     const owner = await ctx.db.get(agent.ownerId);
     if (!owner) return null;
-    const pot = agent.potId ? await ctx.db.get(agent.potId) : null;
     const worker = agent.workerId ? await ctx.db.get(agent.workerId) : null;
-    return { agent, owner, pot, worker };
+    return { agent, owner, worker };
   },
 });
 

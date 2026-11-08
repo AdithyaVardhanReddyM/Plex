@@ -102,14 +102,14 @@ export async function seedHireWorld(ctx: MutationCtx, { adi, now }: { adi: Id<"u
     payeeLabel: "Plex (held)",
     agentLabel: "Claude (MCP)",
     why: "Find me a standing desk under $400 that fits a 100cm wall. Compare three, with sources.",
-    rule: { source: "policy", text: "Errands pot: up to $50 per task, paid only when proof passes" },
+    rule: { source: "poster", text: "Funded by the poster, paid only when proof passes" },
     category: "Errands",
     taskId: desks,
     state: "held",
     paypal: { orderId: "SEED-ORDER-DESKS", authorizationId: "SEED-AUTH-DESKS" },
     occurredAt: now - 50 * 60_000,
   });
-  await ctx.db.patch(desks, { fundingReceiptId: desksReceipt, policyNote: "Within Errands: Up to $50 per task" });
+  await ctx.db.patch(desks, { fundingReceiptId: desksReceipt });
 
   const bid = (round: number, cents: number, note: string, model: string, minsAgo: number, clamped?: boolean) => ({
     round,
@@ -270,7 +270,7 @@ export async function seedHireWorld(ctx: MutationCtx, { adi, now }: { adi: Id<"u
     payerLabel: "Adi Reddy",
     payeeLabel: "Plex (held)",
     why: "What changed for parklets and curbside dining in SF this year? Short summary with sources.",
-    rule: { source: "policy", text: "Errands pot: up to $50 per task, paid only when proof passes" },
+    rule: { source: "poster", text: "Funded by the poster, paid only when proof passes" },
     category: "Errands",
     taskId: brief,
     state: "released",

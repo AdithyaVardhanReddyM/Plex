@@ -16,17 +16,15 @@ type Stage = {
 
 /**
  * Plex's promise as an infographic, filled with this week's numbers: an agent
- * asks, code checks the rules, PayPal holds the money, proof is verified, and
+ * asks, code checks your limits, PayPal holds the money, proof is verified, and
  * the payout lands with a receipt.
  */
 export function MoneyFlow({
   receipts,
-  approvalsWaiting,
   loading,
   className,
 }: {
   receipts: Receipt[];
-  approvalsWaiting: number;
   loading?: boolean;
   className?: string;
 }) {
@@ -48,9 +46,9 @@ export function MoneyFlow({
     {
       icon: <ShieldCheck />,
       tone: "white",
-      label: "Your rules decide",
-      value: String(fromAgents.length + approvalsWaiting),
-      note: approvalsWaiting ? `checks · ${approvalsWaiting} waiting for your OK` : "checks in code · none broke a limit",
+      label: "Your limits decide",
+      value: String(fromAgents.length),
+      note: "checks in code · none broke a limit",
     },
     {
       icon: <Lock />,
@@ -80,7 +78,7 @@ export function MoneyFlow({
       <div className="relative flex flex-col gap-1 px-6 pt-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="font-display text-[16px] font-bold tracking-[-0.02em] text-ink">How every dollar moved this week</div>
-          <div className="mt-0.5 text-[13px] text-faint">The model never decides. Code checks your rules, PayPal holds the money, proof releases it.</div>
+          <div className="mt-0.5 text-[13px] text-faint">The model never decides. Code checks your limits, PayPal holds the money, proof releases it.</div>
         </div>
       </div>
       <ol className="relative my-auto grid gap-3 px-5 pt-7 pb-7 md:grid-cols-5 md:gap-0">

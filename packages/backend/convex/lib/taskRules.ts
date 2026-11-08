@@ -83,7 +83,7 @@ export function lookupPlace(text: string) {
 
 /**
  * The demo world lives in the Bay Area, so task windows are shown in the
- * place's own time zone (as Causes does), wherever the viewer is.
+ * place's own time zone, wherever the viewer is.
  */
 export const PLACE_TZ = "America/Los_Angeles";
 

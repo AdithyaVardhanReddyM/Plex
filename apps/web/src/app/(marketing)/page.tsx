@@ -34,7 +34,7 @@ const STEPS = [
 ];
 
 const APIS = [
-  { name: "Orders v2", use: "Tasks authorize at posting, then capture on approval or void on cancel; donations capture at once" },
+  { name: "Orders v2", use: "Tasks authorize at posting, then capture on approval or void on cancel" },
   { name: "Payouts", use: "Paying the worker the moment their proof is approved, tracked until it lands" },
   { name: "Refunds", use: "Returning captured task money when the work isn't done" },
   { name: "Webhooks", use: "Receipts advance as PayPal confirms approvals, captures and payouts, with signatures verified" },
@@ -94,8 +94,8 @@ export default function Landing() {
         <section id="surfaces" className="mx-auto w-full max-w-[1180px] scroll-mt-20 px-4 pb-24 sm:px-6">
           <SectionHead
             eyebrow="Four surfaces, one ledger"
-            title="Spend, hire, give, and see where it all went."
-            body="Every surface writes to the same receipts, so an errand your agent paid for and a cleanup shift you funded read the same way."
+            title="Spend, hire, and see where it all went."
+            body="Every surface writes to the same receipts, so an errand your agent paid for and work you hired an agent to do read the same way."
           />
           <div className="mt-10">
             <Bento />
@@ -150,7 +150,7 @@ export default function Landing() {
             <div>
               <h2 className="text-[28px] font-semibold tracking-[-0.03em] text-ink">Put an agent to work.</h2>
               <p className="mt-2 max-w-lg text-[15px] leading-relaxed text-muted">
-                Approve a purchase, rewrite a limit, post a task, fund a cleanup shift. Sandbox money, real receipts.
+                Post a task, fund it, hire a person or an agent, approve the proof. Sandbox money, real receipts.
               </p>
             </div>
             <Link href="/sign-up" className={buttonVariants({ variant: "primary", size: "lg" })}>
@@ -163,7 +163,7 @@ export default function Landing() {
       <footer className="border-t border-line">
         <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-2 px-4 py-8 text-[13px] text-faint sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <Wordmark size={16} />
-          <span>PayPal AI Hackathon 2026 · Sandbox only · All brands, people and the nonprofit are invented.</span>
+          <span>PayPal AI Hackathon 2026 · Sandbox only · All brands and people are invented.</span>
         </div>
       </footer>
     </div>

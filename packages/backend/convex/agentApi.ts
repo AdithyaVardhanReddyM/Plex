@@ -5,7 +5,6 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { sha256Hex } from "./apiKeys";
 import { canTake, defaultCriteria, isDigitalTask } from "./lib/hire";
 import { challengeCode, formatCents } from "./lib/money";
-import { evaluate } from "./lib/policy";
 import { fundingCents, PLACE_TZ } from "./lib/taskRules";
 import { proofSpecItem, verificationMode } from "./schema";
 
@@ -13,9 +12,10 @@ import { proofSpecItem, verificationMode } from "./schema";
  * The Plex agent API, for Claude (through apps/mcp) and any other agent.
  * Authenticated with `X-API-Key: plx_live_…` (stored only as a hash).
  *
- * Poster keys spend from one pot; every task they fund is checked by the
- * same `evaluate()` as the web app, and PayPal holds the money until proof
- * passes. Worker keys bid on and deliver digital work.
+ * Poster keys post and fund tasks for their owner: PayPal holds the money
+ * from the owner's saved wallet inside their auto-pay limits (or the owner
+ * approves at PayPal) until proof passes. Worker keys bid on and deliver
+ * digital work.
  *
  *   GET  /api/v1/me
  *   GET  /api/v1/tasks?who=agent|human
@@ -36,7 +36,7 @@ const json = (status: number, body: unknown) =>
 
 const siteUrl = () => (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
-/** The demo world is in the Bay Area; quiet hours are checked in its time. */
+/** The demo world is in the Bay Area: the hour sent with funding is its local time. */
 const localHour = () => Number(new Date().toLocaleString("en-US", { hour: "numeric", hourCycle: "h23", timeZone: PLACE_TZ }));
 
 function errorText(err: unknown) {
@@ -64,9 +64,6 @@ export const handle = httpAction(async (ctx, req) => {
         agent: auth.agent.name,
         role: auth.worker ? "worker" : "poster",
         owner: auth.owner.name,
-        pot: auth.pot
-          ? { name: auth.pot.name, balance: formatCents(auth.pot.balanceCents), spentToday: formatCents(auth.pot.spentTodayCents), rules: auth.pot.rulesText }
-          : null,
         worker: auth.worker ? { handle: auth.worker.handle, profile: `${siteUrl()}/hire/${auth.worker.handle}` } : null,
         paused: Boolean(auth.owner.agentsPaused),
       });
@@ -106,7 +103,6 @@ export const handle = httpAction(async (ctx, req) => {
         tags: d.tags,
         workerType,
         writerModel: written.model,
-        hour: localHour(),
         autoHire: body.autoHire === true,
       });
       return json(201, { ...created, writtenBy: written.model, next: "POST /api/v1/tasks/:id/fund to hold the payout through PayPal" });
@@ -253,7 +249,6 @@ export const taskView = internalQuery({
       workerType: t.workerType ?? "human",
       held: formatCents(fundingCents(t.payout)),
       funding: t.funding.state,
-      policy: t.policyNote,
       assignee: assignee ? { name: assignee.name, kind: assignee.kind } : null,
       applications: await Promise.all(
         apps
@@ -311,7 +306,7 @@ const locationV = v.optional(
   v.object({ label: v.string(), lat: v.optional(v.number()), lng: v.optional(v.number()), radiusM: v.optional(v.number()) }),
 );
 
-/** A task posted by an agent: same checks as the web, plus the key's pot rules. */
+/** A task posted by an agent: same checks as the web, plus the owner's kill switch. */
 export const createFromAgent = internalMutation({
   args: {
     agentId: v.id("agents"),
@@ -328,30 +323,16 @@ export const createFromAgent = internalMutation({
     tags: v.array(v.string()),
     workerType: v.union(v.literal("human"), v.literal("agent"), v.literal("either")),
     writerModel: v.string(),
-    hour: v.number(),
     autoHire: v.optional(v.boolean()),
   },
-  handler: async (ctx, { agentId, hour, autoHire, ...d }) => {
+  handler: async (ctx, { agentId, autoHire, ...d }) => {
     const agent = await ctx.db.get(agentId);
-    if (!agent?.potId) throw new ConvexError("This key isn't tied to a pot.");
-    const pot = (await ctx.db.get(agent.potId)) as Doc<"pots"> | null;
-    const owner = await ctx.db.get(agent.ownerId);
-    if (!pot || !owner) throw new ConvexError("This key's pot is gone.");
+    const owner = agent ? await ctx.db.get(agent.ownerId) : null;
+    if (!agent || !owner) throw new ConvexError("This key's owner is gone.");
+    if (owner.agentsPaused) throw new ConvexError(`${owner.name} has paused their agents.`);
     if (!Number.isInteger(d.payoutCents) || d.payoutCents < 100) throw new ConvexError("Payout must be at least $1.");
     if (d.payoutCents > 100_000) throw new ConvexError("Sandbox tasks are capped at $1,000.");
     const workerType = d.workerType !== "human" && !isDigitalTask(d) ? "human" : d.workerType;
-
-    // The pot's rules decide before anything is posted. The model never does.
-    const decision = evaluate(pot.rules, {
-      amountCents: d.payoutCents,
-      category: pot.name,
-      hour,
-      spentTodayCents: pot.spentTodayCents,
-      spentMonthCents: pot.spentMonthCents,
-      balanceCents: pot.balanceCents,
-      paused: Boolean(owner.agentsPaused),
-    });
-    if (decision.outcome === "deny") throw new ConvexError(`Blocked by ${owner.name}'s ${pot.name} pot: ${decision.ruleText}.`);
 
     const taskId = await ctx.db.insert("tasks", {
       posterId: owner._id,
@@ -372,24 +353,17 @@ export const createFromAgent = internalMutation({
       status: "draft",
       funding: { state: "unfunded" },
       tags: d.tags.slice(0, 4),
-      potId: pot._id,
       writerModel: d.writerModel,
       workerType,
       criteria: isDigitalTask(d) ? defaultCriteria(d.proofSpec) : undefined,
       autoHire: autoHire && workerType !== "human" ? true : undefined,
       ...(autoHire && workerType !== "human" ? { verificationMode: "auto" as const } : {}),
-      policyNote:
-        decision.outcome === "needs_approval"
-          ? `Over “${decision.ruleText}”: ${owner.name.split(" ")[0]} approves it at PayPal checkout`
-          : `Within ${pot.name}: ${decision.ruleText}`,
     });
     return {
       id: taskId,
       title: d.title,
       workerType,
       payout: formatCents(d.payoutCents),
-      policy: decision.outcome,
-      rule: decision.ruleText,
       deliver: d.proofSpec.map((s, index) => ({ index, label: s.label, type: s.type })),
       url: `${siteUrl()}/tasks/${taskId}`,
     };

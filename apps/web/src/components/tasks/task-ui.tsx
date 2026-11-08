@@ -17,7 +17,6 @@ import {
   Lock,
   MapPin,
   RotateCcw,
-  ShieldCheck,
   TriangleAlert,
   Users,
   Video,
@@ -482,56 +481,3 @@ export function MatchScore({ score }: { score?: number }) {
   );
 }
 
-// ── Policy engine result ─────────────────────────────────────────────────────
-
-export function PolicyLine({
-  pot,
-  outcome,
-  ruleText,
-  className,
-}: {
-  pot?: string;
-  outcome?: "allow" | "needs_approval" | "deny";
-  ruleText?: string;
-  className?: string;
-}) {
-  const frame = "flex items-start gap-2.5 rounded-[10px] px-3 py-2.5 text-[12.5px] leading-snug ring-1 ring-inset";
-  if (!pot)
-    return (
-      <div className={cn(frame, "bg-sunken/70 text-muted ring-line/70", className)}>
-        <ShieldCheck className="mt-px size-4 flex-none text-faint" strokeWidth={1.9} />
-        Posted directly, no pot limits apply.
-      </div>
-    );
-  if (!outcome) return <div className={cn("skeleton h-[42px] rounded-[10px]", className)} />;
-  const tone =
-    outcome === "allow"
-      ? "bg-green-50 text-green-800 ring-green-200/70"
-      : outcome === "needs_approval"
-        ? "bg-refunded-bg text-refunded ring-refunded/15"
-        : "bg-disputed-bg text-disputed ring-disputed/15";
-  return (
-    <div className={cn(frame, tone, className)}>
-      {outcome === "allow" ? (
-        <ShieldCheck className="mt-px size-4 flex-none" strokeWidth={1.9} />
-      ) : (
-        <TriangleAlert className="mt-px size-4 flex-none" strokeWidth={1.9} />
-      )}
-      <span>
-        {outcome === "allow" ? (
-          <>
-            Within your {pot} rule: <span className="font-medium">{ruleText}</span>
-          </>
-        ) : outcome === "needs_approval" ? (
-          <>
-            Over your {pot} rule (<span className="font-medium">{ruleText}</span>). Funding it yourself counts as your approval, and the receipt says so.
-          </>
-        ) : (
-          <>
-            Blocked by your {pot} pot: <span className="font-medium">{ruleText}</span>
-          </>
-        )}
-      </span>
-    </div>
-  );
-}

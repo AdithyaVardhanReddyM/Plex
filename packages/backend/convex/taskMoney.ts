@@ -17,12 +17,10 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireActor } from "./lib/actor";
 import { formatCents } from "./lib/money";
-import { evaluate } from "./lib/policy";
 import { advanceReceipt, writeReceipt } from "./lib/receipts";
 import { pct, splitLines, splitTermsFor } from "./lib/split";
 import { fundingCents, isSeedId } from "./lib/taskRules";
 import { isDigitalTask } from "./lib/hire";
-import { errandsPot } from "./tasks";
 
 /**
  * The PayPal money engine for Plex Tasks. Order of operations, always:
@@ -86,10 +84,10 @@ async function fundingReceipt(ctx: MutationCtx, task: Doc<"tasks">) {
 
 // ── Funding ──────────────────────────────────────────────────────────────────
 
-/** Checks the poster's pot with the policy engine and writes the pending receipt. */
+/** Checks the poster may fund it and writes the pending receipt. */
 export const beginFunding = internalMutation({
   args: { taskId: v.id("tasks"), as: v.optional(v.string()), hour: v.number(), posterId: v.optional(v.id("users")) },
-  handler: async (ctx, { taskId, as, hour, posterId }) => {
+  handler: async (ctx, { taskId, as, posterId }) => {
     // posterId: an API key's owner, already authenticated by the HTTP layer.
     const user = posterId ? (await ctx.db.get(posterId))! : (await requireActor(ctx, as)).user;
     const task = await ctx.db.get(taskId);
@@ -98,33 +96,11 @@ export const beginFunding = internalMutation({
     if (t.funding.state !== "unfunded") fail("This task is already funded.");
     if (t.status !== "draft") fail("Only drafts can be funded.");
 
+    // The kill switch: while agents are paused, an API key can't fund anything.
+    if (posterId && user.agentsPaused) fail(`${user.name} has paused their agents.`);
+
     const amountCents = fundingCents(t.payout);
-    const pot = await errandsPot(ctx, t);
-    let rule: Doc<"receipts">["rule"] = { source: "poster", text: "Posted directly, no pot limits" };
-    let policyNote = "No pot rules apply";
-    let needsApproval = false;
-    if (pot) {
-      const decision = evaluate(pot.rules, {
-        amountCents,
-        category: "Errands",
-        hour,
-        spentTodayCents: pot.spentTodayCents,
-        balanceCents: pot.balanceCents,
-        paused: Boolean(user.agentsPaused),
-      });
-      if (decision.outcome === "deny") fail(`Blocked by your ${pot.name} pot: ${decision.ruleText}.`);
-      if (decision.outcome === "needs_approval") {
-        needsApproval = true;
-        rule = {
-          source: "approval",
-          text: `${pot.name} pot: over “${decision.ruleText}”, so you approved it yourself at PayPal checkout`,
-        };
-        policyNote = `Needed your approval: ${decision.ruleText}`;
-      } else {
-        rule = { source: "policy", text: `${pot.name} pot: ${decision.ruleText.toLowerCase()}, paid only when proof passes` };
-        policyNote = `Within your ${pot.name} rule: ${decision.ruleText}`;
-      }
-    }
+    const rule: Doc<"receipts">["rule"] = { source: "poster", text: "Funded by the poster, paid only when proof passes" };
 
     let receiptId = t.fundingReceiptId;
     if (!receiptId) {
@@ -139,15 +115,14 @@ export const beginFunding = internalMutation({
         agentLabel: t.agentLabel,
         why: t.brief || t.title,
         rule,
-        category: pot?.name ?? "Errands",
-        potId: pot?._id,
+        category: "Errands",
         taskId: t._id,
         state: "pending",
-        timelineLabel: "Checked against your rules, sent to PayPal",
+        timelineLabel: "Sent to PayPal",
       });
     }
-    await ctx.db.patch(t._id, { fundingReceiptId: receiptId, policyNote, potId: pot?._id });
-    return { amountCents, title: t.title, currency: t.currency, posterId: t.posterId, needsApproval };
+    await ctx.db.patch(t._id, { fundingReceiptId: receiptId });
+    return { amountCents, title: t.title, currency: t.currency, posterId: t.posterId };
   },
 });
 
@@ -165,7 +140,7 @@ export const attachOrder = internalMutation({
 });
 
 /**
- * Step 1: policy check, receipt, PayPal order (AUTHORIZE). With auto-pay on and
+ * Step 1: receipt, PayPal order (AUTHORIZE). With auto-pay on and
  * inside every limit, the hold is placed from the saved wallet right here (no
  * popup). Otherwise returns the approval URL.
  */
@@ -198,42 +173,39 @@ async function openFundingOrder(
   const { amountCents, title, currency } = begun;
   const pp = paypal();
 
-  // Auto-pay: code decides (pot rules said yes without asking, within the
-  // person's own auto-pay limits), then PayPal holds it from the saved wallet.
+  // Auto-pay: code decides (within the person's own auto-pay limits), then
+  // PayPal holds it from the saved wallet.
   let note: string | undefined;
-  if (begun.needsApproval) note = "Over a pot rule, so this one needs your approval at PayPal";
+  const r = await ctx.runMutation(internal.autopay.reserve, { userId: begun.posterId, amountCents });
+  if ("skip" in r) note = r.skip === "Auto-pay is off" ? undefined : r.skip;
   else {
-    const r = await ctx.runMutation(internal.autopay.reserve, { userId: begun.posterId, amountCents });
-    if ("skip" in r) note = r.skip === "Auto-pay is off" ? undefined : r.skip;
-    else {
-      try {
-        let order = await createOrder(pp, {
-          amountCents,
-          currency,
-          intent: "AUTHORIZE",
-          description: `Plex task: ${title}`,
-          referenceId: taskId,
-          vaultId: r.vaultId,
-          idempotencyKey: `autopay-${taskId}`,
-        });
-        await ctx.runMutation(internal.taskMoney.attachOrder, { taskId, orderId: order.id });
-        if (!order.purchase_units[0]?.payments?.authorizations?.length)
-          order = await authorizeOrder(pp, order.id, `authorize-${order.id}`);
-        const auth = order.purchase_units[0]?.payments?.authorizations?.[0];
-        if (!auth || auth.status === "DENIED") throw new Error("PayPal didn't authorize the saved wallet");
-        await ctx.runMutation(internal.taskMoney.markAuthorized, {
-          taskId,
-          orderId: order.id,
-          authorizationId: auth.id,
-          payerEmail: order.payer?.email_address,
-          via: "autopay",
-          limitText: r.limitText,
-        });
-        return { autoPaid: true, orderId: order.id, note: `Held by auto-pay (${r.limitText}); charged only when proof passes` };
-      } catch (err) {
-        await ctx.runMutation(internal.autopay.unreserve, { userId: begun.posterId, amountCents });
-        note = `Auto-pay didn't go through (${paypalMessage(err)}), so approve this one at PayPal`;
-      }
+    try {
+      let order = await createOrder(pp, {
+        amountCents,
+        currency,
+        intent: "AUTHORIZE",
+        description: `Plex task: ${title}`,
+        referenceId: taskId,
+        vaultId: r.vaultId,
+        idempotencyKey: `autopay-${taskId}`,
+      });
+      await ctx.runMutation(internal.taskMoney.attachOrder, { taskId, orderId: order.id });
+      if (!order.purchase_units[0]?.payments?.authorizations?.length)
+        order = await authorizeOrder(pp, order.id, `authorize-${order.id}`);
+      const auth = order.purchase_units[0]?.payments?.authorizations?.[0];
+      if (!auth || auth.status === "DENIED") throw new Error("PayPal didn't authorize the saved wallet");
+      await ctx.runMutation(internal.taskMoney.markAuthorized, {
+        taskId,
+        orderId: order.id,
+        authorizationId: auth.id,
+        payerEmail: order.payer?.email_address,
+        via: "autopay",
+        limitText: r.limitText,
+      });
+      return { autoPaid: true, orderId: order.id, note: `Held by auto-pay (${r.limitText}); charged only when proof passes` };
+    } catch (err) {
+      await ctx.runMutation(internal.autopay.unreserve, { userId: begun.posterId, amountCents });
+      note = `Auto-pay didn't go through (${paypalMessage(err)}), so approve this one at PayPal`;
     }
   }
 
@@ -419,11 +391,8 @@ export const beginRelease = internalMutation({
         why: t.brief || t.title,
         rule: { source: "proof", text: ruleText },
         evidence: { proofId: proof!._id, verdict: verdictLine, checks },
-        category: t.causeId ? "Giving" : "Errands",
-        potId: t.potId,
+        category: "Errands",
         taskId,
-        // Impact tasks: the Proof Reel finds payouts by cause.
-        causeId: t.causeId,
         state: "pending",
         timelineLabel: "Approved; capturing the held funds",
         split,
@@ -477,14 +446,6 @@ export const recordCapture = internalMutation({
         captureId ? { paypal: { captureId } } : {},
       );
     }
-    // The pot pays when money is actually captured.
-    const pot = task.potId ? await ctx.db.get(task.potId) : null;
-    if (pot && !seeded)
-      await ctx.db.patch(pot._id, {
-        balanceCents: pot.balanceCents - amountCents,
-        spentTodayCents: pot.spentTodayCents + amountCents,
-        spentMonthCents: pot.spentMonthCents + amountCents,
-      });
   },
 });
 
@@ -543,16 +504,6 @@ async function finishRelease(ctx: MutationCtx, task: Doc<"tasks">, payoutReceipt
   if (receipt && receipt.state !== "released")
     await advanceReceipt(ctx, receipt._id, "released", `Released to ${worker?.name ?? "the worker"}`);
   if (worker) await ctx.db.patch(worker._id, { tasksCompleted: (worker.tasksCompleted ?? 0) + 1 });
-  // Impact task: the donations that funded this shift are released on the
-  // same proof, so every donor's receipt shows the work was done.
-  if (task.causeId) {
-    const payout = await ctx.db.get(payoutReceiptId);
-    await ctx.scheduler.runAfter(0, internal.donations.releaseForTask, {
-      taskId,
-      proofId: payout?.evidence?.proofId,
-      verdict: payout?.evidence?.verdict,
-    });
-  }
 }
 
 export const releaseFailed = internalMutation({
@@ -779,7 +730,6 @@ export const recordRefund = internalMutation({
           ? { proofId: proof._id, verdict: `${proof.verdict.result} · ${Math.round(proof.verdict.confidence * 100)}%`, checks: proof.verdict.checks }
           : undefined,
         category: "Errands",
-        potId: task.potId,
         taskId,
         state: "refunded",
         paypal: { captureId: task.funding.captureId, refundId },

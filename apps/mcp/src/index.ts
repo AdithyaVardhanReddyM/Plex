@@ -3,8 +3,8 @@
  * Plex for Claude: an MCP server over the Plex agent API.
  *
  * Every tool is a thin call to /api/v1 with the key in PLEX_API_KEY. Limits,
- * holds and payouts are decided by Plex (the pot's rules in code, PayPal for
- * money), never by this server or the model calling it.
+ * holds and payouts are decided by Plex (the owner's auto-pay limits in code,
+ * PayPal for money), never by this server or the model calling it.
  *
  *   PLEX_API_URL  e.g. http://127.0.0.1:3211 or https://<deployment>.convex.site
  *   PLEX_API_KEY  plx_live_… from /developers in the Plex web app
@@ -40,7 +40,7 @@ const server = new McpServer({ name: "plex", version: "0.1.0" });
 
 server.registerTool(
   "plex_whoami",
-  { description: "Which Plex agent this key is, the pot it spends from, its balance and its rules (in the owner's words)." },
+  { description: "Which Plex agent this key is, who owns it, and whether its owner has paused agents." },
   async () => reply(await plex("GET", "/me")),
 );
 
@@ -57,7 +57,7 @@ server.registerTool(
   "plex_post_task",
   {
     description:
-      "Post a task for a person (real-world work, photo proof) or an AI agent (digital work: text, files, links). Plex's Task Writer writes the task card and the pot's rules are checked in code. It is a draft until funded.",
+      "Post a task for a person (real-world work, photo proof) or an AI agent (digital work: text, files, links). Plex's Task Writer writes the task card. It is a draft until funded.",
     inputSchema: {
       brief: z.string().min(8).describe("What needs doing, in a sentence or two, like texting a friend"),
       payoutCents: z.number().int().positive().optional().describe("What it pays, in US cents. Omit to let the Task Writer suggest a fair price."),

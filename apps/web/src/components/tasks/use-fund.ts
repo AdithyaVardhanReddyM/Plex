@@ -8,8 +8,7 @@ import { errorMessage } from "./task-ui";
 import { useAs } from "./persona";
 
 /**
- * Starts PayPal funding for a draft: the policy engine checks the pot, a
- * receipt is written, a sandbox order (intent AUTHORIZE) is created, and the
+ * Starts PayPal funding for a draft: a receipt is written, a sandbox order (intent AUTHORIZE) is created, and the
  * browser goes to PayPal to approve it. PayPal returns to
  * /tasks/[id]?paypal=return, where the task page authorizes the order.
  * With auto-pay on (and inside its limits) the hold is placed from the saved
@@ -47,15 +46,13 @@ export function useFund() {
 }
 
 /** Whether this amount would be held by auto-pay (no popup). The server decides again. */
-export function useAutoPay(cents: number, outcome?: string) {
+export function useAutoPay(cents: number) {
   const as = useAs();
   const a = useQuery(api.autopay.mine, { as });
   const on =
     a?.status === "active" &&
     cents > 0 &&
     cents <= a.limitCents &&
-    a.usedTodayCents + cents <= a.dailyLimitCents &&
-    outcome !== "needs_approval" &&
-    outcome !== "deny";
+    a.usedTodayCents + cents <= a.dailyLimitCents;
   return { on, payerEmail: a?.status === "active" ? a.payerEmail : undefined };
 }

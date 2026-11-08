@@ -1,6 +1,6 @@
 # Plex: agents, with receipts
 
-Your agents can spend money and hire people now. Plex keeps them inside limits you write in plain English, and makes sure every dollar they move comes with a **Receipt**: who it went to, why (in your own words), which rule allowed it, and the proof that the work was done.
+Your agents can spend money and hire people now. Plex keeps them inside limits you set, enforced in code, and makes sure every dollar they move comes with a **Receipt**: who it went to, why (in your own words), which rule allowed it, and the proof that the work was done.
 
 Built on PayPal (sandbox) for the [PayPal AI Hackathon](https://paypalaihackathon.devpost.com).
 
@@ -10,25 +10,22 @@ Agents got wallets this year, and they started hiring people. Two things are mis
 
 ## Who it's for
 
-- **People who let agents spend for them.** Pots with plain-English limits, enforced in code, with approvals for anything over the line.
+- **People who let agents spend for them.** Auto-pay limits per task and per day, enforced in code, with PayPal approval for anything over the line and a Pause switch for every key.
 - **Anyone who needs something done**, a person or an agent: post a task, fund it, and pay only when the proof passes.
 - **People who do the work**: take a task nearby, upload proof from a phone browser, get paid through PayPal Payouts.
-- **Nonprofits and donors**: donations buy specific, paid shifts of local work, and every donor gets the proof back.
 
 ## What's in it
 
 | Surface | What you can do |
 |---|---|
-| **Home** | What your agents moved this week, what's held until proof passes, approvals waiting for you, recent receipts. |
-| **Pots & limits** | Write limits in plain English ("Up to $120 per purchase. Ask me before anything over $50."). The model turns them into structured rules once; `evaluate()` checks every payment in code. Try a purchase against your draft rules before saving. A Pause switch freezes all agent spending. |
+| **Home** | What your agents moved this week, what's held until proof passes, tasks in flight, recent receipts. |
 | **Tasks** | Describe a task the way you'd text a friend. The **Task Writer** turns it into a card with a proof spec and a challenge word. Fund it through PayPal (an authorization, so you're charged only on approval). Workers apply; **Match** ranks them. The worker uploads proof; the **proof engine** checks each item, the time window, the location, the challenge word and photo originality. Approve, and Plex captures the payment and pays the worker by PayPal Payouts. Reject, and the worker can contest; a **Mediator** summarizes both sides. |
-| **Causes** | Cause pages where a donation funds a specific shift of paid local work. Donate through PayPal (once, a shift, or split across causes). The money is held until the shift's proof passes, then released, and the donor gets a **Proof Reel**: the verified photos, who was paid, and their own receipt. A **cause page builder** turns an NGO's own text into a page and fundable shifts. |
-| **Ledger** | Every receipt in one AG Grid, with Personal, Task poster and Cause dashboards. **Ask the Ledger** a question and the Analyst builds the grid or chart that answers it; **Watchdog** flags refund spikes, failing proofs in one area and unusual spending. See [docs/ag-grid.md](docs/ag-grid.md). |
+| **Ledger** | Every receipt in one AG Grid, with Personal and Task poster dashboards. **Ask the Ledger** a question and the Analyst builds the grid or chart that answers it; **Watchdog** flags refund spikes, failing proofs in one area and unusual spending. See [docs/ag-grid.md](docs/ag-grid.md). |
 | **Receipts** | Every receipt, and each one's full page: amount, parties, why, rule, evidence, timeline and PayPal IDs. |
 
 ## Try it
 
-Plex opens in **guest mode**: choose **Continue as guest** and you are Adi, in a demo world with a few weeks of history. No account needed. On Tasks, the **Acting as** switch lets you play every side: Adi posting, a demo worker (Rosa, Luis…) applying and uploading proof, or the demo nonprofit, Lakeside Commons, approving its cleanup shifts.
+Plex opens in **guest mode**: choose **Continue as guest** and you are Adi, in a demo world with a few weeks of history. No account needed. On Tasks, the **Acting as** switch lets you play every side: Adi posting, or a demo worker (Rosa, Luis…) applying and uploading proof.
 
 To pay through PayPal you sign in on PayPal's sandbox checkout with a **sandbox personal account** (create one under *Sandbox accounts* in the [PayPal developer dashboard](https://developer.paypal.com/dashboard/accounts)). It's test money; nothing real moves.
 
@@ -82,14 +79,13 @@ Every call goes through one typed client, `packages/paypal`, from Convex actions
 |---|---|
 | **Orders v2**: create (intent `AUTHORIZE`), get, authorize | Funding a task. The poster approves on PayPal's checkout; Plex authorizes on return (or on the `CHECKOUT.ORDER.APPROVED` webhook). |
 | **Payments v2**: capture authorization, void authorization | Approving proof captures the held amount; cancelling a task voids the hold. |
-| **Orders v2**: create (intent `CAPTURE`), capture | Donations on a cause page, including a gift split across causes. |
 | **Payouts v1**: create batch, get batch | Paying the worker when their proof is approved, then tracking it until it lands. |
 | **Payments v2**: refund capture | Returning captured task money when the work isn't done. |
 | **Webhooks v1**: verify signature | `CHECKOUT.ORDER.APPROVED`, `PAYMENT.CAPTURE.*` and `PAYMENT.PAYOUTS-ITEM.*` events advance tasks and receipts, idempotently. |
 
-Verified live in the sandbox on Nov 5, 2026: a new task funded through buyer checkout (order `5JJ324734N7647452`), authorized (`3KF05293L76044005`), captured on approval (`9TH6991617033031K`) and paid out (batch `C56BA7SGG78VA`); a donation captured through a cause page (order `8WE71493UH389104V`) and released when its shift's payout went out.
+Verified live in the sandbox on Nov 5, 2026: a new task funded through buyer checkout (order `5JJ324734N7647452`), authorized (`3KF05293L76044005`), captured on approval (`9TH6991617033031K`) and paid out (batch `C56BA7SGG78VA`).
 
-**How held money works.** In the sandbox, Plex acts as the marketplace with its own business account: posters and donors pay Plex, and Plex pays workers through Payouts once the proof passes. Task funding uses authorize-then-capture, so the poster isn't charged until they approve. In production this would move to PayPal's multiparty (marketplace) setup with delayed disbursement, or Payouts with proper KYC. Seeded history carries placeholder `SEED-…` IDs and never calls PayPal.
+**How held money works.** In the sandbox, Plex acts as the marketplace with its own business account: posters pay Plex, and Plex pays workers through Payouts once the proof passes. Task funding uses authorize-then-capture, so the poster isn't charged until they approve. In production this would move to PayPal's multiparty (marketplace) setup with delayed disbursement, or Payouts with proper KYC. Seeded history carries placeholder `SEED-…` IDs and never calls PayPal.
 
 ## How the AI is used
 
@@ -97,12 +93,10 @@ The rule everywhere: **the model interprets, code decides.** Limits, proof thres
 
 | Agent | What it does |
 |---|---|
-| **Rule writer** (`lib/policyAi.ts`) | Turns a pot's plain-English limits into structured rules, once. `lib/policy.ts` `evaluate()` enforces them on every payment. |
 | **Task Writer** (`tasks.ts`) | Turns a loose request into a task card: title, place, window, payout and a proof spec. |
 | **Match** (`applications.ts`) | Ranks applicants by distance, rating, proof record and their ask, and explains each pick. |
 | **Proof engine** (`proofs.ts`) | Gemini vision checks each uploaded photo against the spec; code checks the time window, the location, the challenge word, and file fingerprints to catch a photo submitted before. Pass, fail or unsure, with reasons; unsure goes to a person. |
 | **Mediator** (`proofs.ts`) | When a worker contests a rejection, summarizes both sides against the original spec. |
-| **Cause page builder** and **Proof Reel captions** (`lib/causesAi.ts`) | Drafts a cause page and its paid shifts from an NGO's own words (factual, no guilt-trip copy, no invented numbers), and writes each donor's Reel caption from the receipts. It never generates images of the work. |
 | **Plex Analyst** (`lib/ledgerAi.ts`) | Answers money questions on the Ledger with widget specs that AG Grid and AG Charts render. |
 | **Watchdog** (`ledger.ts`) | Deterministic alerts over the receipt stream. |
 
@@ -116,13 +110,12 @@ The rule everywhere: **the model interprets, code decides.** Limits, proof thres
 - **Clerk** for sign-in (wired; guest mode is the default, see `convex/auth.config.ts.example`).
 - **Stageshow** (a Claude Code skill) for the landing page's product demos.
 - **Claude Code** for building it.
-- **OpenStreetMap** tiles for cause maps. The seeded Proof Reel uses two openly licensed stand-in photos, credited in [apps/web/public/demo/reel/CREDITS.md](apps/web/public/demo/reel/CREDITS.md).
 
 ## Repo
 
 ```
-apps/web/          Next.js: landing, Home, Tasks, Causes, Ledger, Receipts, Pots
-packages/backend/  Convex: schema, functions, receipts, policy engine, agents, seed (the demo world)
+apps/web/          Next.js: landing, Home, Tasks, Hire, Ledger, Receipts, Agents & API
+packages/backend/  Convex: schema, functions, receipts, auto-pay limits, agents, seed (the demo world)
 packages/paypal/   Typed PayPal client: the one place that calls PayPal
 docs/              Plan, AG Grid write-up, webhook runbook
 ```

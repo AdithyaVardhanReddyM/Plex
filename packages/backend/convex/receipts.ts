@@ -29,13 +29,3 @@ export const forTask = query({
       .withIndex("by_task", (q) => q.eq("taskId", taskId))
       .collect(),
 });
-
-export const forCause = query({
-  args: { causeId: v.id("causes"), limit: v.optional(v.number()) },
-  handler: async (ctx, { causeId, limit }) =>
-    ctx.db
-      .query("receipts")
-      .withIndex("by_cause", (q) => q.eq("causeId", causeId))
-      .order("desc")
-      .take(limit ?? 50),
-});

@@ -6,7 +6,6 @@ import {
   CircleDashed,
   FileText,
   HandCoins,
-  HeartHandshake,
   Lock,
   Quote,
   RotateCcw,
@@ -51,7 +50,6 @@ const KIND: Record<Receipt["kind"], { label: string; icon: React.ReactNode }> = 
   task_funding: { label: "Task funding", icon: <HandCoins /> },
   payout: { label: "Payout", icon: <ArrowUpRight /> },
   refund: { label: "Refund", icon: <RotateCcw /> },
-  donation: { label: "Donation", icon: <HeartHandshake /> },
   purchase: { label: "Purchase", icon: <ShoppingBag /> },
   invoice: { label: "Invoice", icon: <FileText /> },
   subscription: { label: "Subscription", icon: <Repeat /> },
@@ -134,7 +132,6 @@ const RULE_SOURCE: Record<Receipt["rule"]["source"], string> = {
   policy: "Allowed by your rule",
   approval: "Approved by you",
   poster: "Set by the poster",
-  donor: "Chosen by the donor",
   proof: "Released on proof",
   system: "Plex",
 };

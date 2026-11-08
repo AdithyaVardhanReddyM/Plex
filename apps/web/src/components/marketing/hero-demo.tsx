@@ -108,13 +108,13 @@ export function HeroDemo() {
                     <Check on={s.step >= 3} pending={s.step === 2} size={16} />
                     <div className="ph-step__main">
                       <div className="ph-step__title">
-                        <States align="start" value={s.step >= 3 ? 'ok' : 'checking'} states={{ checking: 'Checking the Errands pot', ok: 'Errands: $50 per task' }} />
+                        <States align="start" value={s.step >= 3 ? 'ok' : 'checking'} states={{ checking: 'Checking your auto-pay limit', ok: 'Auto-pay: up to $50 a task' }} />
                       </div>
                       <div className="ph-step__sub">
-                        <States align="start" value={s.step >= 3 ? 'after' : 'before'} states={{ before: '$63 of $200 this month', after: '$81 of $200 this month' }} />
+                        <States align="start" value={s.step >= 3 ? 'after' : 'before'} states={{ before: '$63 of $150 today', after: '$81 of $150 today' }} />
                       </div>
                       <span className="ph-gauge">
-                        <span className="ph-gauge__fill" style={{ width: s.step >= 3 ? '40.5%' : '31.5%' }} />
+                        <span className="ph-gauge__fill" style={{ width: s.step >= 3 ? '54%' : '42%' }} />
                       </span>
                     </div>
                     <span className="ph-allowed" data-in={s.step >= 3 || undefined}>

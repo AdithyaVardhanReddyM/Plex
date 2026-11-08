@@ -5,9 +5,9 @@ PayPal AI Hackathon entry: **agents, with receipts.** Product plan: [docs/Plex-P
 ## Repo
 
 ```
-apps/web/          Next.js 16 (App Router, cacheComponents), Tailwind v4: landing, Tasks, Causes, Ledger
+apps/web/          Next.js 16 (App Router, cacheComponents), Tailwind v4: landing, Tasks, Hire, Ledger, Receipts
 apps/mcp/          Plex for Claude: an MCP server over the agent API
-packages/backend/  Convex: schema, functions, receipts, policy engine, seed (the demo world)
+packages/backend/  Convex: schema, functions, receipts, auto-pay limits, seed (the demo world)
 packages/paypal/   Typed PayPal client: the one place that calls PayPal (fetch only, sandbox)
 docs/              Plan and runbooks
 ```
@@ -21,13 +21,14 @@ docs/              Plan and runbooks
 ## Core ideas the code must keep
 
 - **No money moves without a Receipt.** Every PayPal call that moves money writes or advances a `receipts` row through `convex/lib/receipts.ts` (`writeReceipt`, `advanceReceipt`), with `why` (the user's own words), `rule` and `evidence`. Show it with `ReceiptCard` / `ReceiptRow` from `apps/web/src/components/receipt/receipt.tsx`.
-- **Limits are enforced in code.** The model only turns plain English into `rules` once; `convex/lib/policy.ts` `evaluate()` decides. Never let a prompt decide whether money may move.
+- **Limits are enforced in code.** Auto-pay's per-task and daily limits (`convex/autopay.ts` `reserve`) and the agents Pause switch decide; anything over a limit goes to the owner at PayPal. Never let a prompt decide whether money may move.
+- **Pots & limits and Causes (fundraising, NGOs) were removed on 8 Nov 2026.** Causes will come back later with a different approach; don't reintroduce either unasked.
 - **Money is integer cents** everywhere. Format with `formatCents` / `<Amount>`.
 - **Sign-in is required (for now).** `src/proxy.ts` sends signed-out visitors on app routes to `/sign-in`; only `/`, the auth pages and `/sites/*` are public. `getViewer(ctx)` in `convex/lib/viewer.ts` returns the signed-in user, or null. Guest mode (signed-out callers act as the seeded demo user Adi) comes back for the judges before the deadline: set `PLEX_GUEST_MODE=true` in Convex, make the proxy's routes public and restore the Continue as guest buttons.
 
 ## Backend conventions (Convex)
 
-- One file per surface: `tasks.ts`, `causes.ts`, `ledger.ts`, `campaigns.ts`, … Shared helpers go in `convex/lib/`.
+- One file per surface: `tasks.ts`, `hire.ts`, `ledger.ts`, `autopay.ts`, … Shared helpers go in `convex/lib/`.
 - The schema in `convex/schema.ts` is grouped by surface. Add tables or fields **at the end of your surface's section** only, to keep merges clean.
 - PayPal calls run in Convex **actions** via `@plex/paypal` (`PayPalClient.fromEnv()`); they then call internal mutations to write state and receipts. Set the env vars in the Convex deployment: `pnpm --filter @plex/backend exec convex env set PAYPAL_CLIENT_ID …` (also `PAYPAL_CLIENT_SECRET`, `PAYPAL_ENVIRONMENT=sandbox`).
 - AI uses **Gemini through the Vercel AI SDK** (`ai`, `@ai-sdk/google`) inside Convex actions, with `GOOGLE_GENERATIVE_AI_API_KEY` set in Convex. Use structured output (`generateObject` with zod) for anything the code acts on. When the key is missing, fall back to a deterministic heuristic so the demo still works, and label the result as such.

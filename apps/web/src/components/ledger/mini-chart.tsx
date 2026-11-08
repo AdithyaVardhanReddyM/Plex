@@ -10,9 +10,8 @@ import { useTokens } from "./widget";
 registerAg();
 
 /**
- * A sparkline: an AG Charts bar or area series with the axes hidden. Used in
- * pot cards and inside AG Grid cells (top workers), so grid and chart share one
- * theme. Values are cents.
+ * A sparkline: an AG Charts bar or area series with the axes hidden. Used
+ * inside AG Grid cells (top workers), so grid and chart share one theme. Values are cents.
  */
 export function MiniChart({
   values,

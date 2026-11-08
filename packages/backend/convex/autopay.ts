@@ -11,7 +11,7 @@ import { formatCents } from "./lib/money";
  * Plex keeps the payment token, and later tasks (posted on the web, by
  * hands-free mode or by an agent over the API) are held from that wallet
  * without a checkout popup. Still a hold: the charge happens only when the
- * proof passes. Code decides when it may be used: the pot rules, a per-task
+ * proof passes. Code decides when it may be used: a per-task
  * limit and a daily limit, all set by the person.
  */
 

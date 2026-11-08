@@ -22,10 +22,8 @@ function usePath() {
 // ── Sidebar ──────────────────────────────────────────────────────────────────
 
 function useCounts() {
-  const approvals = useQuery(api.pots.pendingApprovals);
-  const tasks = useQuery(api.pots.myOpenTasks);
+  const tasks = useQuery(api.tasks.myOpenTasks);
   return {
-    "/pots": approvals?.length ?? 0,
     "/tasks": tasks?.length ?? 0,
   } as Record<string, number>;
 }
@@ -76,12 +74,7 @@ function NavItems({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                   />
                   <span className="relative flex-1 truncate">{label}</span>
                   {count > 0 ? (
-                    <span
-                      className={cn(
-                        "tabular relative rounded-full px-1.5 text-[11px] leading-[18px] font-medium",
-                        href === "/pots" ? "bg-green-400 text-ink" : "bg-white/10 text-white/70",
-                      )}
-                    >
+                    <span className="tabular relative rounded-full bg-white/10 px-1.5 text-[11px] leading-[18px] font-medium text-white/70">
                       {count}
                     </span>
                   ) : null}
@@ -113,14 +106,15 @@ function SearchButton({ className }: { className?: string }) {
   );
 }
 
-/** Agent spending: the kill switch, live state and this month's spend across pots. */
+/** Agent spending: the kill switch, live state and today's auto-pay use against its daily limit. */
 function AgentsCard() {
   const viewer = useQuery(api.users.viewer);
-  const pots = useQuery(api.pots.list);
+  const autopay = useQuery(api.autopay.mine, {});
   const setPaused = useMutation(api.users.setPaused);
   const paused = Boolean(viewer?.agentsPaused);
-  const spent = pots?.reduce((s, p) => s + p.spentMonthCents, 0) ?? 0;
-  const budget = pots?.reduce((s, p) => s + p.monthlyBudgetCents, 0) ?? 0;
+  const autopayOn = autopay?.status === "active";
+  const spent = autopay?.usedTodayCents ?? 0;
+  const limit = autopay?.dailyLimitCents ?? 0;
 
   return (
     <div
@@ -134,7 +128,7 @@ function AgentsCard() {
           <div className="text-[13px] font-semibold text-white">Agent spending</div>
           <div className={cn("mt-0.5 flex items-center gap-1.5 text-[11.5px]", paused ? "text-amber-300" : "text-white/50")}>
             <StatusDot tone={paused ? "amber" : "green"} live={!paused && viewer !== undefined} />
-            {paused ? "Paused, nothing can spend" : "Live, inside your rules"}
+            {paused ? "Paused, nothing can spend" : "Live, inside your limits"}
           </div>
         </div>
         <Switch
@@ -143,14 +137,18 @@ function AgentsCard() {
           label={paused ? "Resume agent spending" : "Pause agent spending"}
         />
       </div>
-      <div className="mt-4">
-        <div className="tabular flex items-baseline justify-between text-[11.5px] text-white/45">
-          <span>This month</span>
-          <span>of {formatCents(budget)}</span>
+      {autopayOn ? (
+        <div className="mt-4">
+          <div className="tabular flex items-baseline justify-between text-[11.5px] text-white/45">
+            <span>Auto-pay today</span>
+            <span>of {formatCents(limit)}</span>
+          </div>
+          <div className="font-display tabular mt-0.5 text-[20px] font-bold tracking-[-0.03em] text-white">{formatCents(spent)}</div>
+          <Meter value={limit ? spent / limit : 0} size="sm" label="Auto-pay used today" className="mt-2 bg-white/10" />
         </div>
-        <div className="font-display tabular mt-0.5 text-[20px] font-bold tracking-[-0.03em] text-white">{formatCents(spent)}</div>
-        <Meter value={budget ? spent / budget : 0} size="sm" label="Spent this month across pots" className="mt-2 bg-white/10" />
-      </div>
+      ) : (
+        <p className="mt-3 text-[11.5px] leading-relaxed text-white/45">Auto-pay is off, so you approve every hold at PayPal.</p>
+      )}
     </div>
   );
 }

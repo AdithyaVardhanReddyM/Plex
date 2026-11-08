@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, HeartHandshake } from "lucide-react";
+import { ArrowDown, ScanEye } from "lucide-react";
 import { useHydrated } from "@/components/client-only";
 import { LedgerPicture, TasksPicture } from "./bento-pictures";
 
@@ -9,9 +9,9 @@ import { LedgerPicture, TasksPicture } from "./bento-pictures";
  *
  * | Tile         | Span | Kind      | The one thing                               |
  * | Tasks        | 2/3  | Hero UI   | Proof checks pass, the held $12 is paid out |
- * | Pots         | 1/3  | Statement | Your words become a rule the code enforces  |
- * | Causes       | 1/3  | Stat      | $45 pays one cleanup shift, on proof        |
- * | Ledger       | 2/3  | Diagram   | Where the month went, pot by pot            |
+ * | Auto-pay     | 1/3  | Statement | Your limits are checked in code             |
+ * | Proofers     | 1/3  | Stat      | Three blind proofers score agent work       |
+ * | Ledger       | 2/3  | Diagram   | Where the month went, by category           |
  *
  * Kinds alternate across both rows, no window chrome repeats the hero's, and
  * no string from the hero comes back. The two pictures are static Stages, so
@@ -29,11 +29,11 @@ export function Bento() {
           <TasksPicture />
         </Picture>
       </Tile>
-      <Tile title="Pots and limits." body="Write what your agents may spend in plain English, pot by pot. Over a limit, they ask you first.">
+      <Tile title="Auto-pay limits." body="Save your PayPal once and cap what agents may hold. Over a limit, you approve at PayPal.">
         <RulePicture />
       </Tile>
-      <Tile title="Plex Causes." body="Fund a task, not a black hole. Donations pay local people for work they prove.">
-        <CausesPicture />
+      <Tile title="Plex Hire." body="People and AI agents bid on your work. Nobody is paid until the proof passes.">
+        <ProofersPicture />
       </Tile>
       <Tile
         className="lg:col-span-2"
@@ -76,39 +76,38 @@ function Picture({ children }: { children: React.ReactNode }) {
   return useHydrated() ? <>{children}</> : <div className="h-[260px] bg-canvas" />;
 }
 
-// ── Pots: your words become a rule ──────────────────────────────────────────
+// ── Auto-pay: your limits, checked in code ──────────────────────────────────
 
 function RulePicture() {
   return (
     <div className="flex flex-1 flex-col justify-end px-6 pb-6">
       <blockquote className="text-[22px] font-medium leading-snug tracking-[-0.015em] text-ink">
-        “Never buy subscriptions without asking.”
+        “Up to $50 a task, $150 a day.”
       </blockquote>
       <ArrowDown className="my-4 size-4 text-faint" strokeWidth={1.9} aria-hidden />
       <div className="flex flex-col gap-2">
         <code className="w-fit rounded-md bg-sunken px-2.5 py-1.5 font-mono text-[12.5px] text-ink-2">
-          block_category &quot;subscriptions&quot;
+          limitCents 5000 · dailyLimitCents 15000
         </code>
-        <span className="text-[13px] text-muted">Checked in code before every payment.</span>
+        <span className="text-[13px] text-muted">Checked in code before every hold.</span>
       </div>
     </div>
   );
 }
 
-// ── Causes: one number ──────────────────────────────────────────────────────
+// ── Hire: one number ────────────────────────────────────────────────────────
 
-function CausesPicture() {
+function ProofersPicture() {
   return (
     <div className="flex flex-1 flex-col justify-end px-6 pb-6">
-      <HeartHandshake className="size-5 text-green-700" strokeWidth={1.9} aria-hidden />
-      <div className="mt-4 text-[14px] text-muted">One cleanup shift at Lake Merritt</div>
+      <ScanEye className="size-5 text-green-700" strokeWidth={1.9} aria-hidden />
+      <div className="mt-4 text-[14px] text-muted">Every piece of agent work</div>
       <div className="tabular mt-1 whitespace-nowrap text-[64px] font-semibold leading-none tracking-[-0.04em] text-ink">
-        $45
+        3
       </div>
       <div className="mt-3 text-[14px] leading-relaxed text-muted">
-        paid to a local worker when the before-and-after photos pass. Lakeside Commons, Oakland.
+        blind proofers score it against the brief before PayPal releases a cent.
       </div>
     </div>
   );
 }
-

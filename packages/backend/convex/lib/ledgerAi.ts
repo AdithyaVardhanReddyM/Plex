@@ -63,12 +63,6 @@ export const DEMO_QUESTIONS: Record<LedgerRole, string[]> = {
     "Show refunds and disputes",
     "How much went to Errands?",
   ],
-  cause: [
-    "Who gave the most?",
-    "Show donations by week",
-    "How much did shift workers earn?",
-    "Which gifts came from saved money?",
-  ],
 };
 
 export async function runAnalyst(input: AnalystInput): Promise<AnalystResult> {
@@ -89,7 +83,7 @@ const zFilter = z.object({
   sinceDays: z.number().int().min(1).max(90).optional().describe("Only the last N days. 7 for 'this week', 30 for 'this month'."),
   kinds: z.array(z.enum(RECEIPT_KINDS)).optional(),
   states: z.array(z.enum(RECEIPT_STATES)).optional(),
-  categories: z.array(z.string()).optional().describe("Pot categories, e.g. Food, Shopping, Errands, Giving"),
+  categories: z.array(z.string()).optional().describe("Categories, e.g. Food, Shopping, Errands"),
   agents: z.array(z.string()).optional().describe("Agent names exactly as listed, or 'You'"),
   parties: z.array(z.string()).optional().describe("Merchant or person names (substring match)"),
   direction: z.enum(["in", "out"]).optional(),
@@ -249,41 +243,6 @@ export function runHeuristic(input: AnalystInput): Omit<AnalystResult, "engineNo
         }),
       ],
       followUps: ["What's the biggest purchase?", "Where did my money go this week?"],
-      engine: "heuristic",
-    };
-  }
-
-  // Donations, giving, causes
-  if (role === "cause" || has(q, "donat", "giv", "cause", "charity", "saved money", "savings fund")) {
-    if (role === "cause" && has(q, "shift", "worker", "earn", "payout", "paid")) {
-      const f: WidgetFilter = { kinds: ["payout"], ...when };
-      const rows = pick(f);
-      return {
-        answer: `${money(sumCents(rows))} went to local workers across ${rows.length} paid shifts ${phrase}, each released only after its before-and-after photos passed.`,
-        widgets: [
-          { kind: "chart", title: "Paid to each worker", filter: f, chart: { type: "bar", groupBy: "party", measure: "sum" } },
-          GRID("Shift payouts", f, { columns: ["when", "party", "why", "rule", "amount"] }),
-        ],
-        followUps: ["Who gave the most?", "Show donations by week"],
-        engine: "heuristic",
-      };
-    }
-    const saved = has(q, "saved", "savings", "agent saved");
-    const f: WidgetFilter = { kinds: ["donation"], ...when, ...(saved ? { search: "saved" } : {}) };
-    const rows = pick(f);
-    const byWeek = has(q, "week", "trend", "over time", "by day");
-    const top = aggregate(rows, "party", "sum").buckets[0];
-    return {
-      answer: rows.length
-        ? `${money(sumCents(rows))} in ${rows.length} donation${rows.length === 1 ? "" : "s"} ${phrase}.${top ? ` The largest giver: ${top.label}, ${money(top.value)}.` : ""}`
-        : `No donations ${phrase}.`,
-      widgets: [
-        byWeek
-          ? { kind: "chart", title: "Donations by week", filter: f, chart: { type: "column", groupBy: "week", measure: "sum" } }
-          : { kind: "chart", title: saved ? "Gifts from saved money" : "Top donors", filter: f, chart: { type: "bar", groupBy: "party", measure: "sum" } },
-        GRID(saved ? "Gifts from saved money" : "Donations", f, { columns: ["when", "party", "why", "agent", "state", "amount"] }),
-      ],
-      followUps: role === "cause" ? ["How much did shift workers earn?", "Show donations by week"] : ["Where did my money go this week?"],
       engine: "heuristic",
     };
   }

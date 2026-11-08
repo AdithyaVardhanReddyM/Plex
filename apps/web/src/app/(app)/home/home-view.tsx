@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { useMemo, useState } from "react";
 import {
   ArrowRight,
@@ -9,17 +9,14 @@ import {
   Clock,
   ListChecks,
   Lock,
-  ShieldCheck,
 } from "lucide-react";
 import { AiAgentIcon } from "@/components/ui/icons";
 import { api } from "@/lib/convex";
-import type { Doc } from "@/lib/convex";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Badge, Card, CardHeader, EmptyState, PageHeader, Skeleton } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
 import { DayBars } from "@/components/ui/viz";
 import { ReceiptRow, type Receipt } from "@/components/receipt/receipt";
-import { PotIcon, type Pot } from "@/components/pots/pot-meta";
 import { MoneyFlow } from "@/components/art/money-flow";
 import { cn, formatCents, relativeTime } from "@/lib/utils";
 
@@ -33,9 +30,7 @@ function greeting() {
 export function HomeView() {
   const viewer = useQuery(api.users.viewer);
   const receipts = useQuery(api.receipts.list, { limit: 80 });
-  const pots = useQuery(api.pots.list);
-  const approvals = useQuery(api.pots.pendingApprovals);
-  const tasks = useQuery(api.pots.myOpenTasks);
+  const tasks = useQuery(api.tasks.myOpenTasks);
 
   const [now] = useState(() => Date.now());
   const week = useMemo(() => receipts?.filter((r) => r.occurredAt >= now - 7 * DAY) ?? [], [receipts, now]);
@@ -58,18 +53,13 @@ export function HomeView() {
 
       <WeekCard week={week} movedCents={movedByAgents} heldCents={heldCents} heldCount={held.length} now={now} loading={!receipts} />
 
-      <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <MoneyFlow receipts={week} approvalsWaiting={approvals?.length ?? 0} loading={!receipts} className="h-full" />
-        <ApprovalsCard approvals={approvals} pots={pots} />
-      </div>
-
-      <PotStrip pots={pots} />
+      <MoneyFlow receipts={week} loading={!receipts} className="mt-4" />
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <Card>
           <CardHeader
             title="Recent receipts"
-            description="Who it went to, why, and which rule allowed it."
+            description="Who it went to, why, and what allowed it."
             action={
               <Link href="/receipts" className={buttonVariants({ variant: "ghost", size: "sm" })}>
                 View all <ArrowRight />
@@ -90,7 +80,6 @@ export function HomeView() {
         </Card>
         <div className="flex min-w-0 flex-col gap-4">
           <TasksCard tasks={tasks} />
-          <RulesCard pots={pots} />
         </div>
       </div>
     </div>
@@ -143,7 +132,7 @@ function WeekCard({
         </div>
         <div className="tabular mt-3 text-[13px] text-muted">
           {week.length} receipts · {agents} agent{agents === 1 ? "" : "s"} ·{" "}
-          <span className="font-medium text-green-700">0 outside your rules</span>
+          <span className="font-medium text-green-700">0 outside your limits</span>
         </div>
         <DayBars
           values={days.map((d) => d.cents)}
@@ -178,160 +167,9 @@ function WeekCard({
   );
 }
 
-// ── Approvals ────────────────────────────────────────────────────────────────
-
-function ApprovalsCard({
-  approvals,
-  pots,
-}: {
-  approvals: Doc<"approvals">[] | undefined;
-  pots: Doc<"pots">[] | undefined;
-}) {
-  const decide = useMutation(api.pots.decideApproval);
-  const first = approvals?.[0];
-  const pot = first ? pots?.find((p) => p._id === first.potId) : undefined;
-
-  return (
-    <Card className="flex h-full flex-col">
-      <CardHeader
-        title="Needs your OK"
-        description="Anything over a limit waits for you."
-        action={approvals?.length ? <Badge tone="steel">{approvals.length} waiting</Badge> : null}
-      />
-      <div className="flex flex-1 flex-col p-4 pt-3.5">
-        {approvals === undefined ? (
-          <Skeleton className="h-48 w-full rounded-[12px]" />
-        ) : first ? (
-          <div className="flex flex-1 flex-col overflow-hidden rounded-[16px] bg-canvas/80">
-            <div className="flex items-center gap-2 px-4 pt-3.5 text-[12px] font-medium text-muted">
-              <AiAgentIcon className="size-3.5" strokeWidth={2} />
-              <span className="truncate">{first.agentLabel} wants to buy</span>
-              <span className="ml-auto flex-none text-faint">{relativeTime(first._creationTime)}</span>
-            </div>
-            <div className="flex flex-1 flex-col px-4 pt-2 pb-4">
-              <div className="text-[15px] font-semibold leading-snug tracking-[-0.01em] text-ink">{first.description}</div>
-              <div className="mt-0.5 text-[12.5px] text-muted">
-                {first.merchant} · {pot?.name ?? "a"} pot
-              </div>
-              <div className="mt-4 flex items-end justify-between gap-3">
-                <Amount cents={first.amountCents} size="lg" className="text-[28px]" />
-              </div>
-              <div className="mt-3 flex items-start gap-2 text-[12.5px] leading-snug text-steel-700">
-                <ShieldCheck className="mt-px size-3.5 flex-none" strokeWidth={2} />
-                <span>
-                  Paused by your rule: <span className="font-medium">{first.ruleText}</span>
-                </span>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <Button variant="secondary" onClick={() => decide({ id: first._id, approve: false })}>
-                  Decline
-                </Button>
-                <Button variant="brand" onClick={() => decide({ id: first._id, approve: true })}>
-                  Approve {formatCents(first.amountCents)}
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <EmptyState
-            icon={<ShieldCheck />}
-            title="Nothing waiting"
-            body="Your agents are inside every limit."
-            className="flex-1 justify-center rounded-[14px] bg-canvas/80 py-8"
-          />
-        )}
-      </div>
-    </Card>
-  );
-}
-
-// ── Pots ─────────────────────────────────────────────────────────────────────
-
-const POT_FACE: Record<string, string> = {
-  green: "bg-[linear-gradient(150deg,var(--color-green-50),var(--color-green-100)_70%,var(--color-green-200))]",
-  teal: "bg-[linear-gradient(150deg,var(--color-green-50),var(--color-green-100)_70%,var(--color-green-300))]",
-  blue: "bg-[linear-gradient(150deg,var(--color-steel-50),var(--color-steel-100)_70%,var(--color-steel-200))]",
-  steel: "bg-[linear-gradient(150deg,var(--color-steel-50),var(--color-steel-100)_70%,var(--color-steel-200))]",
-};
-
-function PotStrip({ pots }: { pots: Pot[] | undefined }) {
-  return (
-    <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
-      {(pots ?? Array.from({ length: 4 }).map(() => null)).map((p, i) =>
-        p ? (
-          <Link
-            key={p._id}
-            href="/pots"
-            className={cn(
-              "group relative flex min-h-[156px] flex-col overflow-hidden rounded-xl p-5 shadow-card transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-hover",
-              POT_FACE[p.color] ?? POT_FACE.green,
-            )}
-          >
-            <span className="pointer-events-none absolute -right-8 -bottom-10 size-36 rounded-full border-[18px] border-white/40" aria-hidden />
-            <div className="relative flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <PotIcon pot={p} size={24} />
-                <span className="truncate text-[13.5px] font-semibold text-ink">{p.name}</span>
-              </div>
-              <span className="tabular hidden text-[12px] font-semibold text-ink-2 sm:inline">
-                {p.monthlyBudgetCents ? Math.round((p.spentMonthCents / p.monthlyBudgetCents) * 100) : 0}%
-              </span>
-            </div>
-            <div className="relative mt-auto pt-6">
-              <span className="tabular font-display text-[28px] leading-none font-extrabold tracking-[-0.04em] text-ink">
-                {formatCents(p.spentMonthCents)}
-              </span>
-              <div className="tabular mt-1.5 text-[12px] font-medium text-ink-2/70">
-                of {formatCents(p.monthlyBudgetCents)} · {formatCents(Math.max(0, p.monthlyBudgetCents - p.spentMonthCents))} left
-              </div>
-              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/60">
-                <div
-                  className="h-full rounded-full bg-ink transition-[width] duration-700"
-                  style={{ width: `${p.monthlyBudgetCents ? Math.min(100, (p.spentMonthCents / p.monthlyBudgetCents) * 100) : 0}%` }}
-                />
-              </div>
-            </div>
-          </Link>
-        ) : (
-          <Skeleton key={i} className="h-[156px] w-full rounded-xl" />
-        ),
-      )}
-    </div>
-  );
-}
-
-function RulesCard({ pots }: { pots: Pot[] | undefined }) {
-  return (
-    <Card>
-      <CardHeader
-        title="Your rules"
-        description="Your words, enforced in code."
-        action={
-          <Link href="/pots" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-            Edit <ArrowRight />
-          </Link>
-        }
-      />
-      <div className="space-y-2 p-4 pt-3.5">
-        {pots
-          ? pots.slice(0, 3).map((p) => (
-              <div key={p._id} className="rounded-[12px] border border-line bg-canvas/50 px-3.5 py-3">
-                <div className="flex items-center gap-2 text-[12.5px] font-medium text-ink-2">
-                  <PotIcon pot={p} size={20} />
-                  {p.name}
-                </div>
-                <p className="mt-1.5 text-[13px] leading-relaxed text-pretty text-ink">“{p.rulesText}”</p>
-              </div>
-            ))
-          : <Skeleton className="h-32 w-full" />}
-      </div>
-    </Card>
-  );
-}
-
 // ── Tasks you posted ─────────────────────────────────────────────────────────
 
-type OpenTask = NonNullable<ReturnType<typeof useQuery<typeof api.pots.myOpenTasks>>>[number];
+type OpenTask = NonNullable<ReturnType<typeof useQuery<typeof api.tasks.myOpenTasks>>>[number];
 
 const TASK_STATUS: Record<string, { label: string; tone: "outline" | "steel" | "green" }> = {
   open: { label: "Open", tone: "outline" },

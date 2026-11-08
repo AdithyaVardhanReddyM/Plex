@@ -3,7 +3,6 @@ import { internalAction, internalMutation, internalQuery, mutation, query, type 
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { getViewer, requireViewer } from "./lib/viewer";
-import { describeRule } from "./lib/policy";
 import { formatCents } from "./lib/money";
 import { runAnalyst, DEMO_QUESTIONS } from "./lib/ledgerAi";
 import {
@@ -30,32 +29,7 @@ const DAY = 24 * HOUR;
 
 // ── Scope ────────────────────────────────────────────────────────────────────
 
-/** The cause a viewer's Cause view shows: one they gave to, else the first live one. */
-async function causeFor(ctx: QueryCtx, userId: Id<"users">) {
-  const mine = await ctx.db
-    .query("receipts")
-    .withIndex("by_owner_time", (q) => q.eq("ownerId", userId))
-    .order("desc")
-    .filter((q) => q.neq(q.field("causeId"), undefined))
-    .first();
-  if (mine?.causeId) return ctx.db.get(mine.causeId);
-  return ctx.db
-    .query("causes")
-    .filter((q) => q.eq(q.field("status"), "live"))
-    .first();
-}
-
 async function scopedReceipts(ctx: QueryCtx, user: Doc<"users">, role: LedgerRole) {
-  if (role === "cause") {
-    const cause = await causeFor(ctx, user._id);
-    if (!cause) return { receipts: [] as Doc<"receipts">[], scopeLabel: "No cause yet" };
-    const receipts = await ctx.db
-      .query("receipts")
-      .withIndex("by_cause", (q) => q.eq("causeId", cause._id))
-      .order("desc")
-      .take(500);
-    return { receipts: receipts.sort((a, b) => b.occurredAt - a.occurredAt), scopeLabel: cause.name };
-  }
   const all = await ctx.db
     .query("receipts")
     .withIndex("by_owner_time", (q) => q.eq("ownerId", user._id))
@@ -90,8 +64,7 @@ export const personal = query({
     if (!viewer) return null;
     const me = viewer.user._id;
     const now = Date.now();
-    const [pots, splits, receipts] = await Promise.all([
-      ctx.db.query("pots").withIndex("by_owner", (q) => q.eq("ownerId", me)).collect(),
+    const [splits, receipts] = await Promise.all([
       ctx.db.query("splits").withIndex("by_owner", (q) => q.eq("ownerId", me)).collect(),
       ctx.db
         .query("receipts")
@@ -99,41 +72,9 @@ export const personal = query({
         .collect(),
     ]);
 
-    const dayStart = (ms: number) => {
-      const d = new Date(ms);
-      d.setHours(0, 0, 0, 0);
-      return d.getTime();
-    };
-    const today = dayStart(now);
     // Money that left the viewer: not refunds or invoices coming in, and not
     // payouts Plex made from a hold (counted when the task was funded).
     const out = receipts.filter((r) => r.payeeId !== me && r.kind !== "refund" && r.kind !== "invoice" && !(r.kind === "payout" && r.payerId !== me));
-
-    const potRows = pots.map((p) => {
-      const daily = Array.from({ length: 14 }, (_, i) => ({ day: today - (13 - i) * DAY, cents: 0 }));
-      for (const r of out) {
-        if (r.potId !== p._id) continue;
-        const slot = daily.find((d) => d.day === dayStart(r.occurredAt));
-        if (slot) slot.cents += r.amountCents;
-      }
-      const dailyLimit = p.rules.find((r) => r.kind === "daily_limit");
-      const approvalOver = p.rules.find((r) => r.kind === "approval_over");
-      return {
-        _id: p._id,
-        name: p.name,
-        icon: p.icon,
-        color: p.color,
-        balanceCents: p.balanceCents,
-        spentTodayCents: p.spentTodayCents,
-        spentMonthCents: p.spentMonthCents,
-        monthlyBudgetCents: p.monthlyBudgetCents,
-        dailyLimitCents: dailyLimit?.kind === "daily_limit" ? dailyLimit.amountCents : undefined,
-        approvalOverCents: approvalOver?.kind === "approval_over" ? approvalOver.amountCents : undefined,
-        rulesText: p.rulesText,
-        ruleLines: p.rules.map(describeRule),
-        daily,
-      };
-    });
 
     const weekOut = out.filter((r) => r.occurredAt >= now - 7 * DAY && r.state !== "held");
     const prevWeekOut = out.filter((r) => r.occurredAt < now - 7 * DAY && r.occurredAt >= now - 14 * DAY && r.state !== "held");
@@ -142,7 +83,6 @@ export const personal = query({
     const saved = receipts.reduce((s, r) => s + (r.evidence?.savedCents ?? 0), 0);
 
     return {
-      pots: potRows,
       splits: await Promise.all(
         splits
           .sort((a, b) => b.occurredAt - a.occurredAt)
@@ -327,93 +267,6 @@ export const poster = query({
   },
 });
 
-// ── Cause ────────────────────────────────────────────────────────────────────
-
-export const cause = query({
-  args: {},
-  handler: async (ctx) => {
-    const viewer = await getViewer(ctx);
-    if (!viewer) return null;
-    const c = await causeFor(ctx, viewer.user._id);
-    if (!c) return null;
-    const org = await ctx.db.get(c.orgId);
-    const donations = await ctx.db.query("donations").withIndex("by_cause", (q) => q.eq("causeId", c._id)).collect();
-    const feed = await Promise.all(
-      donations.map(async (d) => {
-        const r = d.receiptId ? await ctx.db.get(d.receiptId) : null;
-        return {
-          _id: d._id,
-          donor: d.donorLabel,
-          amountCents: d.amountCents,
-          recurring: d.recurring,
-          source: d.source,
-          forTask: Boolean(d.taskId),
-          at: r?.occurredAt ?? d._creationTime,
-          receiptId: d.receiptId,
-          isYou: d.donorId === viewer.user._id,
-        };
-      }),
-    );
-    feed.sort((a, b) => b.at - a.at);
-
-    const board = new Map<string, { donor: string; cents: number; gifts: number; recurring: boolean; isYou: boolean }>();
-    for (const d of feed) {
-      if (d.donor === "Anonymous") continue;
-      const row = board.get(d.donor) ?? { donor: d.donor, cents: 0, gifts: 0, recurring: false, isYou: d.isYou };
-      row.cents += d.amountCents;
-      row.gifts += 1;
-      row.recurring ||= d.recurring;
-      board.set(d.donor, row);
-    }
-
-    const tasks = await ctx.db.query("tasks").withIndex("by_cause", (q) => q.eq("causeId", c._id)).collect();
-    const taskRows = await Promise.all(
-      tasks.map(async (t) => {
-        const rs = await ctx.db.query("receipts").withIndex("by_task", (q) => q.eq("taskId", t._id)).collect();
-        const paid = rs.filter((r) => r.kind === "payout" && (r.state === "released" || r.state === "paid"));
-        const pledged = donations.filter((d) => d.taskId === t._id).reduce((s, d) => s + d.amountCents, 0);
-        const per = t.payout.kind === "fixed" ? t.payout.amountCents : 0;
-        const spots = t.spots ?? 1;
-        return {
-          _id: t._id,
-          title: t.title,
-          status: t.status,
-          when: t.windowStart,
-          spots,
-          neededCents: per * spots,
-          fundedCents: t.status === "open" ? pledged : per * spots,
-          paidCents: paid.reduce((s, r) => s + r.amountCents, 0),
-          workersPaid: paid.length,
-          workers: await Promise.all(
-            paid.map(async (r) => {
-              const u = r.payeeId ? await ctx.db.get(r.payeeId) : null;
-              return { name: r.payeeLabel, color: u?.avatarColor };
-            }),
-          ),
-        };
-      }),
-    );
-    taskRows.sort((a, b) => b.when - a.when);
-
-    const now = Date.now();
-    return {
-      cause: { _id: c._id, name: c.name, slug: c.slug, tagline: c.tagline, location: c.location.label, goalCents: c.goalCents, raisedCents: c.raisedCents, donorsCount: c.donorsCount, workersPaidCount: c.workersPaidCount },
-      org: org ? { name: org.name, color: org.avatarColor } : null,
-      feed: feed.slice(0, 60),
-      leaderboard: [...board.values()].sort((a, b) => b.cents - a.cents).slice(0, 10),
-      tasks: taskRows,
-      totals: {
-        last21Cents: feed.filter((d) => d.at >= now - 21 * DAY).reduce((s, d) => s + d.amountCents, 0),
-        gifts: feed.length,
-        recurring: feed.filter((d) => d.recurring).length,
-        paidToWorkersCents: taskRows.reduce((s, t) => s + t.paidCents, 0),
-        shiftsDone: taskRows.filter((t) => t.status === "paid" || t.status === "approved").length,
-        shiftsOpen: taskRows.filter((t) => t.status === "open" || t.status === "assigned").length,
-      },
-    };
-  },
-});
-
 // ── Watchdog ─────────────────────────────────────────────────────────────────
 
 export type WatchdogAlert = {
@@ -438,36 +291,6 @@ export const watchdog = query({
     const me = viewer.user._id;
     const now = Date.now();
     const alerts: WatchdogAlert[] = [];
-
-    if (role === "cause") {
-      const c = await causeFor(ctx, me);
-      if (!c) return [];
-      const tasks = await ctx.db.query("tasks").withIndex("by_cause", (q) => q.eq("causeId", c._id)).collect();
-      const donations = await ctx.db.query("donations").withIndex("by_cause", (q) => q.eq("causeId", c._id)).collect();
-      for (const t of tasks) {
-        if (t.status !== "open" || t.windowStart < now) continue;
-        const per = t.payout.kind === "fixed" ? t.payout.amountCents : 0;
-        const need = per * (t.spots ?? 1);
-        const have = donations.filter((d) => d.taskId === t._id).reduce((s, d) => s + d.amountCents, 0);
-        if (have < need) {
-          const days = Math.max(1, Math.round((t.windowStart - now) / DAY));
-          alerts.push({
-            id: `short-${t._id}`,
-            severity: "notice",
-            title: `${t.title.split(",")[0]} is ${formatCents(need - have)} short`,
-            detail: `${formatCents(have)} of ${formatCents(need)} pledged for ${t.spots ?? 1} paid spots, ${days} day${days === 1 ? "" : "s"} out. General gifts can cover the rest.`,
-            spec: {
-              kind: "grid",
-              title: "Gifts pledged to shifts",
-              filter: { kinds: ["donation"], search: "shift" },
-              columns: ["when", "party", "why", "state", "amount"],
-              sort: { column: "when", desc: true },
-            },
-          });
-        }
-      }
-      return alerts;
-    }
 
     const recent = await ctx.db
       .query("receipts")

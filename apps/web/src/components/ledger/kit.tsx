@@ -82,20 +82,6 @@ export function WidgetFrame({
   );
 }
 
-// ── Tinted card faces ────────────────────────────────────────────────────────
-
-/** Home's pot faces: mint for money that moves, steel for money that's held. */
-export const FACE = {
-  green: "bg-[linear-gradient(150deg,var(--color-green-50),var(--color-green-100)_70%,var(--color-green-200))]",
-  teal: "bg-[linear-gradient(150deg,var(--color-green-50),var(--color-green-100)_70%,var(--color-green-300))]",
-  steel: "bg-[linear-gradient(150deg,var(--color-steel-50),var(--color-steel-100)_70%,var(--color-steel-200))]",
-} as const;
-
-/** The faint ring in a face's corner, as on Home. */
-export function FaceRing() {
-  return <span className="pointer-events-none absolute -right-8 -bottom-10 size-36 rounded-full border-[18px] border-white/40" aria-hidden />;
-}
-
 // ── Stat board ───────────────────────────────────────────────────────────────
 
 export type StripStat = {

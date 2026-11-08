@@ -18,11 +18,11 @@ import { v, type Infer, type VLiteral, type VUnion } from "convex/values";
 
 // ── Vocabulary ───────────────────────────────────────────────────────────────
 
-export const ROLES = ["personal", "poster", "cause"] as const;
+export const ROLES = ["personal", "poster"] as const;
 export type LedgerRole = (typeof ROLES)[number];
 
 export const RECEIPT_KINDS = [
-  "task_funding", "payout", "refund", "donation", "purchase", "invoice", "subscription",
+  "task_funding", "payout", "refund", "purchase", "invoice", "subscription",
 ] as const;
 export type ReceiptKind = (typeof RECEIPT_KINDS)[number];
 
@@ -109,7 +109,6 @@ export type ActionTool = keyof typeof ACTION_TOOLS;
 export const ROLE_TOOLS: Record<LedgerRole, readonly ActionTool[]> = {
   personal: ["send_reminder"],
   poster: ["release_payout", "refund"],
-  cause: ["release_payout"],
 };
 
 /**
@@ -197,7 +196,7 @@ const STATE_LABEL: Record<ReceiptStateName, string> = {
   refunded: "Refunded", disputed: "Disputed", declined: "Declined",
 };
 const KIND_LABEL: Record<ReceiptKind, string> = {
-  task_funding: "Task funding", payout: "Payout", refund: "Refund", donation: "Donation",
+  task_funding: "Task funding", payout: "Payout", refund: "Refund",
   purchase: "Purchase", invoice: "Invoice", subscription: "Subscription",
 };
 export const stateLabel = (s: ReceiptStateName) => STATE_LABEL[s];
@@ -299,12 +298,10 @@ export function fillDays(buckets: Bucket[], sinceDays: number, now: number): Buc
 export const ROLE_LABEL: Record<LedgerRole, string> = {
   personal: "Personal",
   poster: "Task poster",
-  cause: "Cause",
 };
 
 /** Which receipts a role's Ledger covers (applied to the viewer's receipts). */
 export const ROLE_BASE_FILTER: Record<LedgerRole, WidgetFilter> = {
   personal: {},
   poster: { kinds: ["task_funding", "payout", "refund"] },
-  cause: {},
 };

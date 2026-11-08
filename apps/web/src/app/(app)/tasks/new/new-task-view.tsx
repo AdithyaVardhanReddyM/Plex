@@ -40,7 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, Badge, Card, CardHeader, IconTile, Input, Kbd, Label, PageHeader, Segmented, Skeleton, Switch, Textarea } from "@/components/ui/primitives";
 import { Amount } from "@/components/ui/money";
 import { PersonaSwitch, useAs } from "@/components/tasks/persona";
-import { KIND_ICON, PolicyLine, SpecIcon, TaskCard, errorMessage, type CardTask } from "@/components/tasks/task-ui";
+import { KIND_ICON, SpecIcon, TaskCard, errorMessage, type CardTask } from "@/components/tasks/task-ui";
 import { useAutoPay, useFund } from "@/components/tasks/use-fund";
 import { cn } from "@/lib/utils";
 
@@ -160,14 +160,7 @@ export function NewTaskView() {
   const [saving, setSaving] = useState<"draft" | "fund" | "build" | null>(null);
 
   const payoutCents = form ? Math.round(Number(form.payout || 0) * 100) : 0;
-  const pots = useQuery(api.pots.list);
-  const errands = as ? undefined : pots?.find((p) => p.name === "Errands");
-  const [hour] = useState(() => new Date().getHours());
-  const policy = useQuery(
-    api.pots.check,
-    errands && payoutCents > 0 ? { potId: errands._id, amountCents: payoutCents, category: "Errands", hour } : "skip",
-  );
-  const autoPay = useAutoPay(payoutCents, policy?.outcome);
+  const autoPay = useAutoPay(payoutCents);
 
   async function runWriter(text = brief) {
     if (text.trim().length < 8) {
@@ -386,13 +379,12 @@ export function NewTaskView() {
                     </li>
                   ))}
                 </ol>
-                <PolicyLine pot={errands?.name} outcome={policy?.outcome} ruleText={policy?.ruleText} className="mt-5" />
                 <div className="mt-5 flex flex-col gap-2">
                   <Button
                     variant="brand"
                     size="lg"
                     onClick={() => save("fund")}
-                    disabled={!!saving || funding || payoutCents < 100 || policy?.outcome === "deny"}
+                    disabled={!!saving || funding || payoutCents < 100}
                   >
                     {saving === "fund" || funding ? <Loader2 className="animate-spin" /> : null}
                     {saving === "fund" || funding ? (
@@ -430,7 +422,7 @@ export function NewTaskView() {
 /** The four steps of a task, before there's a draft to preview: the screen's lit card. */
 function HowItWorks() {
   const steps = [
-    { icon: <Lock />, title: "Fund", body: "PayPal holds the payout. Your pot's rules are checked first, in code." },
+    { icon: <Lock />, title: "Fund", body: "PayPal holds the payout, inside your auto-pay limits or with your approval." },
     { icon: <UsersRound />, title: "Match", body: "People apply and AI agents bid. Match ranks them by record and ask." },
     { icon: <Camera />, title: "Proof", body: "Photos with the challenge word, or agent work scored by three blind proofers." },
     { icon: <BadgeCheck />, title: "Pay", body: "You approve, PayPal captures and pays out. Both sides get the receipt." },

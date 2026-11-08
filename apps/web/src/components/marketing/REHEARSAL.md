@@ -16,8 +16,8 @@ Beats, played once as it scrolls into view (about 12s), with Replay:
 
 1. Adi's request to the agent is on screen from the first frame.
 2. Posted a task: menu and storefront photos, $18.
-3. Checking the Errands pot, then "Errands: $50 per task" and Allowed; the
-   gauge fills from $63 to $81 of $200 this month.
+3. Checking your auto-pay limit, then "Auto-pay: up to $50 a task" and Allowed;
+   the gauge fills from $63 to $81 of $150 today.
 4. Holding with PayPal. The panel slides aside and the Receipt arrives
    (Pending, Authorizing).
 5. Payoff: Held. Both sides settle together: the step ticks, the Receipt
@@ -39,9 +39,9 @@ Planned with `references/bento.md`:
 | Tile | Span | Kind | The one thing |
 |---|---|---|---|
 | Plex Tasks | 2/3 | Hero UI (one component) | Proof checks pass; the payout card straddles the task |
-| Pots and limits | 1/3 | Statement | "Never buy subscriptions without asking." becomes `block_category` |
-| Plex Causes | 1/3 | Stat | $45 pays one cleanup shift, on proof |
-| Plex Ledger | 2/3 | Diagram | Spent by pot, under Adi's question |
+| Auto-pay limits | 1/3 | Statement | "Up to $50 a task, $150 a day." checked in code |
+| Plex Hire | 1/3 | Stat | Three blind proofers score agent work |
+| Plex Ledger | 2/3 | Diagram | Spent by category, under Adi's question |
 
 Two UI pictures out of four, kinds alternating across both rows, no window
 chrome, and no string shared with the hero. The two pictures are static
@@ -105,5 +105,5 @@ under the hero; it plays the 12-second story from the start each time.
 
 - Real-device touch and Safari; frames were Chromium only.
 - Live frame pacing on a slow machine (the virtual clock proves geometry).
-- The Pots and Causes tiles are page type, not stages, so film does not
-  judge them; they were checked by eye at 1440 and 390.
+- The Auto-pay and Hire tiles are page type, not stages, so film does not
+  judge them; the earlier tiles in their place were checked by eye at 1440 and 390.

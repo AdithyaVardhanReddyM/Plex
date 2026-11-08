@@ -6,7 +6,7 @@ import { userByHandle } from "./viewer";
 /**
  * History the Ledger needs to tell a story: three weeks of finished tasks
  * (proofs that passed, two that failed in Dogpatch, one dispute), a couple of
- * MCP-agent purchases, and the cause's donations and paid cleanup shifts.
+ * and MCP-agent purchases.
  * All invented, all sandbox. Called at the end of `seed:run`; idempotent.
  */
 
@@ -27,16 +27,7 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
     if (!u) throw new Error(`Seed user ${handle} missing: run seed:run first`);
     return u;
   };
-  const [adi, rosa, luis, theo, amara, kenji, lakeside, fernway] = await Promise.all(
-    ["adi", "rosa", "luis", "theo", "amara", "kenji", "lakeside-commons", "fernway"].map(h),
-  );
-  const pots = await ctx.db.query("pots").withIndex("by_owner", (q) => q.eq("ownerId", adi._id)).collect();
-  const pot = (name: string) => pots.find((p) => p.name === name)?._id;
-  const cause = await ctx.db
-    .query("causes")
-    .withIndex("by_slug", (q) => q.eq("slug", "lake-merritt-shoreline"))
-    .unique();
-
+  const [adi, rosa, luis, theo, amara, kenji] = await Promise.all(["adi", "rosa", "luis", "theo", "amara", "kenji"].map(h));
   // On the hour, so past shifts read "9am–1pm", not "9:39am–1:39pm".
   const now = Math.floor(Date.now() / HOUR) * HOUR;
   const ago = (days: number, hours = 0) => now - days * DAY - hours * HOUR;
@@ -144,7 +135,6 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
   ];
 
   for (const p of past) {
-    const potId = pot("Errands");
     const start = p.daysAgo;
     const status: Doc<"tasks">["status"] = p.outcome === "pass" ? "paid" : p.outcome === "fail" ? "refunded" : "disputed";
     const taskId = await ctx.db.insert("tasks", {
@@ -192,7 +182,6 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
       currency: "USD",
       ownerId: adi._id,
       category: "Errands",
-      potId,
       taskId,
       why: p.brief,
       agentLabel: p.via === "mcp" ? "Claude (MCP)" : undefined,
@@ -259,7 +248,7 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
   await receipt(
     {
       kind: "refund", amountCents: 1_800, currency: "USD", ownerId: adi._id, payerLabel: "Plex", payeeId: adi._id,
-      payeeLabel: adi.name, category: "Errands", potId: pot("Errands"), agentLabel: "Claude (MCP)",
+      payeeLabel: adi.name, category: "Errands", agentLabel: "Claude (MCP)",
       why: "Drop my spare keys with the dog walker in Noe Valley (cancelled: no one showed)",
       rule: { source: "system", text: "Nobody started within the window, so the hold was refunded" },
       state: "refunded", paypal: { refundId: "SEED-LEDGER-REF-NOE" },
@@ -279,7 +268,7 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
     await receipt(
       {
         kind: "purchase", amountCents: cents, currency: "USD", ownerId: adi._id, payerId: adi._id, payerLabel: adi.name,
-        payeeLabel: payee, agentLabel: mcp, why, category: "Shopping", potId: pot("Shopping"),
+        payeeLabel: payee, agentLabel: mcp, why, category: "Shopping",
         rule: { source: "policy", text: "Shopping: up to $120 per purchase, ask over $50" }, state: "paid",
       },
       [{ daysAgo: d, hoursAgo: 4, label: "Paid", state: "paid" }],
@@ -289,7 +278,7 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
     {
       kind: "purchase", amountCents: 11_200, currency: "USD", ownerId: adi._id, payerId: adi._id, payerLabel: adi.name,
       payeeLabel: "Northside Audio", agentLabel: mcp, why: "Noise-cancelling headphones for the office, open-box is fine",
-      category: "Shopping", potId: pot("Shopping"),
+      category: "Shopping",
       rule: { source: "approval", text: "You approved it: “Ask before anything over $50”" },
       evidence: { savedCents: 3_700 },
       state: "paid", paypal: { orderId: "SEED-LEDGER-NSA", captureId: "SEED-LEDGER-NSA-CAP" },
@@ -300,113 +289,6 @@ export async function seedLedgerHistory(ctx: MutationCtx) {
     ],
   );
 
-  // ── The cause: donations with receipts, paid cleanup shifts ──────────────
-  if (cause) {
-    const donated = await ctx.db.query("donations").withIndex("by_cause", (q) => q.eq("causeId", cause._id)).collect();
-    // Seeded donations had no receipt; give each one a backdated receipt.
-    let i = 0;
-    for (const d of donated) {
-      if (d.receiptId) continue;
-      const day = [1, 3, 5, 8, 10, 12, 15, 18][i % 8]!;
-      i++;
-      const rid = await receipt(
-        {
-          kind: "donation", amountCents: d.amountCents, currency: "USD", ownerId: lakeside._id, payerId: d.donorId,
-          payerLabel: d.donorLabel, payeeId: lakeside._id, payeeLabel: lakeside.name, causeId: cause._id,
-          taskId: d.taskId, category: "Giving",
-          why: d.taskId ? "Fund a Saturday cleanup shift" : d.recurring ? "Monthly gift to the shoreline" : "For the shoreline cleanups",
-          rule: { source: "donor", text: d.taskId ? "Donor chose a specific shift" : "Goes to the next unfunded shift" },
-          state: d.taskId ? "held" : "paid",
-        },
-        [{ daysAgo: day, hoursAgo: 5 + (i % 7), label: d.taskId ? "Held until the shift's proof passes" : "Received", state: d.taskId ? "held" : "paid" }],
-      );
-      await ctx.db.patch(d._id, { receiptId: rid });
-    }
-    const more: Array<[string, number, number, boolean, "direct" | "saved_for_good" | "campaign"]> = [
-      ["Noor A.", 5_000, 0, false, "direct"],
-      ["Fernway match", 9_600, 2, false, "campaign"],
-      ["Tomás R.", 1_500, 2, true, "direct"],
-      ["Leah M.", 4_500, 4, false, "direct"],
-      ["Anonymous", 2_000, 6, false, "saved_for_good"],
-      ["Grace L.", 13_500, 7, false, "direct"],
-      ["Sam K.", 4_500, 9, true, "direct"],
-      ["Fernway match", 6_200, 11, false, "campaign"],
-      ["Ravi P.", 3_000, 14, false, "direct"],
-      ["Hana W.", 4_500, 17, true, "direct"],
-      ["Owen D.", 1_000, 19, false, "saved_for_good"],
-    ];
-    for (const [label, cents, day, recurring, source] of more) {
-      const rid = await receipt(
-        {
-          kind: "donation", amountCents: cents, currency: "USD", ownerId: lakeside._id,
-          payerId: source === "campaign" ? fernway._id : undefined, payerLabel: label, payeeId: lakeside._id,
-          payeeLabel: lakeside.name, causeId: cause._id, category: "Giving",
-          agentLabel: source === "saved_for_good" ? "Claude (MCP)" : undefined,
-          why: source === "campaign" ? "Fernway matches every verified view on “Tell the lake's story”"
-            : source === "saved_for_good" ? "10% of what my agent saved this week"
-            : recurring ? "Monthly gift to the shoreline" : "For the shoreline cleanups",
-          rule: { source: source === "campaign" ? "poster" : "donor", text: source === "campaign" ? "Campaign rule: matched per 1,000 verified views" : "Goes to the next unfunded shift" },
-          state: "paid",
-        },
-        [{ daysAgo: day, hoursAgo: 3 + (cents % 5), label: "Received", state: "paid" }],
-      );
-      await ctx.db.insert("donations", {
-        causeId: cause._id, donorLabel: label, amountCents: cents, recurring, source,
-        donorId: source === "campaign" ? fernway._id : undefined, receiptId: rid,
-      });
-    }
-
-    const shifts: Array<[string, number, Doc<"users">[], number]> = [
-      ["Cleanup, north shore", 15, [rosa, luis], 0.96],
-      ["Cleanup, boathouse to Pergola", 10, [rosa, luis, kenji], 0.93],
-      ["Storm-drain clearing after the rain", 5, [luis, kenji], 0.9],
-    ];
-    for (const [title, day, workers, conf] of shifts) {
-      const taskId = await ctx.db.insert("tasks", {
-        posterId: lakeside._id, postedVia: "web", title, brief: title,
-        description: "Three hours clearing litter along the marked stretch. Before and after photos at the marked post.",
-        category: "impact", location: { label: "Lake Merritt, Oakland", lat: 37.8024, lng: -122.2589, radiusM: 400 },
-        windowStart: ago(day, 6), windowEnd: ago(day, 2), payout: { kind: "fixed", amountCents: 4_500 }, currency: "USD",
-        proofSpec: [
-          { label: "Before", description: "The marked stretch before you start", type: "photo" },
-          { label: "After", description: "The same spot, after the shift", type: "photo" },
-          { label: "Bags", description: "The filled bags at the pickup point", type: "photo" },
-        ],
-        verificationMode: "auto", challengeCode: "meadow-" + day, status: "paid",
-        funding: { state: "released", orderId: `SEED-LEDGER-SHIFT-${day}` },
-        causeId: cause._id, spots: workers.length, tags: ["Impact", "ledger-history"],
-      });
-      for (const w of workers) {
-        const proofId = await ctx.db.insert("proofs", {
-          taskId, workerId: w._id,
-          items: [0, 1, 2].map((s) => ({ specIndex: s, capturedAt: ago(day, 5 - s * 1.5), lat: 37.8024, lng: -122.2589 })),
-          status: "pass",
-          verdict: {
-            result: "pass", confidence: conf, model: "gemini-2.5-flash",
-            summary: "Before and after match the marked post; bags visible at the pickup point.",
-            checks: [
-              { check: "Before and after", passed: true, detail: "Same angle, same post" },
-              { check: "Bags", passed: true, detail: "Filled bags at the pickup point" },
-              { check: "Challenge word", passed: true, detail: "On paper in the after photo" },
-            ],
-          },
-          decision: "approved",
-        });
-        await receipt(
-          {
-            kind: "payout", amountCents: 4_500, currency: "USD", ownerId: lakeside._id, payerId: lakeside._id,
-            payerLabel: lakeside.name, payeeId: w._id, payeeLabel: w.name, causeId: cause._id, taskId, category: "Giving",
-            why: `${title}: one 3-hour shift`,
-            rule: { source: "proof", text: "Auto-released: proof passed with high confidence" },
-            evidence: { proofId, verdict: `Pass · ${Math.round(conf * 100)}% · 3 of 3 checks` },
-            state: "released", paypal: { payoutBatchId: `SEED-LEDGER-SHIFT-${day}` },
-          },
-          [{ daysAgo: day, hoursAgo: 1.5, label: "Paid out through PayPal Payouts", state: "released" }],
-        );
-      }
-    }
-  }
-
-  return `Ledger history: ${past.length} finished tasks, MCP purchases, cause donations and shifts.`;
+  return `Ledger history: ${past.length} finished tasks and MCP purchases.`;
 }
 

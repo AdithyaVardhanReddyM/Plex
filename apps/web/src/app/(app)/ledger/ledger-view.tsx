@@ -3,32 +3,28 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
-import { Eye, HeartHandshake, ListChecks, MapPin, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { ListChecks, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { ROLE_LABEL, type LedgerRole, type WidgetSpec } from "@plex/backend/lib/ledgerSpec";
 import { api } from "@/lib/convex";
 import type { Receipt } from "@/components/receipt/receipt";
-import { Avatar, Card, EmptyState, PageHeader, SectionHeading, Segmented } from "@/components/ui/primitives";
+import { PageHeader, SectionHeading, Segmented } from "@/components/ui/primitives";
 import { cn, formatCents } from "@/lib/utils";
 import { Analyst, PinnedWidgets, Watchdog, WidgetCard, type WidgetHost } from "@/components/ledger/analyst";
-import { DashboardSkeleton, DisplayMoney, FACE, FaceRing, Figure, StatStrip } from "@/components/ledger/kit";
+import { DashboardSkeleton, DisplayMoney, Figure, StatStrip } from "@/components/ledger/kit";
 import { ReceiptPanel } from "@/components/ledger/receipt-panel";
 import { ReceiptsCard } from "@/components/ledger/receipts-card";
-import { PotGauges } from "@/components/ledger/pots";
 import { Scoreboard } from "@/components/ledger/scoreboard";
 import { MoneyFlow, ProofVerdicts, ProofWall, TopWorkers } from "@/components/ledger/poster-widgets";
-import { CauseTasks, DonationFeed, DonorLeaderboard } from "@/components/ledger/cause-widgets";
 import { Toast } from "@/components/ledger/confirm";
 
 const ROLES: { key: LedgerRole; icon: React.ReactNode }[] = [
   { key: "personal", icon: <Wallet /> },
   { key: "poster", icon: <ListChecks /> },
-  { key: "cause", icon: <HeartHandshake /> },
 ];
 
 const ROLE_INTRO: Record<LedgerRole, { title: string; description: string }> = {
-  personal: { title: "Your money", description: "This week against your pots, and who still owes you." },
+  personal: { title: "Your money", description: "This week's spending, and who still owes you." },
   poster: { title: "Tasks you fund", description: "Money held on proof, what reached workers, and how their proof held up." },
-  cause: { title: "Your cause", description: "Gifts coming in and local work paid out, the way the organization sees it." },
 };
 
 function useRole(): [LedgerRole, (r: LedgerRole) => void] {
@@ -36,7 +32,7 @@ function useRole(): [LedgerRole, (r: LedgerRole) => void] {
   const router = useRouter();
   const pathname = usePathname();
   const raw = params.get("view");
-  const role: LedgerRole = raw === "poster" || raw === "cause" ? raw : "personal";
+  const role: LedgerRole = raw === "poster" ? raw : "personal";
   const set = useCallback(
     (r: LedgerRole) => router.replace(r === "personal" ? pathname : `${pathname}?view=${r}`, { scroll: false }),
     [router, pathname],
@@ -118,13 +114,11 @@ function RoleLedger({ role }: { role: LedgerRole }) {
           <SectionHeading title={ROLE_INTRO[role].title} description={ROLE_INTRO[role].description} />
           {role === "personal" ? <PersonalDashboard host={host} onToast={setToast} /> : null}
           {role === "poster" ? <PosterDashboard /> : null}
-          {role === "cause" ? <CauseDashboard host={host} /> : null}
         </section>
 
         <ReceiptsCard
           receipts={receipts}
-          title={role === "poster" ? "Task money" : role === "cause" ? `Receipts for ${data?.scopeLabel ?? "the cause"}` : "Receipts"}
-          columns={role === "cause" ? ["when", "party", "why", "rule", "state", "amount"] : undefined}
+          title={role === "poster" ? "Task money" : "Receipts"}
           requested={host.requested}
           selectedId={openId}
           onOpen={onOpen}
@@ -150,7 +144,7 @@ function RoleLedger({ role }: { role: LedgerRole }) {
 const SPEND_BY_DAY: WidgetSpec = {
   kind: "chart",
   title: "Spend by day",
-  subtitle: "Last 14 days, by pot",
+  subtitle: "Last 14 days, by category",
   filter: { direction: "out", sinceDays: 14 },
   chart: { type: "column", groupBy: "day", measure: "sum", stackBy: "category" },
 };
@@ -198,7 +192,6 @@ function PersonalDashboard({ host, onToast }: { host: WidgetHost; onToast: (m: s
           },
         ]}
       />
-      <PotGauges pots={p.pots} />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <WidgetCard spec={SPEND_BY_DAY} host={host} />
         {p.splits[0] ? (
@@ -258,103 +251,6 @@ function PosterDashboard() {
         <ProofWall proofs={p.proofs} />
       </div>
       <TopWorkers workers={p.workers} />
-    </div>
-  );
-}
-
-// ── Cause ────────────────────────────────────────────────────────────────────
-
-const DONATIONS_BY_WEEK: WidgetSpec = {
-  kind: "chart",
-  title: "Donations by week",
-  subtitle: "Last four weeks, every gift",
-  filter: { kinds: ["donation"], sinceDays: 28 },
-  chart: { type: "column", groupBy: "week", measure: "sum" },
-};
-
-function CauseDashboard({ host }: { host: WidgetHost }) {
-  const c = useQuery(api.ledger.cause);
-  if (c === null) {
-    return (
-      <Card>
-        <EmptyState
-          icon={<HeartHandshake />}
-          title="No cause on this account"
-          body="When you run a cause on Plex, its gifts and the local work they paid for show up here."
-        />
-      </Card>
-    );
-  }
-  if (!c) return <DashboardSkeleton />;
-  const raised = c.cause.raisedCents / Math.max(c.cause.goalCents, 1);
-  return (
-    <div className="space-y-4">
-      <div className={cn("relative overflow-hidden rounded-xl p-6 shadow-card sm:p-7", FACE.green)}>
-        <FaceRing />
-        <div className="relative grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,360px)] md:items-end md:gap-10">
-          <div className="min-w-0">
-            <div className="flex min-w-0 items-center gap-3">
-              {c.org ? <Avatar name={c.org.name} color={c.org.color} size={40} square /> : null}
-              <div className="min-w-0">
-                <div className="truncate font-display text-[19px] font-bold tracking-[-0.02em] text-ink">{c.cause.name}</div>
-                <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[13px] text-ink-2/75">
-                  <span className="truncate">{c.org?.name}</span>
-                  <MapPin className="ml-1 size-3.5 flex-none" strokeWidth={1.9} />
-                  <span className="truncate">{c.cause.location}</span>
-                </div>
-              </div>
-            </div>
-            <p className="mt-5 flex items-start gap-2 text-[12.5px] leading-relaxed text-ink-2/75">
-              <Eye className="mt-0.5 size-4 flex-none" strokeWidth={1.9} />
-              The view {c.org?.name ?? "the cause"} sees. Donors get the same receipts for the shifts they fund.
-            </p>
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <DisplayMoney cents={c.cause.raisedCents} className="text-[44px] text-ink" />
-                <div className="tabular mt-1.5 text-[12.5px] font-medium text-ink-2/70">raised of {formatCents(c.cause.goalCents)}</div>
-              </div>
-              <span className="tabular font-display text-[20px] font-bold tracking-[-0.03em] text-ink">{Math.round(Math.min(raised, 1) * 100)}%</span>
-            </div>
-            <div
-              className="mt-3 h-2 overflow-hidden rounded-full bg-white/60"
-              role="meter"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(Math.min(raised, 1) * 100)}
-              aria-label="Raised toward the goal"
-            >
-              <div className="h-full rounded-full bg-ink transition-[width] duration-700" style={{ width: `${Math.min(raised, 1) * 100}%` }} />
-            </div>
-          </div>
-        </div>
-      </div>
-      <StatStrip
-        stats={[
-          {
-            label: "Raised, 21 days",
-            tone: "green",
-            value: <DisplayMoney cents={c.totals.last21Cents} className={BIG} />,
-            foot: `${plural(c.totals.gifts, "gift")}, ${c.totals.recurring} monthly`,
-          },
-          { label: "Paid to local workers", value: <DisplayMoney cents={c.totals.paidToWorkersCents} className={BIG} />, foot: "Released on proof" },
-          { label: "Shifts done", value: <Figure className={BIG}>{c.totals.shiftsDone}</Figure>, foot: `${c.totals.shiftsOpen} open` },
-          {
-            label: "Donors, all time",
-            value: <Figure className={BIG}>{c.cause.donorsCount}</Figure>,
-            foot: `${plural(c.cause.workersPaidCount, "worker")} paid so far`,
-          },
-        ]}
-      />
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <WidgetCard spec={DONATIONS_BY_WEEK} host={host} />
-        <DonorLeaderboard leaders={c.leaderboard} />
-      </div>
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <DonationFeed feed={c.feed} />
-        <CauseTasks tasks={c.tasks} />
-      </div>
     </div>
   );
 }

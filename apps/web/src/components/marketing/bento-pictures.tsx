@@ -62,11 +62,11 @@ export function TasksPicture() {
 
 // ── Ledger: where the month went ────────────────────────────────────────────
 
-const POTS = [
+const CATEGORIES = [
   { name: "Food", spent: 385.5, budget: 600, tone: "green" },
   { name: "Shopping", spent: 84, budget: 400, tone: "steel" },
   { name: "Errands", spent: 63, budget: 200, tone: "green" },
-  { name: "Giving", spent: 25.6, budget: 50, tone: "steel" },
+  { name: "Subscriptions", spent: 25.6, budget: 50, tone: "steel" },
 ];
 
 export function LedgerPicture() {
@@ -78,11 +78,11 @@ export function LedgerPicture() {
             <span className="pb-board__q">Where did my money go this month?</span>
           </div>
           <div className="pb-board__title">
-            <span>Spent by pot</span>
+            <span>Spent by category</span>
             <span className="pb-board__total">$558.10</span>
           </div>
           <ul className="pb-bars">
-            {POTS.map((p) => (
+            {CATEGORIES.map((p) => (
               <li key={p.name} className="pb-bar">
                 <span className="pb-bar__name">{p.name}</span>
                 <span className="pb-bar__track">

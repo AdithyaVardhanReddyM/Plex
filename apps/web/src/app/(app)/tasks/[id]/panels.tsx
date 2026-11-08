@@ -40,7 +40,6 @@ import {
   CheckList,
   Deliverable,
   MatchScore,
-  PolicyLine,
   SpecIcon,
   VerdictPill,
   errorMessage,
@@ -233,7 +232,7 @@ export function ActionPanel({ data }: { data: TaskPage }) {
   const reject = useMutation(api.proofs.reject);
   const contest = useMutation(api.proofs.contest);
   const { fund, busy: funding, error: fundError } = useFund();
-  const autoPay = useAutoPay(data.task.fundingCents, data.policy?.outcome);
+  const autoPay = useAutoPay(data.task.fundingCents);
   const { run, busy, errorFor } = useRun();
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
@@ -263,12 +262,11 @@ export function ActionPanel({ data }: { data: TaskPage }) {
               : "PayPal authorizes the payout now and Plex holds it. You're charged only when you approve the proof."
           }
         >
-          <PolicyLine pot={data.policy?.potName} outcome={data.policy?.outcome} ruleText={data.policy?.ruleText} />
-          <div className="mt-3.5 flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="brand"
               onClick={() => fund(task._id)}
-              disabled={funding || data.policy?.outcome === "deny"}
+              disabled={funding}
             >
               {funding ? <Loader2 className="animate-spin" /> : null}
               {funding

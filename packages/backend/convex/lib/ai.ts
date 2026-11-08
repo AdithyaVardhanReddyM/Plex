@@ -1,6 +1,6 @@
 /**
  * Shared Gemini helper for every Plex agent (Task Writer, Match, proof
- * engine, Mediator, cause pages, Ledger...). Runs inside Convex actions.
+ * engine, Mediator, Ledger...). Runs inside Convex actions.
  *
  * Gemini comes from Google Cloud (Vertex AI) when GOOGLE_VERTEX_PROJECT (or
  * GOOGLE_CLOUD_PROJECT) is set, authenticated with one of:

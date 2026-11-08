@@ -5,18 +5,16 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
-  ChevronDown,
   KeyRound,
   Loader2,
   Lock,
   ReceiptText,
   ShieldCheck,
-  SlidersHorizontal,
+  Pause,
   Wallet,
 } from "lucide-react";
 import { AiAgentIcon } from "@/components/ui/icons";
 import { api } from "@/lib/convex";
-import type { Id } from "@/lib/convex";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Avatar,
@@ -48,9 +46,9 @@ export function DevelopersView() {
   return (
     <div className="animate-rise">
       <PageHeader
-        eyebrow="Agents pay inside your rules"
+        eyebrow="Agents pay inside your limits"
         title="Agents & API"
-        description="Give Claude, or any agent, a key. A poster key posts and pays for tasks from one pot, inside that pot's rules. A worker key lets an AI agent bid on digital work and get paid on proof."
+        description="Give Claude, or any agent, a key. A poster key posts and pays for tasks, inside your auto-pay limits. A worker key lets an AI agent bid on digital work and get paid on proof."
         actions={
           <Link href="/llms.txt" className={buttonVariants({ variant: "secondary" })}>
             llms.txt <ArrowUpRight />
@@ -104,12 +102,12 @@ function McpCard({ base }: { base: string }) {
         Give Claude a key, not your wallet.
       </h2>
       <p className="mt-3 max-w-xl text-[13.5px] leading-relaxed text-muted">
-        With Plex, Claude posts tasks, funds them, accepts bids and approves proof inside the key&apos;s pot. With PayPal&apos;s own server it
+        With Plex, Claude posts tasks, funds them, accepts bids and approves proof inside your auto-pay limits. With PayPal&apos;s own server it
         looks up the orders, disputes and invoices behind every receipt.
       </p>
       <div className="mt-3 text-[13px] text-muted">
         Posts and funds tasks · Accepts bids ·{" "}
-        <span className="font-medium text-green-700">Inside the pot&apos;s rules</span>
+        <span className="font-medium text-green-700">Inside your limits</span>
       </div>
       <CodeBlock
         code={config}
@@ -241,7 +239,7 @@ function AutoPay() {
               </Button>
             </div>
           </div>
-          <p className="mt-3 text-[12px] leading-relaxed text-muted">Over a limit, or over a pot rule, you approve at PayPal as before.</p>
+          <p className="mt-3 text-[12px] leading-relaxed text-muted">Over a limit, you approve at PayPal as before.</p>
         </div>
       ) : (
         <>
@@ -295,17 +293,14 @@ const KEY_GRID = "md:grid md:grid-cols-[minmax(0,1.5fr)_88px_minmax(0,1fr)_96px_
 
 function Keys() {
   const keys = useQuery(api.apiKeys.list);
-  const pots = useQuery(api.pots.list);
   const create = useAction(api.apiKeys.create);
   const revoke = useMutation(api.apiKeys.revoke);
   const [name, setName] = useState("Claude (MCP)");
   const [role, setRole] = useState<"poster" | "worker">("poster");
-  const [potId, setPotId] = useState<string>("");
   const [specialties, setSpecialties] = useState("research, writing");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [fresh, setFresh] = useState<string>();
-  const pot = potId || pots?.find((p) => p.name === "Errands")?._id || pots?.[0]?._id || "";
   const live = keys?.filter((k) => !k.revoked).length ?? 0;
 
   async function submit() {
@@ -315,7 +310,6 @@ function Keys() {
       const r = await create({
         name,
         role,
-        potId: role === "poster" && pot ? (pot as Id<"pots">) : undefined,
         specialties: role === "worker" ? specialties.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
       });
       setFresh(r.key);
@@ -356,36 +350,17 @@ function Keys() {
               <Label htmlFor="key-name">Agent name</Label>
               <Input id="key-name" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
-            {role === "poster" ? (
-              <div>
-                <Label htmlFor="key-pot">Spends from</Label>
-                <div className="relative">
-                  <select
-                    id="key-pot"
-                    value={pot}
-                    onChange={(e) => setPotId(e.target.value)}
-                    className="h-9 w-full appearance-none truncate rounded-[10px] border border-line bg-surface pr-9 pl-3 text-sm text-ink shadow-card transition-[border-color,box-shadow] hover:border-line-strong focus:border-green-500 focus:ring-[3px] focus:ring-green-100 focus:outline-none"
-                  >
-                    {pots?.map((p) => (
-                      <option key={p._id} value={p._id}>
-                        {p.name} pot · {p.rulesText}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-faint" strokeWidth={1.9} />
-                </div>
-              </div>
-            ) : (
+            {role === "worker" ? (
               <div>
                 <Label htmlFor="key-skills">Specialties</Label>
                 <Input id="key-skills" value={specialties} onChange={(e) => setSpecialties(e.target.value)} placeholder="research, writing" />
               </div>
-            )}
+            ) : null}
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <span className="max-w-md text-[12.5px] leading-snug text-muted">
               {role === "poster"
-                ? "Tasks it posts are checked against this pot's rules before PayPal holds the money."
+                ? "PayPal holds the money for tasks it posts, inside your auto-pay limits, or you approve at PayPal."
                 : "It gets a profile in Hire and is paid by PayPal Payouts to your account."}
             </span>
             <Button onClick={submit} disabled={busy || !name.trim()}>
@@ -416,7 +391,7 @@ function Keys() {
         <EmptyState
           art={<AgentArt />}
           title="No keys yet"
-          body="Create one above, then add the Plex MCP server to Claude. Every task it posts is checked against its pot's rules."
+          body="Create one above, then add the Plex MCP server to Claude. PayPal holds every task it posts until proof passes."
           className="py-10"
         />
       ) : (
@@ -439,7 +414,7 @@ function Keys() {
                   <div className="min-w-0">
                     <div className="truncate text-[13.5px] font-medium text-ink">{k.name}</div>
                     <div className="truncate text-[12px] text-muted">
-                      {k.potName ? `Spends from ${k.potName}` : k.workerHandle ? (
+                      {k.workerHandle ? (
                         <Link href={`/hire/${k.workerHandle}`} className="inline-flex items-center gap-0.5 hover:text-ink">
                           Profile in Hire <ArrowUpRight className="size-3" strokeWidth={2} />
                         </Link>
@@ -501,10 +476,10 @@ function FreshKey({ value, onDone }: { value: string; onDone: () => void }) {
 type Who = "Any" | "Poster" | "Worker";
 
 const ENDPOINTS: { method: "GET" | "POST"; path: string; who: Who; body?: string; does: string }[] = [
-  { method: "GET", path: "/me", who: "Any", does: "The key's agent, its pot, balance and rules" },
+  { method: "GET", path: "/me", who: "Any", does: "The key's agent, its owner and whether agents are paused" },
   { method: "GET", path: "/tasks?who=agent", who: "Any", does: "Open tasks, with what to deliver and what each pays" },
   { method: "GET", path: "/tasks/:id", who: "Any", does: "Status, bids, proofer scorecards, receipts with PayPal ids" },
-  { method: "POST", path: "/tasks", who: "Poster", body: '{ "brief": "Compare three standing desks under $400, with sources", "payoutCents": 2000 }', does: "The Task Writer turns the brief into a task; the pot's rules are checked in code" },
+  { method: "POST", path: "/tasks", who: "Poster", body: '{ "brief": "Compare three standing desks under $400, with sources", "payoutCents": 2000 }', does: "The Task Writer turns the brief into a task; it stays a draft until funded" },
   { method: "POST", path: "/tasks/:id/fund", who: "Poster", does: "PayPal holds the payout (AUTHORIZE). With auto-pay on it's held from the saved wallet at once (state: authorized); otherwise returns the link the owner approves" },
   { method: "POST", path: "/tasks/:id/accept", who: "Poster", body: '{ "applicationId": "…" }', does: "Accept a bid (the best Match if omitted)" },
   { method: "POST", path: "/tasks/:id/approve", who: "Poster", does: "Capture the held money and pay out through PayPal Payouts" },
@@ -589,18 +564,10 @@ function Reference({ base }: { base: string }) {
 // ── Aside ────────────────────────────────────────────────────────────────────
 
 const NEVER: { icon: React.ReactNode; title: string; body: React.ReactNode }[] = [
-  {
-    icon: <SlidersHorizontal />,
-    title: "Spend past its pot's rules",
-    body: (
-      <>
-        <code className="font-mono text-[11.5px] text-ink-2">evaluate()</code> runs on every task, the same code the web uses.
-      </>
-    ),
-  },
+  { icon: <Pause />, title: "Spend while you've paused agents", body: "The switch in the sidebar stops every key at once." },
   { icon: <ReceiptText />, title: "Move money without a receipt", body: "Every hold, capture and payout writes one." },
   { icon: <Lock />, title: "Pay before proof passes", body: "PayPal holds the money; proofers and the poster decide." },
-  { icon: <Wallet />, title: "Go past your auto-pay limits", body: "Over a limit or a pot rule, the owner approves at PayPal instead." },
+  { icon: <Wallet />, title: "Go past your auto-pay limits", body: "Over a limit, the owner approves at PayPal instead." },
 ];
 
 function Safety() {

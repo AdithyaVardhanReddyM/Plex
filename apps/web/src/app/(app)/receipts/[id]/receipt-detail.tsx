@@ -10,7 +10,6 @@ import {
   ChevronRight,
   Fingerprint,
   HandCoins,
-  HeartHandshake,
   Link2,
   ListChecks,
   ReceiptText,
@@ -21,11 +20,10 @@ import { AiAgentIcon } from "@/components/ui/icons";
 import { direction } from "@plex/backend/lib/ledgerSpec";
 import { api } from "@/lib/convex";
 import type { Id } from "@/lib/convex";
-import { Avatar, Badge, Card, CardHeader, EmptyState, Meter, Skeleton } from "@/components/ui/primitives";
+import { Avatar, Badge, Card, CardHeader, EmptyState, Skeleton } from "@/components/ui/primitives";
 import { DisplayMoney } from "@/components/ledger/kit";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ReceiptCard, StatePill, receiptKindLabel, type Receipt } from "@/components/receipt/receipt";
-import { PotIcon } from "@/components/pots/pot-meta";
 import { cn, formatCents, relativeTime, shortDate } from "@/lib/utils";
 
 export function ReceiptDetail({ id }: { id: string }) {
@@ -251,16 +249,11 @@ function ContextRow({
 
 function BelongsTo({ receipt }: { receipt: Receipt }) {
   const task = useQuery(api.tasks.get, receipt.taskId ? { id: receipt.taskId } : "skip");
-  const causes = useQuery(api.causes.list, receipt.causeId ? {} : "skip");
-  const pots = useQuery(api.pots.list, receipt.potId ? {} : "skip");
-  const cause = causes?.find((c) => c._id === receipt.causeId);
-  const pot = pots?.find((p) => p._id === receipt.potId);
-
-  const loading = (receipt.taskId && task === undefined) || (receipt.causeId && causes === undefined) || (receipt.potId && pots === undefined);
+  const loading = receipt.taskId && task === undefined;
 
   return (
     <Card>
-      <CardHeader title="Where it fits" description="The work, the cause and the limits behind this payment." />
+      <CardHeader title="Where it fits" description="The work and the rule behind this payment." />
       <div className="px-2 pt-3 pb-1">
         {loading ? (
           <div className="space-y-1 p-3">
@@ -295,38 +288,7 @@ function BelongsTo({ receipt }: { receipt: Receipt }) {
           />
         ) : null}
 
-        {cause ? (
-          <ContextRow
-            href={`/causes/${cause.slug}`}
-            icon={<Avatar name={cause.org.name || cause.name} color={cause.org.avatarColor} size={34} square />}
-            eyebrow="Cause"
-            title={cause.name}
-            meta={`${cause.org.name} · ${cause.locationLabel}`}
-          >
-            <div className="mt-2.5">
-              <Meter value={cause.raisedCents / Math.max(cause.goalCents, 1)} size="sm" label="Raised toward the goal" />
-              <div className="tabular mt-1.5 text-[11.5px] text-faint">
-                {formatCents(cause.raisedCents)} of {formatCents(cause.goalCents)} raised
-              </div>
-            </div>
-          </ContextRow>
-        ) : null}
-
-        {pot ? (
-          <ContextRow
-            href="/pots"
-            icon={<PotIcon pot={pot} size={34} />}
-            eyebrow="Pot"
-            title={pot.name}
-            meta={
-              <span className="tabular">
-                {formatCents(pot.spentMonthCents)} of {formatCents(pot.monthlyBudgetCents)} spent this month
-              </span>
-            }
-          />
-        ) : null}
-
-        {receipt.taskId || receipt.causeId || receipt.potId ? null : receipt.agentLabel ? (
+        {receipt.taskId ? null : receipt.agentLabel ? (
           <ContextRow
             icon={<BareIcon className="text-steel-600"><AiAgentIcon /></BareIcon>}
             eyebrow="Agent"
@@ -341,8 +303,8 @@ function BelongsTo({ receipt }: { receipt: Receipt }) {
         ) : (
           <ContextRow
             icon={
-              <BareIcon className={receipt.kind === "donation" ? "text-green-700" : undefined}>
-                {receipt.kind === "donation" ? <HeartHandshake /> : <HandCoins />}
+              <BareIcon>
+                <HandCoins />
               </BareIcon>
             }
             eyebrow="Who acted"

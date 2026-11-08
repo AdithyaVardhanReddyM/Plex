@@ -7,7 +7,6 @@ import { getActor, requireActor } from "./lib/actor";
 import { generateStructured } from "./lib/ai";
 import { defaultCriteria, isDigitalTask } from "./lib/hire";
 import { challengeCode } from "./lib/money";
-import { evaluate } from "./lib/policy";
 import { fundingCents, lookupPlace } from "./lib/taskRules";
 import { userByHandle } from "./lib/viewer";
 
@@ -212,23 +211,6 @@ export const get = query({
             ? "applicant"
             : "visitor";
 
-    // The poster sees what the policy engine will say before funding.
-    let policy: null | { potName: string; outcome: "allow" | "needs_approval" | "deny"; ruleText: string } = null;
-    if (role === "poster" && task.funding.state === "unfunded") {
-      const pot = await errandsPot(ctx, task);
-      if (pot && actor) {
-        const d = evaluate(pot.rules, {
-          amountCents: fundingCents(task.payout),
-          category: "Errands",
-          hour: 12, // the server's hour is UTC; quiet hours are rechecked at funding with the client's hour
-          spentTodayCents: pot.spentTodayCents,
-          balanceCents: pot.balanceCents,
-          paused: Boolean(actor.user.agentsPaused),
-        });
-        policy = { potName: pot.name, outcome: d.outcome, ruleText: d.ruleText };
-      }
-    }
-
     const review = await ctx.db
       .query("reviews")
       .withIndex("by_task", (q) => q.eq("taskId", id))
@@ -246,7 +228,6 @@ export const get = query({
       receipts,
       role,
       me: actor ? await personCard(ctx, actor.user._id) : null,
-      policy,
       review,
       digital: isDigitalTask(task),
     };
@@ -275,15 +256,6 @@ export const personas = query({
     ).then((cards) => cards.filter(Boolean) as PersonCard[]);
   },
 });
-
-export async function errandsPot(ctx: QueryCtx, task: Doc<"tasks">) {
-  if (task.potId) return ctx.db.get(task.potId);
-  const pots = await ctx.db
-    .query("pots")
-    .withIndex("by_owner", (q) => q.eq("ownerId", task.posterId))
-    .collect();
-  return pots.find((p) => p.name === "Errands") ?? null;
-}
 
 export const internalGet = internalQuery({
   args: { id: v.id("tasks") },
@@ -541,10 +513,6 @@ export const createDraft = mutation({
     if (workerType !== "human" && !isDigitalTask(draft))
       throw new Error("AI agents can only take work delivered as text, files or links, with no place to be.");
     const handsFree = Boolean(autoHire) && workerType !== "human";
-    const pots = await ctx.db
-      .query("pots")
-      .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
-      .collect();
     return ctx.db.insert("tasks", {
       posterId: user._id,
       postedVia: "web",
@@ -563,7 +531,6 @@ export const createDraft = mutation({
       status: "draft",
       funding: { state: "unfunded" },
       tags: args.tags.slice(0, 4),
-      potId: pots.find((p) => p.name === "Errands")?._id,
       writerModel: args.writerModel,
       workerType,
       invitedId: invited?._id,
@@ -584,5 +551,33 @@ export const cancelDraft = mutation({
     if (!task || task.posterId !== user._id) throw new Error("Task not found");
     if (task.funding.state !== "unfunded") throw new Error("This task is funded; refund it instead.");
     await ctx.db.patch(id, { status: "cancelled" });
+  },
+});
+
+/** Tasks the viewer posted that are still in flight, for Home. */
+export const myOpenTasks = query({
+  args: {},
+  handler: async (ctx) => {
+    const actor = await getActor(ctx);
+    if (!actor) return [];
+    const tasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_poster", (q) => q.eq("posterId", actor.user._id))
+      .collect();
+    const live = new Set(["open", "assigned", "submitted", "verifying", "approved"]);
+    return tasks
+      .filter((t) => live.has(t.status))
+      .sort((a, b) => a.windowEnd - b.windowEnd)
+      .map((t) => ({
+        _id: t._id,
+        title: t.title,
+        status: t.status,
+        payout: t.payout,
+        locationLabel: t.location?.label,
+        windowEnd: t.windowEnd,
+        postedVia: t.postedVia,
+        agentLabel: t.agentLabel,
+        fundingState: t.funding.state,
+      }));
   },
 });

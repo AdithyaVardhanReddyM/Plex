@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { ArrowUpRight, Clock, HandCoins, HeartHandshake, Layers, Lock, ReceiptText, Search } from "lucide-react";
+import { ArrowUpRight, Clock, HandCoins, Layers, Lock, ReceiptText, Search } from "lucide-react";
 import { AiAgentIcon } from "@/components/ui/icons";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { direction } from "@plex/backend/lib/ledgerSpec";
@@ -22,7 +22,6 @@ const FILTERS = [
   { key: "held", label: "Held", icon: <Lock /> },
   { key: "agents", label: "By agents", icon: <AiAgentIcon /> },
   { key: "tasks", label: "Tasks", icon: <HandCoins /> },
-  { key: "giving", label: "Giving", icon: <HeartHandshake /> },
 ] as const;
 
 type FilterKey = (typeof FILTERS)[number]["key"];
@@ -41,17 +40,12 @@ const EMPTY: Record<FilterKey, { art: React.ReactNode; title: string; body: stri
   agents: {
     art: <AgentArt />,
     title: "Your agents haven't spent yet",
-    body: "Connect an agent and give it a pot. Everything it buys comes back with a receipt.",
+    body: "Connect an agent with a key. Everything it buys comes back with a receipt.",
   },
   tasks: {
     art: <TaskArt />,
     title: "No task money yet",
     body: "Post a task and fund it. The hold, the payout and any refund each get a receipt.",
-  },
-  giving: {
-    art: <ReceiptStackArt />,
-    title: "No gifts yet",
-    body: "Give to a cause and the receipt shows which shift your money paid for.",
   },
 };
 
@@ -59,8 +53,7 @@ function matches(r: Receipt, f: FilterKey) {
   if (f === "all") return true;
   if (f === "held") return r.state === "held";
   if (f === "agents") return Boolean(r.agentLabel);
-  if (f === "tasks") return r.kind === "task_funding" || r.kind === "payout" || Boolean(r.taskId);
-  return r.kind === "donation";
+  return r.kind === "task_funding" || r.kind === "payout" || Boolean(r.taskId);
 }
 
 function searchable(r: Receipt) {

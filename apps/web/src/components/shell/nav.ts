@@ -1,10 +1,8 @@
 import {
-  HeartHandshake,
   House,
   KeyRound,
   LayoutDashboard,
   ListChecks,
-  PiggyBank,
   ReceiptText,
   UsersRound,
   type LucideIcon,
@@ -32,8 +30,6 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Money",
     items: [
       { href: "/receipts", label: "Receipts", icon: ReceiptText, hint: "Every dollar, why it moved" },
-      { href: "/pots", label: "Pots & limits", icon: PiggyBank, hint: "Budgets and rules, in your words" },
-      { href: "/causes", label: "Causes", icon: HeartHandshake, hint: "Donations that pay for proven work" },
     ],
   },
   {
