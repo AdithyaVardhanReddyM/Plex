@@ -20,10 +20,10 @@
  */
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createVertex } from "@ai-sdk/google-vertex/edge";
-import { generateText, Output, type LanguageModel, type ModelMessage } from "ai";
+import { generateText, NoObjectGeneratedError, Output, type LanguageModel, type ModelMessage } from "ai";
 import type { z } from "zod";
 
-export const DEFAULT_MODEL = "gemini-2.5-flash";
+export const DEFAULT_MODEL = "gemini-3.8-flash";
 export const HEURISTIC = "heuristic";
 
 /** Aborts a model call that runs too long, so an agent never hangs; the fallback runs instead. */
@@ -212,9 +212,49 @@ export async function generateStructured<T>(input: StructuredInput<T>): Promise<
     });
     return { object: result.output as T, model: modelId };
   } catch (err) {
+    const repaired = NoObjectGeneratedError.isInstance(err) ? repairToSchema(err.text, input.schema) : undefined;
+    if (repaired !== undefined) {
+      console.info(`[ai] ${input.name ?? "generateStructured"}: trimmed an answer that ran over the schema's limits`);
+      return { object: repaired, model: modelId };
+    }
     console.warn(`[ai] ${input.name ?? "generateStructured"} fell back to heuristic:`, err);
     return { object: await input.fallback(), model: HEURISTIC, fallbackReason: "error" };
   }
+}
+
+/**
+ * Newer models sometimes return one tag too many or a sentence too long. When
+ * the only problems are size limits, trim lists and strings and clamp numbers
+ * to the schema's own bounds, then validate again. Anything else stays a failure.
+ */
+export function repairToSchema<T>(text: string | undefined, schema: z.ZodType<T>): T | undefined {
+  if (!text) return undefined;
+  let value: unknown;
+  try {
+    value = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ""));
+  } catch {
+    return undefined;
+  }
+  for (let pass = 0; pass < 3; pass++) {
+    const result = schema.safeParse(value);
+    if (result.success) return result.data;
+    for (const issue of result.error.issues) {
+      if (issue.code !== "too_big" && issue.code !== "too_small") return undefined;
+      const bound = Number((issue as { maximum?: unknown; minimum?: unknown })[issue.code === "too_big" ? "maximum" : "minimum"]);
+      const origin = (issue as { origin?: string }).origin;
+      if (!Number.isFinite(bound)) return undefined;
+      const path = issue.path as (string | number)[];
+      const parent = path.slice(0, -1).reduce<unknown>((o, k) => (o as Record<string | number, unknown>)?.[k], value) as Record<string | number, unknown> | undefined;
+      const key = path.at(-1);
+      if (key === undefined) return undefined;
+      const current = parent?.[key];
+      if (issue.code === "too_big" && Array.isArray(current)) parent![key] = current.slice(0, bound);
+      else if (issue.code === "too_big" && typeof current === "string") parent![key] = current.slice(0, bound).trimEnd();
+      else if (typeof current === "number" && (origin === "number" || origin === "int")) parent![key] = Math.min(Math.max(current, issue.code === "too_small" ? bound : -Infinity), issue.code === "too_big" ? bound : Infinity);
+      else return undefined;
+    }
+  }
+  return undefined;
 }
 
 export interface MarkdownInput {

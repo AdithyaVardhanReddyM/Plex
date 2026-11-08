@@ -1,5 +1,5 @@
-import { generateText, Output } from "ai";
-import { aiConfigured, geminiModel } from "./ai";
+import { generateText, NoObjectGeneratedError, Output } from "ai";
+import { aiConfigured, geminiModel, repairToSchema } from "./ai";
 import { z } from "zod";
 import {
   aggregate,
@@ -135,8 +135,8 @@ async function runGemini(input: AnalystInput): Promise<AnalystResult> {
   const agents = [...new Set(receipts.map(agentOf))].join(", ");
   const categories = [...new Set(receipts.map((r) => r.category).filter(Boolean))].join(", ");
 
-  const { output } = await generateText({
-    model: geminiModel(process.env.GEMINI_MODEL ?? "gemini-2.5-flash")!,
+  const call = generateText({
+    model: geminiModel()!,
     output: Output.object({ schema: zResult }),
     system: [
       "You are Plex Analyst, the agent inside Plex Ledger. Plex is a money layer where agents spend and hire people within limits, and every payment has a Receipt (why, rule, evidence).",
@@ -147,6 +147,15 @@ async function runGemini(input: AnalystInput): Promise<AnalystResult> {
     ].join("\n"),
     prompt: `Receipts (date | kind | state | amount | party | category | agent | why):\n${rows}\n\nQuestion: ${input.question}`,
   });
+  // An answer that only runs over a size limit (a third widget, a long title) is trimmed, not thrown away.
+  const output = await call.then(
+    (r) => r.output,
+    (err: unknown) => {
+      const fixed = NoObjectGeneratedError.isInstance(err) ? repairToSchema(err.text, zResult) : undefined;
+      if (fixed === undefined) throw err;
+      return fixed;
+    },
+  );
   if (!output) throw new Error("empty output");
   return { ...output, engine: "gemini" };
 }
