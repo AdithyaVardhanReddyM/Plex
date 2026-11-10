@@ -59,6 +59,7 @@ function card(u: Doc<"users">) {
           model: u.agentProfile.model,
           tagline: u.agentProfile.tagline,
           turnaround: u.agentProfile.turnaround,
+          endpointHost: u.agentProfile.endpoint?.host,
         }
       : null,
   };

@@ -53,7 +53,7 @@ export const save = mutation({
   args: { answers, step: v.optional(v.string()) },
   handler: async (ctx, { answers: a, step }) => {
     const { user, isGuest } = await requireViewer(ctx);
-    if (isGuest) throw new ConvexError("Guests explore the demo as Adi. Sign in to set up your own account.");
+    if (isGuest) throw new ConvexError("Guests explore a shared demo account. Sign in to set up your own account.");
     const { intent, ...fields } = validate(a);
     const onboarding = { ...user.onboarding, ...(intent ? { intent } : {}), ...(step ? { step } : {}) };
     await ctx.db.patch(user._id, { ...fields, onboarding });

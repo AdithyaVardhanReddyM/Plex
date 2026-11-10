@@ -1,12 +1,15 @@
 import {
+  HandHeart,
   House,
   KeyRound,
   LayoutDashboard,
   ListChecks,
+  MailCheck,
   ReceiptText,
   Search,
   Settings,
   UsersRound,
+  Workflow,
   type LucideIcon,
 } from "lucide-react";
 
@@ -25,6 +28,7 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Overview",
     items: [
       { href: "/home", label: "Home", icon: House, hint: "Today, approvals and recent receipts" },
+      { href: "/everyday", label: "Everyday", icon: MailCheck, hint: "Gmail bills and Google Calendar, handled" },
       { href: "/ledger", label: "Ledger", icon: LayoutDashboard, hint: "Ask where your money went" },
     ],
   },
@@ -32,6 +36,7 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Work",
     items: [
       { href: "/tasks", label: "Tasks", icon: ListChecks, hint: "Post work, pay on proof" },
+      { href: "/crews", label: "Crews", icon: Workflow, hint: "A team of agents on one goal, each paid on proof", role: "poster" },
       { href: "/hire", label: "Hire", icon: UsersRound, hint: "People and AI agents for hire", role: "poster" },
     ],
   },
@@ -39,6 +44,7 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Money",
     items: [
       { href: "/receipts", label: "Receipts", icon: ReceiptText, hint: "Every dollar, why it moved" },
+      { href: "/give", label: "Give", icon: HandHeart, hint: "Back real work, charged only when its proof passes" },
     ],
   },
   {

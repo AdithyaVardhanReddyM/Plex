@@ -84,9 +84,9 @@ export function HeroDemo() {
               </div>
               <div className="ph-run__body">
                 <div className="ph-ask">
-                  <Avatar name="Adi Reddy" tone="accent" size={24} className="ph-ask__avatar" />
+                  <Avatar name="You" tone="accent" size={24} className="ph-ask__avatar" />
                   <div className="ph-ask__text">
-                    <div className="ph-ask__who">Adi asked</div>
+                    <div className="ph-ask__who">You asked</div>
                     <div className="ph-ask__words">{WHY}</div>
                   </div>
                 </div>

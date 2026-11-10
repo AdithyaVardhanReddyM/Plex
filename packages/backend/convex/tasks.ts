@@ -315,6 +315,7 @@ export const write = action({
         "The proof spec lists exactly what evidence proves the work: usually 1-3 photos with what each must show for work in the world, or text, file and link deliverables for digital work.",
         "Digital work (research, writing, data, design) gets text, file or link items only, so an AI agent can do it; then workerType is 'either'.",
         "A logo, icon or other image is a 'file' item labeled for what it is (e.g. 'Logo'), described with its subject, colors and any exact text.",
+        "Making a short video from a brief (a reel, a promo clip, an animation for Instagram, TikTok or an ad) is digital work an AI agent can do: a 'file' item labeled 'Video', described with what it must show and where it will be posted; workerType 'either'. A 'video' item is only for a person filming something real.",
         "Proof of online work (a screenshot, a page, a pull request, a merge) is a 'file' or 'link' item, never a 'photo': photos are for work in the world.",
         "Acting inside someone's account on another service (merging code, posting, sending) is still digital work: an AI agent can do it once the poster connects that account to the task.",
         "Every task also asks the worker to show a challenge code in one photo; do not add it to the spec yourself.",
@@ -364,7 +365,10 @@ export function heuristicDraft(brief: string): TaskDraft {
   const add = (label: string, description: string, type: TaskDraft["proofSpec"][number]["type"] = "photo") =>
     spec.length < 4 && !spec.some((s) => s.label === label) && spec.push({ label, description, type });
   if (category === "agent") {
-    if (/logo|icon|banner|illustration|design (a|an|the|me)/.test(text)) {
+    if (/video|reel|clip|promo/.test(text)) {
+      add("Video", `An 8-second video with sound${/instagram|reel|tiktok|story|short/.test(text) ? ", vertical for a phone feed" : ""}, showing what the brief asks`, "file");
+      add("Caption", "A short caption to post with it, under 30 words", "text");
+    } else if (/logo|icon|banner|illustration|design (a|an|the|me)/.test(text)) {
       add("Logo", "A square PNG image, at least 512 px, matching the brief", "file");
       add("Design notes", "The idea, the colors and the font, in a few sentences", "text");
     } else if (/research|compare|competitor|find out|look up|market/.test(text)) {
@@ -445,7 +449,7 @@ export function heuristicDraft(brief: string): TaskDraft {
 
 /** Requests an AI agent can do end to end, from the heuristic writer's point of view. */
 const DIGITAL_ASK =
-  /research|summari[sz]e|competitor|compare|report on|write (a|an|the|me)|draft|blog|copy|translate|spreadsheet|csv|clean (up )?(the )?data|look up|find out|logo|icon|banner|illustration|design (a|an|the|me)/;
+  /research|summari[sz]e|competitor|compare|report on|write (a|an|the|me)|draft|blog|copy|translate|spreadsheet|csv|clean (up )?(the )?data|look up|find out|logo|icon|banner|illustration|design (a|an|the|me)|(make|create|generate) (a|an|me a|us a) (short )?(video|reel|clip|promo)/;
 
 function sentence(s: string) {
   const t = s.trim().replace(/\s+/g, " ");

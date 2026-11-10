@@ -1,11 +1,11 @@
 import { ConvexError, v } from "convex/values";
 import { z } from "zod";
-import { action, internalQuery, mutation, query } from "./_generated/server";
+import { action, internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { getActor, requireActor } from "./lib/actor";
 import { DEFAULT_MODEL, generateStructured } from "./lib/ai";
-import { agentFit, isDigitalTask, isImageSpec, isSourcesSpec, needsAccountAction, specialtyHits } from "./lib/hire";
+import { agentFit, isDigitalTask, isImageSpec, isSourcesSpec, isVideoSpec, needsAccountAction, specialtyHits } from "./lib/hire";
 import { fundingCents } from "./lib/taskRules";
 
 /**
@@ -20,17 +20,17 @@ import { fundingCents } from "./lib/taskRules";
  * creator's instructions are placed below Plex's own rules.
  */
 
-const TOOLS = ["web_search", "image", "mcp"] as const;
+const TOOLS = ["web_search", "image", "video", "mcp"] as const;
 type Tool = (typeof TOOLS)[number];
-const MAX_PER_CREATOR = 10;
-const RESERVED = new Set(["new", "plex", "admin", "scout", "quill", "tally", "pixel"]);
+const MAX_PER_CREATOR = 25;
+const RESERVED = new Set(["new", "plex", "admin", "scout", "quill", "tally", "pixel", "lingo", "patch", "reel"]);
 const STOP = new Set("about after also and any are but can each for from have into its more most not one only our out over that the their them then they this those three two use was were what when which will with you your write make create find task tasks".split(" "));
 
 export const draftV = v.object({
   name: v.string(),
   tagline: v.string(),
   skills: v.array(v.string()),
-  tools: v.array(v.union(v.literal("web_search"), v.literal("image"), v.literal("mcp"))),
+  tools: v.array(v.union(v.literal("web_search"), v.literal("image"), v.literal("video"), v.literal("mcp"))),
   instructions: v.string(),
   floorCents: v.number(),
   turnaround: v.string(),
@@ -116,7 +116,7 @@ const draftSchema = z.object({
   name: z.string().describe("A short, memorable one-word agent name, e.g. 'Ledgerly' or 'Sprout'. Not a real person's name, not an existing agent's"),
   tagline: z.string().describe("One sentence: what it delivers, concretely"),
   skills: z.array(z.string()).describe("3 to 8 lowercase keywords (one or two words each) for the work it should bid on. Use words that appear in the task"),
-  tools: z.array(z.enum(TOOLS)).describe("web_search: Google Search for current facts and sources. image: makes images (logos, icons, banners). mcp: acts in the accounts the poster connects to the task (GitHub, or any MCP server): review and merge pull requests, comment, read files. Only what the work needs"),
+  tools: z.array(z.enum(TOOLS)).describe("web_search: Google Search for current facts and sources. image: makes images (logos, icons, banners). video: makes short video clips with sound (reels, promos) with Veo. mcp: acts in the accounts the poster connects to the task (GitHub, or any MCP server): review and merge pull requests, comment, read files. Only what the work needs"),
   instructions: z.string().describe("How it works and what good looks like: 3 to 8 short lines in the second person ('You…'). Method, quality bar, format. No rules about payment or proof"),
   floorDollars: z.number().describe("The least it should accept for a job like this, in US dollars"),
   turnaround: z.string().describe("e.g. 'about 3 minutes'"),
@@ -191,6 +191,7 @@ function tidy(d: AgentDraft, task: (TaskFacts & { heldCents: number }) | null, h
     // It must actually fit the task it's made for.
     if (!specialtyHits(task, skills).length) skills = [...keywords(task.title), ...skills].slice(0, 8);
     if (task.proofSpec.some(isImageSpec)) tools.add("image");
+    if (task.proofSpec.some(isVideoSpec)) tools.add("video");
     if (task.proofSpec.some(isSourcesSpec)) tools.add("web_search");
     if (needsAccountAction(task)) tools.add("mcp");
   }
@@ -235,12 +236,55 @@ export const create = mutation({
   args: { draft: draftV, taskId: v.optional(v.id("tasks")), payoutEmail: v.optional(v.string()), as: v.optional(v.string()) },
   handler: async (ctx, { draft, taskId, payoutEmail, as }): Promise<{ handle: string; agentId: Id<"users">; bidding: boolean }> => {
     const { user } = await requireActor(ctx, as);
+    const task = taskId ? await ctx.db.get(taskId) : null;
+    return insertAgent(ctx, user, draft, task, task ? fundingCents(task.payout) : 500_00, payoutEmail);
+  },
+});
+
+/**
+ * A crew step no agent could do: the crew's planner had the builder draft one,
+ * and code creates it for the crew's owner (no signed-in person here: this runs
+ * in the background while the canvas shows it being built).
+ */
+export const createForCrew = internalMutation({
+  args: {
+    ownerId: v.id("users"),
+    draft: draftV,
+    step: v.object({ title: v.string(), brief: v.string(), deliver: v.object({ label: v.string(), description: v.string(), type: v.string() }), payoutCents: v.number() }),
+    github: v.boolean(),
+  },
+  handler: async (ctx, { ownerId, draft, step, github }): Promise<{ handle: string; agentId: Id<"users"> }> => {
+    const user = await ctx.db.get(ownerId);
+    if (!user) throw new ConvexError("The crew's owner is gone.");
+    const facts: TaskFacts = {
+      title: step.title,
+      description: step.brief,
+      tags: [],
+      category: "agent",
+      proofSpec: [step.deliver as TaskFacts["proofSpec"][number]],
+      workerType: "agent",
+      location: undefined,
+      invitedId: undefined,
+      connections: github ? [{ kind: "github", label: "GitHub" }] : undefined,
+    };
+    const r = await insertAgent(ctx, user, draft, facts, step.payoutCents);
+    return { handle: r.handle, agentId: r.agentId };
+  },
+});
+
+async function insertAgent(
+  ctx: MutationCtx,
+  user: Doc<"users">,
+  draft: AgentDraft,
+  task: (TaskFacts & { _id?: Id<"tasks">; status?: Doc<"tasks">["status"] }) | null,
+  held: number,
+  payoutEmail?: string,
+): Promise<{ handle: string; agentId: Id<"users">; bidding: boolean }> {
+  {
     const mine = (await ctx.db.query("users").withIndex("by_kind", (q) => q.eq("kind", "agent")).collect()).filter(
       (a) => a.agentProfile?.custom && a.agentProfile.ownerId === user._id,
     );
     if (mine.length >= MAX_PER_CREATOR) throw new ConvexError(`You can create up to ${MAX_PER_CREATOR} agents.`);
-    const task = taskId ? await ctx.db.get(taskId) : null;
-    const held = task ? fundingCents(task.payout) : 500_00;
     const d = tidy(draft, task ? { ...task, heldCents: held } : null, held, []);
     if (d.name.length < 2) throw new ConvexError("Give your agent a name.");
     const email = payoutEmail?.trim() || user.paypalEmail || process.env.PAYPAL_DEMO_PAYEE_EMAIL;
@@ -275,11 +319,11 @@ export const create = mutation({
       },
     });
     // Made for an open task: it bids right away.
-    const bidding = Boolean(task && task.status === "open" && (task.workerType ?? "human") !== "human" && isDigitalTask(task));
-    if (bidding) await ctx.scheduler.runAfter(500, internal.houseAgents.runBidding, { taskId: task!._id, only: agentId });
+    const bidding = Boolean(task?._id && task.status === "open" && (task.workerType ?? "human") !== "human" && isDigitalTask(task));
+    if (bidding) await ctx.scheduler.runAfter(500, internal.houseAgents.runBidding, { taskId: task!._id!, only: agentId });
     return { handle, agentId, bidding };
-  },
-});
+  }
+}
 
 /** The creator's own agents, with their private instructions. */
 export const mine = query({

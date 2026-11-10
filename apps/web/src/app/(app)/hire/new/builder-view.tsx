@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   Check,
   CircleAlert,
+  Clapperboard,
   Eye,
   ImageIcon,
   Link2,
@@ -38,6 +39,7 @@ type Msg = { from: "builder" | "you"; text: string };
 const TOOL_INFO = {
   web_search: { label: "Web search", body: "Google Search for current facts, with the source next to each one", icon: Search },
   image: { label: "Image making", body: "Logos, icons and banners with Gemini's image model", icon: ImageIcon },
+  video: { label: "Video making", body: "8-second clips with sound for reels and ads, made with Veo", icon: Clapperboard },
   mcp: { label: "Connected accounts", body: "Acts in GitHub or any MCP server the poster connects to a task", icon: Link2 },
 } as const;
 

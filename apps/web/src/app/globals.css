@@ -259,6 +259,16 @@ html:has(#app-scroll) body {
   animation: var(--animate-shimmer);
 }
 
+/* Crews: a connection draws itself in as an agent drags it across the canvas */
+.crew-canvas .edge-draw .react-flow__edge-path {
+  stroke-dasharray: 1200;
+  stroke-dashoffset: 1200;
+  animation: edge-draw 700ms var(--ease-out-soft) forwards;
+}
+@keyframes edge-draw {
+  to { stroke-dashoffset: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

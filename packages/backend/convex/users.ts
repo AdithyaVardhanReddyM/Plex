@@ -108,7 +108,7 @@ export const updateProfile = mutation({
   },
   handler: async (ctx, args) => {
     const { user, isGuest } = await requireViewer(ctx);
-    if (isGuest) throw new ConvexError("Guests explore the demo as Adi. Sign in to edit your own profile.");
+    if (isGuest) throw new ConvexError("Guests explore a shared demo account. Sign in to edit your own profile.");
     const { intent: _intent, ...fields } = validate(args);
     await ctx.db.patch(user._id, fields);
   },

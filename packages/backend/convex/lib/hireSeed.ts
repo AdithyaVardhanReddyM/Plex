@@ -1,6 +1,8 @@
 import type { MutationCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
+import { DEFAULT_MODEL } from "./ai";
 import { writeReceipt } from "./receipts";
+import { demoName } from "./viewer";
 
 /**
  * Plex Hire in the demo world: four house agents (Scout, Quill, Tally, Pixel), one
@@ -12,7 +14,22 @@ import { writeReceipt } from "./receipts";
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 
-type AgentSeed = { handle: string; name: string; color: string; tagline: string; bio: string; specialties: string[]; floorCents: number; turnaround: string; rating: number; pass: number; done: number; house?: boolean };
+type AgentSeed = {
+  handle: string;
+  name: string;
+  color: string;
+  tagline: string;
+  bio: string;
+  specialties: string[];
+  floorCents: number;
+  turnaround: string;
+  rating: number;
+  pass: number;
+  done: number;
+  house?: boolean;
+  tools?: ("web_search" | "image" | "video" | "mcp")[];
+  instructions?: string;
+};
 
 /** Every demo agent: Plex's house agents and one outside agent (Atlas). */
 export const DEMO_AGENTS: AgentSeed[] = [
@@ -20,17 +37,57 @@ export const DEMO_AGENTS: AgentSeed[] = [
   { handle: "quill", name: "Quill", color: "#8A5A3C", tagline: "Clear copy: listings, emails, summaries, posts.", bio: "Plex house agent. Writes in plain language and keeps to the facts it's given.", specialties: ["write", "draft", "copy", "summary", "summarize", "email", "listing", "post", "research"], floorCents: 500, turnaround: "about 2 minutes", rating: 4.78, pass: 0.92, done: 41 },
   { handle: "tally", name: "Tally", color: "#4B5FA8", tagline: "Spreadsheets cleaned, merged and checked.", bio: "Plex house agent. Cleans and reshapes tables, and flags rows it couldn't fix.", specialties: ["data", "csv", "spreadsheet", "table", "clean", "dedupe"], floorCents: 700, turnaround: "about 4 minutes", rating: 4.9, pass: 0.97, done: 33 },
   { handle: "pixel", name: "Pixel", color: "#B4487A", tagline: "Logos, icons and banners, made with Gemini's image model.", bio: "Plex house agent. Designs simple marks from a brief, and explains the idea behind each one.", specialties: ["logo", "icon", "banner", "design", "illustration", "brand"], floorCents: 800, turnaround: "about 1 minute", rating: 4.7, pass: 0.9, done: 19 },
+  { handle: "lingo", name: "Lingo", color: "#3B7A57", tagline: "Translations that read like they were written there.", bio: "Plex house agent. Translates and localizes menus, posts and pages, keeping names and tone.", specialties: ["translate", "translation", "spanish", "hindi", "french", "localize", "language"], floorCents: 400, turnaround: "about 2 minutes", rating: 4.82, pass: 0.95, done: 27 },
+  {
+    handle: "patch",
+    name: "Patch",
+    color: "#6B5BA8",
+    tagline: "Small code changes, shipped as a pull request.",
+    bio: "Plex house agent. Reads the repository, makes the change asked for and opens a pull request for a human or another agent to merge.",
+    specialties: ["code", "bug", "fix", "feature", "implement", "pull request", "github", "repo"],
+    floorCents: 500,
+    turnaround: "about 3 minutes",
+    rating: 4.75,
+    pass: 0.9,
+    done: 15,
+    tools: ["mcp"],
+    instructions: [
+      "You write code. Work only in the one repository the task names.",
+      "First read what's there: list the repo's default branch and get the contents of any file you plan to touch, so your change applies to the real current content, not a guess.",
+      "Make the smallest change that does what was asked. Never touch files the task doesn't call for.",
+      "Create a new branch off the default branch (never commit to main or master directly). Name it clearly, e.g. patch/short-description.",
+      "Commit your change on that branch, then open a pull request from it into the default branch. Write a short, accurate PR description of exactly what changed and why.",
+      "Deliver the pull request's URL as your answer, on its own first line.",
+    ].join("\n"),
+  },
+  {
+    handle: "reel",
+    name: "Reel",
+    color: "#C2553A",
+    tagline: "Short videos with sound for Instagram, TikTok and ads, made with Veo.",
+    bio: "Plex house agent. Plans the shots from your brief, then makes the clip with Google's Veo on Vertex AI.",
+    specialties: ["video", "reel", "clip", "instagram", "tiktok", "promo", "animation", "short"],
+    floorCents: 900,
+    turnaround: "about 2 minutes",
+    rating: 4.8,
+    pass: 0.91,
+    done: 9,
+    tools: ["video"],
+  },
   { handle: "atlas-northwind", name: "Atlas", color: "#3B5B7A", tagline: "Built by Northwind Labs. Market maps and pricing scans.", bio: "An outside agent working on Plex through the API with a worker key.", specialties: ["research", "pricing", "market"], floorCents: 900, turnaround: "about 10 minutes", rating: 4.6, pass: 0.88, done: 12, house: false },
 ];
 
-/** Inserts any demo agent that's missing (by handle). Safe to run on a live database. */
+/** Inserts any demo agent that's missing (by handle), and keeps Plex-run agents' shown model current. Safe to run on a live database. */
 export async function ensureDemoAgents(ctx: MutationCtx): Promise<Record<string, Id<"users">>> {
   const ids: Record<string, Id<"users">> = {};
+  const model = process.env.GEMINI_MODEL_QUALITY ?? process.env.GEMINI_MODEL ?? DEFAULT_MODEL;
   for (const a of DEMO_AGENTS) {
     const existing = await ctx.db
       .query("users")
       .withIndex("by_handle", (q) => q.eq("handle", a.handle))
       .unique();
+    if (existing?.agentProfile && (a.house ?? true) && existing.agentProfile.model !== model)
+      await ctx.db.patch(existing._id, { agentProfile: { ...existing.agentProfile, model } });
     ids[a.handle] =
       existing?._id ??
       (await ctx.db.insert("users", {
@@ -49,11 +106,13 @@ export async function ensureDemoAgents(ctx: MutationCtx): Promise<Record<string,
         paypalEmail: process.env.PAYPAL_DEMO_PAYEE_EMAIL ?? `${a.handle}.agent@business.example.com`,
         agentProfile: {
           house: a.house ?? true,
-          model: "gemini-2.5-flash",
+          model,
           tagline: a.tagline,
           specialties: a.specialties,
           floorCents: a.floorCents,
           turnaround: a.turnaround,
+          tools: a.tools,
+          instructions: a.instructions,
         },
       }));
   }
@@ -98,7 +157,7 @@ export async function seedHireWorld(ctx: MutationCtx, { adi, now }: { adi: Id<"u
     currency: "USD",
     ownerId: adi,
     payerId: adi,
-    payerLabel: "Adi Reddy",
+    payerLabel: demoName(),
     payeeLabel: "Plex (held)",
     agentLabel: "Claude (MCP)",
     why: "Find me a standing desk under $400 that fits a 100cm wall. Compare three, with sources.",
@@ -267,7 +326,7 @@ export async function seedHireWorld(ctx: MutationCtx, { adi, now }: { adi: Id<"u
     currency: "USD",
     ownerId: adi,
     payerId: adi,
-    payerLabel: "Adi Reddy",
+    payerLabel: demoName(),
     payeeLabel: "Plex (held)",
     why: "What changed for parklets and curbside dining in SF this year? Short summary with sources.",
     rule: { source: "poster", text: "Funded by the poster, paid only when proof passes" },
@@ -283,12 +342,12 @@ export async function seedHireWorld(ctx: MutationCtx, { adi, now }: { adi: Id<"u
     currency: "USD",
     ownerId: adi,
     payerId: adi,
-    payerLabel: "Adi Reddy",
+    payerLabel: demoName(),
     payeeId: scout,
     payeeLabel: "Scout",
     agentLabel: "Scout",
     why: "What changed for parklets and curbside dining in SF this year? Short summary with sources.",
-    rule: { source: "proof", text: "Three proofers passed it · Adi approved with one tap" },
+    rule: { source: "proof", text: "Three proofers passed it · approved with one tap" },
     evidence: { proofId, verdict: verdictLine, checks },
     category: "Errands",
     taskId: brief,

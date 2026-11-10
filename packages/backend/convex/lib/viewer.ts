@@ -6,7 +6,16 @@ import { ConvexError } from "convex/values";
 export const DEMO_HANDLE = "adi";
 
 /**
- * Guest mode: signed-out callers explore the seeded demo world as Adi, so
+ * Display name of the seeded demo user. Signed-in people always see their own
+ * name; this is only what guests see. Set PLEX_DEMO_NAME in the Convex env to
+ * change it for a demo, never in code.
+ */
+export function demoName() {
+  return process.env.PLEX_DEMO_NAME?.trim() || "Guest";
+}
+
+/**
+ * Guest mode: signed-out callers explore the seeded demo world as the demo user, so
  * judges can try Plex without an account. Off unless the Convex deployment
  * sets PLEX_GUEST_MODE=true (`convex env set PLEX_GUEST_MODE true`).
  */
@@ -17,8 +26,8 @@ export function guestModeOn() {
 /**
  * Who is acting: the signed-in Clerk user's `users` row (created on first
  * sign-in by `users.ensureViewer`). Signed-out callers get null, or the demo
- * user Adi when guest mode is on. A signed-in user whose row doesn't exist
- * yet also gets null, never Adi.
+ * user when guest mode is on. A signed-in user whose row doesn't exist
+ * yet also gets null, never the demo user.
  */
 export async function getViewer(
   ctx: QueryCtx | MutationCtx,
