@@ -242,6 +242,8 @@ export interface InvoiceInput {
   note?: string;
   invoicerEmail?: string;
   reference?: string;
+  /** YYYY-MM-DD; due on receipt when omitted. */
+  dueDate?: string;
 }
 
 export interface Invoice {
@@ -259,7 +261,7 @@ export function createInvoice(pp: PayPalClient, input: InvoiceInput): Promise<In
         currency_code: currency,
         note: input.note,
         reference: input.reference,
-        payment_term: { term_type: "DUE_ON_RECEIPT" },
+        payment_term: input.dueDate ? { term_type: "DUE_ON_DATE_SPECIFIED", due_date: input.dueDate } : { term_type: "DUE_ON_RECEIPT" },
       },
       ...(input.invoicerEmail ? { invoicer: { email_address: input.invoicerEmail } } : {}),
       primary_recipients: [

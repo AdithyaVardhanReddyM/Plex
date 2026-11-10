@@ -106,6 +106,7 @@ export const acceptanceCriterion = v.union(
   v.object({ kind: v.literal("links_resolve") }),
   v.object({ kind: v.literal("must_mention"), terms: v.array(v.string()) }),
   v.object({ kind: v.literal("image"), specIndex: v.number(), minPx: v.number() }),
+  v.object({ kind: v.literal("video"), specIndex: v.number(), minSeconds: v.number(), vertical: v.optional(v.boolean()) }),
 );
 
 export default defineSchema({
@@ -140,8 +141,21 @@ export default defineSchema({
         // Added by the agent builder: agents people create with Plex's builder agent
         custom: v.optional(v.boolean()),
         instructions: v.optional(v.string()), // the creator's method and style; below Plex's rules, never shown publicly
-        tools: v.optional(v.array(v.union(v.literal("web_search"), v.literal("image"), v.literal("mcp")))),
+        tools: v.optional(v.array(v.union(v.literal("web_search"), v.literal("image"), v.literal("video"), v.literal("mcp")))),
         createdFor: v.optional(v.id("tasks")), // the task nobody could do, that it was made for
+        // Added by "Bring your agent": an agent that runs on its developer's own server.
+        // Plex bids for it inside its floor, POSTs it the task when hired (signed), and
+        // checks its work like any other. The URL and secret are AES-GCM sealed.
+        endpoint: v.optional(
+          v.object({
+            host: v.string(), // shown publicly, e.g. "agents.acme.dev"
+            urlEnc: v.string(),
+            secretEnc: v.string(), // HMAC key for X-Plex-Signature
+            verifiedAt: v.number(),
+            latencyMs: v.optional(v.number()),
+            failures: v.optional(v.number()),
+          }),
+        ),
       }),
     ),
     // Added by onboarding: what the person came to do, and what each side needs.
@@ -227,6 +241,91 @@ export default defineSchema({
     addedBy: v.id("users"),
     wipedAt: v.optional(v.number()),
   }).index("by_task", ["taskId"]),
+
+  // "Connect GitHub" / "Connect Google": one row per OAuth round trip, used once, so a callback can't be forged or replayed.
+  oauthStates: defineTable({
+    state: v.string(), // random, sent to the provider and checked on the way back
+    taskId: v.optional(v.id("tasks")), // GitHub: the task the token is lent to
+    crewId: v.optional(v.id("crews")), // GitHub: or the crew it's lent to
+    purpose: v.optional(v.literal("google")), // Google: the person's Everyday account
+    userId: v.id("users"),
+    origin: v.string(), // where to send the person back
+    createdAt: v.number(),
+  }).index("by_state", ["state"]),
+
+  // ── Everyday: Gmail bills and Google Calendar ──────────────────────────────
+
+  // A person's Google account for Everyday. The refresh token is AES-GCM sealed
+  // (CONNECTIONS_KEY), used only server-side, and revoked on disconnect.
+  googleAccounts: defineTable({
+    userId: v.id("users"),
+    email: v.string(),
+    refreshEnc: v.string(),
+    scopes: v.string(),
+    watching: v.boolean(), // Plex checks Gmail for bills every few minutes
+    autoPayUnderCents: v.number(), // bills at or under this pay themselves, if every other check passes
+    connectedAt: v.number(),
+    lastScanAt: v.optional(v.number()),
+    lastScanNote: v.optional(v.string()),
+  }).index("by_user", ["userId"]),
+
+  // Invoices a person sends from Everyday: real PayPal invoices (Invoicing v2)
+  // that Plex collects and pays out to them through PayPal Payouts when paid.
+  sentInvoices: defineTable({
+    userId: v.id("users"),
+    invoiceId: v.string(), // PayPal's INV2-…
+    number: v.optional(v.string()),
+    to: v.string(),
+    toName: v.optional(v.string()),
+    items: v.array(v.object({ name: v.string(), cents: v.number(), quantity: v.number() })),
+    totalCents: v.number(),
+    dueDate: v.optional(v.string()),
+    note: v.optional(v.string()),
+    status: v.union(v.literal("sent"), v.literal("paid"), v.literal("paid_out"), v.literal("cancelled")),
+    payUrl: v.optional(v.string()),
+    reminders: v.number(),
+    lastRemindedAt: v.optional(v.number()),
+    paidAt: v.optional(v.number()),
+    receiptId: v.optional(v.id("receipts")),
+    lastCheckedAt: v.optional(v.number()),
+    problem: v.optional(v.string()),
+  }).index("by_user", ["userId"]),
+
+  // Every Gmail message Plex looked at for a bill. Non-bills are kept (status
+  // "not_a_bill") only so they aren't read twice.
+  gmailBills: defineTable({
+    userId: v.id("users"),
+    gmailId: v.string(),
+    from: v.string(), // "Sunny Window Co <billing@sunny.example>"
+    fromEmail: v.string(),
+    subject: v.string(),
+    receivedAt: v.number(),
+    vendor: v.optional(v.string()),
+    amountCents: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    dueDate: v.optional(v.string()), // "2026-11-20"
+    invoiceNumber: v.optional(v.string()),
+    payTo: v.optional(v.string()), // the PayPal email the bill says to pay
+    summary: v.optional(v.string()),
+    model: v.optional(v.string()),
+    status: v.union(
+      v.literal("not_a_bill"),
+      v.literal("needs_approval"),
+      v.literal("paying"),
+      v.literal("paid"),
+      v.literal("declined"),
+    ),
+    // Plex's rules, checked by code: why it paid by itself, or why it asked.
+    checks: v.array(verdictCheck),
+    autoPay: v.optional(v.boolean()), // every check passed, so it paid without asking
+    note: v.optional(v.string()), // the last problem, in words
+    orderId: v.optional(v.string()), // a checkout waiting at PayPal
+    receiptId: v.optional(v.id("receipts")),
+    reminderLink: v.optional(v.string()), // the Calendar reminder for its due date
+    decidedAt: v.optional(v.number()),
+  })
+    .index("by_user_time", ["userId", "receivedAt"])
+    .index("by_user_gmail", ["userId", "gmailId"]),
 
   // ── Receipts: the record attached to every payment ─────────────────────────
 
@@ -333,7 +432,7 @@ export default defineSchema({
       orderId: v.optional(v.string()),
       authorizationId: v.optional(v.string()),
       captureId: v.optional(v.string()),
-      via: v.optional(v.union(v.literal("checkout"), v.literal("autopay"))), // autopay: a saved wallet, no popup
+      via: v.optional(v.union(v.literal("checkout"), v.literal("autopay"), v.literal("backers"))), // autopay: a saved wallet, no popup; backers: many donors' holds
     }),
     assigneeId: v.optional(v.id("users")),
     spots: v.optional(v.number()), // impact tasks: "4 people x 3 hours"
@@ -347,6 +446,8 @@ export default defineSchema({
     invitedId: v.optional(v.id("users")),
     criteria: v.optional(v.array(acceptanceCriterion)), // checked by code on digital work
     autoHire: v.optional(v.boolean()), // hands-free: hire the best bid, pay when every check passes
+    // Back a task: an organization opened it to donors, who fund it together (see `backings`).
+    backing: v.optional(v.object({ goalCents: v.number(), story: v.optional(v.string()), openedAt: v.number() })),
     // Accounts the poster connected for the hired agent (GitHub, MCP servers). No secrets here: see taskConnections.
     connections: v.optional(v.array(v.object({ kind: v.union(v.literal("github"), v.literal("mcp")), label: v.string() }))),
     // The PayPal desk agent (PayPal Agent Toolkit) read PayPal's own records for this task
@@ -378,11 +479,88 @@ export default defineSchema({
         lockedAt: v.number(),
       }),
     ),
+    // Added by Crews: this task is one step of a crew
+    crew: v.optional(v.object({ crewId: v.id("crews"), stepKey: v.string() })),
   })
     .index("by_status", ["status"])
     .index("by_poster", ["posterId"])
     .index("by_assignee", ["assigneeId"])
     .index("by_orderId", ["funding.orderId"]),
+
+  // ── Back a task: people give toward proven work ────────────────────────────
+  // One row per donor's PayPal hold on a backed task. Held, not charged; every
+  // hold is captured together when the task's photo proof passes, or voided
+  // together if it doesn't. The donor then sees the proof photos.
+  backings: defineTable({
+    taskId: v.id("tasks"),
+    donorId: v.id("users"),
+    donorName: v.string(),
+    amountCents: v.number(),
+    message: v.optional(v.string()),
+    state: v.union(v.literal("pending"), v.literal("held"), v.literal("captured"), v.literal("voided"), v.literal("declined")),
+    via: v.optional(v.union(v.literal("checkout"), v.literal("autopay"))),
+    orderId: v.optional(v.string()),
+    authorizationId: v.optional(v.string()),
+    captureId: v.optional(v.string()),
+    receiptId: v.optional(v.id("receipts")),
+  })
+    .index("by_task", ["taskId"])
+    .index("by_donor", ["donorId"]),
+
+  // ── Crews: a team of agents on a canvas ─────────────────────────────────────
+  // A goal split into steps. Each step becomes a hands-free task (its own
+  // PayPal hold, bids, proof, payout); a step starts only when the steps it
+  // depends on passed, and gets their work as input. Code runs the flow.
+  crews: defineTable({
+    ownerId: v.id("users"),
+    title: v.string(),
+    goal: v.string(), // the poster's words
+    budgetCents: v.number(), // the ceiling for all steps together
+    status: v.union(
+      v.literal("draft"),
+      v.literal("running"),
+      v.literal("paused"), // a step failed or needs the owner
+      v.literal("done"),
+      v.literal("cancelled"),
+    ),
+    steps: v.array(
+      v.object({
+        key: v.string(), // "logo"
+        title: v.string(),
+        brief: v.string(), // what the step's agent is asked to do
+        deliver: v.object({ label: v.string(), description: v.string(), type: v.union(v.literal("text"), v.literal("file"), v.literal("link")) }),
+        payoutCents: v.number(),
+        dependsOn: v.array(v.string()), // keys of the steps whose work it takes as input
+        agentHandle: v.optional(v.string()), // invite this agent; otherwise agents bid
+        building: v.optional(v.boolean()), // no agent fit, so Plex's agent builder is making one
+        built: v.optional(v.boolean()), // its agent was made for this crew
+        x: v.number(),
+        y: v.number(),
+        taskId: v.optional(v.id("tasks")),
+        note: v.optional(v.string()), // why it's paused, the approval link, ...
+      }),
+    ),
+    plannerModel: v.optional(v.string()),
+    template: v.optional(v.string()),
+    slug: v.optional(v.string()), // published: anyone can open it and run their own copy
+    runs: v.optional(v.number()), // copies run from the published page
+    startedAt: v.optional(v.number()),
+    finishedAt: v.optional(v.number()),
+  })
+    .index("by_owner", ["ownerId"])
+    .index("by_slug", ["slug"]),
+
+  // GitHub lent to a whole crew, so its GitHub steps can act there. Sealed like a
+  // task connection, copied into each GitHub step's task as it starts, and
+  // deleted when the crew ends. Its own table so the token never rides along
+  // with a crew doc to a browser.
+  crewConnections: defineTable({
+    crewId: v.id("crews"),
+    kind: v.literal("github"),
+    label: v.string(),
+    tokenEnc: v.string(),
+    addedBy: v.id("users"),
+  }).index("by_crew", ["crewId"]),
 
   applications: defineTable({
     taskId: v.id("tasks"),
