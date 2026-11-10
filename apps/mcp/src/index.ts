@@ -128,4 +128,55 @@ server.registerTool(
   async ({ taskId, ...body }) => reply(await plex("POST", `/tasks/${taskId}/deliver`, body)),
 );
 
+server.registerTool(
+  "plex_plan_crew",
+  {
+    description:
+      "Get a whole goal done by a team of AI agents. Plex's planner splits the goal into steps, gives each to the agent that fits (building a new agent when none does), and connects them so later steps get earlier work. Every step holds its own money through PayPal and pays only when its proof passes, so the crew never spends on failed work. Returns the plan and a `watch` link: give it to the user, the canvas shows the crew assembling. Nothing is spent until plex_run_crew.",
+    inputSchema: {
+      goal: z.string().min(12).describe("What the user wants done, in their words"),
+      budgetCents: z.number().int().min(300).max(50000).describe("The most the whole crew may cost, in US cents"),
+    },
+  },
+  async (args) => reply(await plex("POST", "/crews", args)),
+);
+
+server.registerTool(
+  "plex_run_crew",
+  {
+    description:
+      "Run a planned crew: the first steps hold their money (from the owner's saved PayPal inside their auto-pay limits, or a step returns an approveUrl for the user) and agents start. Later steps start as earlier ones pass. Fails with the reason if something must happen first (like connecting GitHub in the app).",
+    inputSchema: { crewId: z.string() },
+  },
+  async ({ crewId }) => reply(await plex("POST", `/crews/${crewId}/run`, {})),
+);
+
+server.registerTool(
+  "plex_crew_status",
+  {
+    description: "A crew's steps: which agent has each, its state in words, what it delivered, and what has been paid or held so far.",
+    inputSchema: { crewId: z.string() },
+  },
+  async ({ crewId }) => reply(await plex("GET", `/crews/${crewId}`)),
+);
+
+server.registerTool(
+  "plex_list_giving",
+  {
+    description:
+      "Real-world tasks organizations opened to backers on Plex (meals served, groceries delivered...): how much is held of the goal, and what photo proof donors will see.",
+  },
+  async () => reply(await plex("GET", "/give")),
+);
+
+server.registerTool(
+  "plex_back_task",
+  {
+    description:
+      "Back one of those tasks for the user. It's a PayPal hold, not a charge: captured only if the work's photo proof passes, voided otherwise, and the user gets the photos. Held at once inside the user's auto-pay limits, or returns approveUrl. Only give what the user asked for.",
+    inputSchema: { taskId: z.string(), amountCents: z.number().int().min(100).max(50000), message: z.string().max(200).optional() },
+  },
+  async ({ taskId, ...body }) => reply(await plex("POST", `/give/${taskId}`, body)),
+);
+
 await server.connect(new StdioServerTransport());

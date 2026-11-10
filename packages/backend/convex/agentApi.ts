@@ -26,6 +26,12 @@ import { proofSpecItem, verificationMode } from "./schema";
  *   POST /api/v1/tasks/:id/approve     → capture + PayPal Payouts
  *   POST /api/v1/tasks/:id/apply       { askCents, message }        (worker keys)
  *   POST /api/v1/tasks/:id/deliver     { items: [{ index, text?, url? }], note? }
+ *
+ *   POST /api/v1/crews                 { goal, budgetCents }  → a planned crew (agents built if missing)
+ *   GET  /api/v1/crews/:id             → each step's agent, state, output
+ *   POST /api/v1/crews/:id/run         → steps hold their money and start, in order
+ *   GET  /api/v1/give                  → real-world tasks open to backers
+ *   POST /api/v1/give/:taskId          { amountCents, message? } → a PayPal hold, charged only on proof
  */
 
 const json = (status: number, body: unknown) =>
@@ -67,6 +73,77 @@ export const handle = httpAction(async (ctx, req) => {
         worker: auth.worker ? { handle: auth.worker.handle, profile: `${siteUrl()}/hire/${auth.worker.handle}` } : null,
         paused: Boolean(auth.owner.agentsPaused),
       });
+
+    // ── Crews: a team of agents on one goal ──
+    if (parts[0] === "crews") {
+      if (auth.worker) return json(403, { error: "Worker keys can't run crews. Use a poster key." });
+      const crewId = parts[1] as Id<"crews"> | undefined;
+      const origin = typeof body.origin === "string" && /^https?:\/\/[^/]+$/.test(body.origin) ? body.origin : siteUrl();
+      if (req.method === "POST" && !crewId) {
+        const goal = String(body.goal ?? "").trim();
+        const budgetCents = Math.round(Number(body.budgetCents ?? 3000));
+        const r = await ctx.runAction(internal.crews.planFor, { goal, budgetCents, ownerId: auth.owner._id });
+        const view = await ctx.runQuery(internal.crews.viewFor, { crewId: r.crewId, ownerId: auth.owner._id });
+        return json(201, {
+          ...view,
+          planner: r.reply,
+          watch: `${siteUrl()}/crews/${r.crewId}?build=1`,
+          next: "Open `watch` to see it assemble. Then POST /api/v1/crews/:id/run when the readiness checks pass.",
+        });
+      }
+      if (!crewId) return json(404, { error: "No such endpoint." });
+      if (req.method === "GET") {
+        const view = await ctx.runQuery(internal.crews.viewFor, { crewId, ownerId: auth.owner._id });
+        return view ? json(200, { ...view, url: `${siteUrl()}/crews/${crewId}` }) : json(404, { error: "Crew not found." });
+      }
+      if (req.method === "POST" && parts[2] === "run") {
+        await ctx.runAction(internal.crews.startFor, { crewId, ownerId: auth.owner._id, origin });
+        return json(200, { ...(await ctx.runQuery(internal.crews.viewFor, { crewId, ownerId: auth.owner._id })), url: `${siteUrl()}/crews/${crewId}` });
+      }
+      return json(404, { error: "No such endpoint." });
+    }
+
+    // ── Give: back real-world work, charged only when its photo proof passes ──
+    if (parts[0] === "give") {
+      if (auth.worker) return json(403, { error: "Worker keys can't give. Use a poster key." });
+      if (req.method === "GET") {
+        const rows = await ctx.runQuery(api.backing.list, {});
+        return json(200, {
+          tasks: rows
+            .filter((t) => t.status === "draft")
+            .map((t) => ({
+              id: t._id,
+              title: t.title,
+              org: t.org?.name,
+              where: t.place,
+              story: t.story,
+              held: formatCents(t.raisedCents),
+              goal: formatCents(t.goalCents),
+              stillNeeded: formatCents(Math.max(0, t.goalCents - t.raisedCents)),
+              backers: t.backers,
+              proof: t.proofSpec.map((p) => p.label),
+              url: `${siteUrl()}/give`,
+            })),
+        });
+      }
+      const giveTo = parts[1] as Id<"tasks"> | undefined;
+      if (req.method === "POST" && giveTo) {
+        const origin = typeof body.origin === "string" && /^https?:\/\/[^/]+$/.test(body.origin) ? body.origin : siteUrl();
+        const r = await ctx.runAction(internal.backing.backFor, {
+          taskId: giveTo,
+          amountCents: Math.round(Number(body.amountCents)),
+          message: typeof body.message === "string" ? body.message : undefined,
+          origin,
+          donorId: auth.owner._id,
+        });
+        return json(200,
+          "held" in r
+            ? { state: "held", amount: formatCents(r.cents), note: "Held by auto-pay inside the owner's limits. Charged only if the work's photo proof passes; voided otherwise." }
+            : { state: "needs_approval", amount: formatCents(r.cents), approveUrl: r.approveUrl, note: `${auth.owner.name} approves this hold once in PayPal.` },
+        );
+      }
+      return json(404, { error: "No such endpoint." });
+    }
 
     if (parts[0] !== "tasks") return json(404, { error: "No such endpoint. See /developers." });
 
