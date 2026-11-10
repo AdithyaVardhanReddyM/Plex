@@ -28,6 +28,7 @@ import {
   UserCheck,
   UserRound,
   UsersRound,
+  Workflow,
   Zap,
 } from "lucide-react";
 import { AiAgentIcon } from "@/components/ui/icons";
@@ -109,6 +110,22 @@ function AgentFitLine({ form, onBuild, building }: { form: Form; onBuild: () => 
   );
 }
 
+/** More than one deliverable, or several things to do: a crew splits it, each agent paid on its own proof. */
+function CrewOffer({ form, onCrew, busy }: { form: Form; onCrew: () => void; busy: boolean }) {
+  const parts = form.proofSpec.filter((s) => s.label.trim()).length;
+  const strong = parts >= 2;
+  return (
+    <div className={cn("flex flex-wrap items-center justify-between gap-3 rounded-[12px] px-3.5 py-3 ring-1 ring-inset", strong ? "bg-surface ring-ink/15 shadow-card" : "bg-canvas/70 ring-line")}>
+      <span className="min-w-0 flex-1 basis-64 text-[12.5px] leading-snug text-ink-2">
+        <span className="font-medium text-ink">{strong ? `${parts} deliverables: let a crew split it.` : "Bigger than one agent?"}</span> The planner gives each part to the agent that fits, builds any that are missing, and each one is paid only when its own proof passes.
+      </span>
+      <Button variant={strong ? "primary" : "secondary"} size="sm" onClick={onCrew} disabled={busy}>
+        {busy ? <Loader2 className="animate-spin" /> : <Workflow />} {busy ? "Planning the crew…" : "Plan a crew instead"}
+      </Button>
+    </div>
+  );
+}
+
 function toLocalInput(ms: number) {
   const d = new Date(ms);
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -150,6 +167,7 @@ export function NewTaskView() {
   const invitedHandle = params.get("for") ?? undefined;
   const invited = useQuery(api.hire.profile, invitedHandle ? { handle: invitedHandle } : "skip");
   const write = useAction(api.tasks.write);
+  const planCrew = useAction(api.crews.plan);
   const createDraft = useMutation(api.tasks.createDraft);
   const { fund, busy: funding, error: fundError } = useFund();
 
@@ -226,6 +244,20 @@ export function NewTaskView() {
   }
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => (f ? { ...f, [key]: value } : f));
+  const [crewing, setCrewing] = useState(false);
+  async function toCrew() {
+    if (!form) return;
+    setCrewing(true);
+    setError(undefined);
+    try {
+      const goal = brief.trim().length >= 12 ? brief.trim() : `${form.title}. ${form.description}`;
+      const { crewId } = await planCrew({ goal, budgetCents: Math.max(300, Math.min(500_00, payoutCents || 2000)), as });
+      router.push(`/crews/${crewId}?build=1`);
+    } catch (err) {
+      setError(errorMessage(err));
+      setCrewing(false);
+    }
+  }
 
   return (
     <div className="animate-rise">
@@ -332,7 +364,7 @@ export function NewTaskView() {
           </Card>
 
           {writing && !form ? <WriterSkeleton /> : null}
-          {form ? <Editor form={form} set={set} onBuild={() => save("build")} building={saving === "build"} /> : null}
+          {form ? <Editor form={form} set={set} onBuild={() => save("build")} building={saving === "build"} onCrew={toCrew} crewing={crewing} /> : null}
         </div>
 
         <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-8">
@@ -644,11 +676,15 @@ function Editor({
   set,
   onBuild,
   building,
+  onCrew,
+  crewing,
 }: {
   form: Form;
   set: <K extends keyof Form>(k: K, v: Form[K]) => void;
   onBuild: () => void;
   building: boolean;
+  onCrew: () => void;
+  crewing: boolean;
 }) {
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string>();
@@ -722,7 +758,10 @@ function Editor({
         {!digital ? (
           <p className="-mt-1 text-[12.5px] text-muted">This one needs someone on the ground, so it&apos;s for a person.</p>
         ) : form.workerType !== "human" ? (
-          <AgentFitLine form={form} onBuild={onBuild} building={building} />
+          <>
+            <AgentFitLine form={form} onBuild={onBuild} building={building} />
+            <CrewOffer form={form} onCrew={onCrew} busy={crewing} />
+          </>
         ) : null}
         {digital ? <AcceptanceCriteria form={form} set={set} /> : null}
       </Section>

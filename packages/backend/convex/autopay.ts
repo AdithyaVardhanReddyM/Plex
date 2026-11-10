@@ -115,10 +115,11 @@ export const start = action({
     origin: v.string(),
     as: v.optional(v.string()),
     // Where PayPal sends the person back: the page they turned it on from.
-    returnPath: v.optional(v.union(v.literal("/developers"), v.literal("/settings"), v.literal("/onboarding"))),
+    returnPath: v.optional(v.string()),
   },
   handler: async (ctx, { origin, as, returnPath = "/developers" }): Promise<{ approveUrl: string }> => {
     if (!/^https?:\/\/[^/]+$/.test(origin)) throw new ConvexError("Bad return origin");
+    if (!/^\/(developers|settings|onboarding|everyday|crews\/[a-z0-9]{10,40})$/.test(returnPath)) throw new ConvexError("Bad return page");
     if (!PayPalClient.isConfigured()) throw new ConvexError("PayPal isn't configured on this deployment.");
     const userId: Id<"users"> = await ctx.runQuery(internal.autopay.actorId, { as });
     try {
