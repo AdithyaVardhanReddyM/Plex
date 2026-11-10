@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import {
@@ -45,7 +46,7 @@ import {
   errorMessage,
   verdictRows,
 } from "@/components/tasks/task-ui";
-import { isImageSpec, needsAccountAction } from "@plex/backend/lib/hire";
+import { isImageSpec, isVideoSpec, needsAccountAction } from "@plex/backend/lib/hire";
 import { servicesIn } from "@plex/backend/lib/connect";
 import { splitSummary } from "@plex/backend/lib/split";
 import type { FunctionReturnType } from "convex/server";
@@ -71,15 +72,19 @@ export function ConnectionsCard({ data }: { data: TaskPage }) {
   const { task } = data;
   const conn = useQuery(api.connections.list, { taskId: task._id, as });
   const add = useAction(api.connections.add);
+  const startGithub = useAction(api.githubOAuth.start);
   const remove = useMutation(api.connections.remove);
   const { run, busy, errorFor } = useRun();
   const [kind, setKind] = useState<"github" | "mcp">("github");
   const [token, setToken] = useState("");
   const [url, setUrl] = useState("");
   const [allow, setAllow] = useState("");
+  const [pasteToken, setPasteToken] = useState(false);
+  const returned = useSearchParams()?.get("github");
   const needed = needsAccountAction(task);
   if (!conn || (!needed && !conn.rows.length) || !data.digital) return null;
   const live = conn.rows.filter((r) => !r.wiped);
+  const oauth = kind === "github" && conn.githubOAuth && !pasteToken;
   return (
     <Card>
       <CardHeader
@@ -89,6 +94,11 @@ export function ConnectionsCard({ data }: { data: TaskPage }) {
         description="Lend the hired agent one account for this task only. The token is encrypted, used only by the agent's tool calls and the proof check, and deleted when the task is paid or refunded."
         action={live.length ? <Badge tone="green">{live.length} connected</Badge> : needed ? <Badge tone="amber">Needed</Badge> : null}
       />
+      {returned ? (
+        <p className={cn("mx-5 mt-3 text-[12.5px]", returned === "connected" ? "text-green-700" : "text-refunded")}>
+          {returned === "connected" ? "GitHub is connected for this task." : returned === "cancelled" ? "GitHub wasn't connected: the approval was cancelled." : "GitHub didn't connect. Try again, or paste a token."}
+        </p>
+      ) : null}
       {conn.rows.length ? (
         <ul className="mt-3 px-2">
           {conn.rows.map((r) => (
@@ -124,6 +134,40 @@ export function ConnectionsCard({ data }: { data: TaskPage }) {
               { value: "mcp", label: "Any MCP server" },
             ]}
           />
+          {kind === "github" ? (
+            conn.repos.length ? (
+              <p className="flex items-start gap-2 text-[12.5px] leading-snug text-green-800">
+                <Lock className="mt-px size-3.5 flex-none" strokeWidth={1.9} />
+                <span>
+                  Repo lock: the agent may only touch <span className="font-medium">{conn.repos.join(", ")}</span>. Plex checks every GitHub call against it, whatever the token can reach.
+                </span>
+              </p>
+            ) : (
+              <p className="text-[12.5px] leading-snug text-refunded">Name the repository in the task (owner/repo or its GitHub link), so Plex can lock the agent to it. Without that the agent won&apos;t act.</p>
+            )
+          ) : null}
+          {oauth ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-[12.5px] leading-snug text-muted">Approve Plex on github.com. No token to copy; it&apos;s encrypted and deleted when the task ends.</span>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={!!busy || !conn.ready}
+                onClick={() =>
+                  run("github", async () => {
+                    const r = await startGithub({ taskId: task._id, origin: window.location.origin, as });
+                    window.location.assign(r.url);
+                  })
+                }
+              >
+                {busy === "github" ? <Loader2 className="animate-spin" /> : <Link2 />} Connect GitHub
+              </Button>
+              <ErrorLine message={errorFor("github")} />
+              <button type="button" onClick={() => setPasteToken(true)} className="text-[12px] text-muted underline-offset-2 hover:text-ink hover:underline">
+                or paste a token instead
+              </button>
+            </div>
+          ) : null}
           {kind === "mcp" ? (
             <>
               <RegistrySearch task={task} onPick={(u) => setUrl(u)} />
@@ -136,6 +180,8 @@ export function ConnectionsCard({ data }: { data: TaskPage }) {
               </div>
             </>
           ) : null}
+          {oauth ? null : (
+          <>
           <div>
             <Label htmlFor="conn-token">{kind === "github" ? "GitHub token" : "Bearer token (optional)"}</Label>
             <Input id="conn-token" type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} placeholder={kind === "github" ? "github_pat_…" : ""} />
@@ -177,6 +223,8 @@ export function ConnectionsCard({ data }: { data: TaskPage }) {
               {busy === "connect" ? <Loader2 className="animate-spin" /> : <Link2 />} Connect
             </Button>
           </div>
+          </>
+          )}
         </div>
       ) : null}
     </Card>
@@ -772,7 +820,9 @@ export function ProofPanel({ data }: { data: TaskPage }) {
   const v = proof.verdict;
   const passed = rows.filter((r) => r.status === "pass").length;
   const media = task.proofSpec.map((s, i) => ({ s, i, it: proof.items.find((x) => x.specIndex === i) }));
-  const tiles = media.filter(({ s, it }) => s.type === "photo" || s.type === "video" || (s.type === "file" && isImageSpec(s) && Boolean(it?.imageUrl)));
+  const tiles = media.filter(
+    ({ s, it }) => s.type === "photo" || s.type === "video" || (s.type === "file" && (isImageSpec(s) || isVideoSpec(s)) && Boolean(it?.imageUrl)),
+  );
   const others = media.filter((m) => !tiles.includes(m));
   return (
     <Card className="overflow-hidden">
@@ -801,8 +851,10 @@ export function ProofPanel({ data }: { data: TaskPage }) {
         <div className="mt-4 grid grid-cols-2 gap-3 px-5 sm:grid-cols-3">
           {tiles.map(({ s, i, it }) => (
             <figure key={i} className="min-w-0">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-[14px] bg-sunken shadow-card">
-                {it?.imageUrl ? (
+              <div className={cn("relative overflow-hidden rounded-[14px] bg-sunken shadow-card", isVideoSpec(s) ? "aspect-[9/16] bg-ink" : "aspect-[4/3]")}>
+                {it?.imageUrl && isVideoSpec(s) ? (
+                  <video src={it.imageUrl} controls playsInline className="size-full object-contain" />
+                ) : it?.imageUrl ? (
                   <a href={it.imageUrl} target="_blank" rel="noreferrer" className="block size-full">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={it.imageUrl} alt={s.label} className={cn("size-full", s.type === "file" ? "bg-surface object-contain" : "object-cover")} />

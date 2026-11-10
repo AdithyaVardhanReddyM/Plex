@@ -7,7 +7,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { DEFAULT_MODEL, HEURISTIC, RETRIES, geminiModel } from "./lib/ai";
-import { GITHUB_MCP_URL, toolAllowed } from "./lib/connect";
+import { GITHUB_MCP_URL, repoGuard, reposIn, toolAllowed } from "./lib/connect";
 import { unseal } from "./lib/secrets";
 
 /**
@@ -34,6 +34,10 @@ export const act = internalAction({
     if (!c || !rows.length || !llm) return { text: "", model: HEURISTIC, calls: [] };
     const { task, agent } = c;
     const p = agent.agentProfile!;
+    // The repo lock: GitHub calls may only touch the repositories the task names.
+    const repos = reposIn(`${task.title}\n${task.description}\n${task.brief}`);
+    if (rows.some((r) => r.kind === "github") && !repos.length)
+      return { text: "Name the GitHub repository (owner/repo or its URL) in the task, so Plex knows the one repository the agent may touch.", model: HEURISTIC, calls: [] };
 
     const clients: Client[] = [];
     const calls: Call[] = [];
@@ -57,6 +61,13 @@ export const act = internalAction({
             description: (t.description ?? t.name).slice(0, 1000),
             inputSchema: jsonSchema(t.inputSchema as never),
             execute: async (input: unknown) => {
+              if (r.kind === "github") {
+                const guard = repoGuard(t.name, input, repos);
+                if (!guard.ok) {
+                  calls.push({ tool: `${t.name} (blocked)`, server: r.label, ok: false });
+                  return guard.reason;
+                }
+              }
               const res = await client.callTool({ name: t.name, arguments: (input ?? {}) as Record<string, unknown> });
               calls.push({ tool: t.name, server: r.label, ok: !res.isError });
               const text = (Array.isArray(res.content) ? res.content : [])
@@ -80,6 +91,7 @@ export const act = internalAction({
         system: [
           `You are ${agent.name}. ${p.tagline} You were hired on Plex and are paid only if Plex's checks and independent proofers pass your work.`,
           "You are acting in accounts the poster connected for this task, through their tools. Do exactly what the task asks and nothing else: no other repositories, files, branches or settings.",
+          repos.length ? `On GitHub you may only touch ${repos.join(", ")}; Plex blocks calls on anything else. Always pass owner and repo.` : "",
           "Look before you act: confirm you have the right target (repository, pull request, item) and that any condition the task sets (for example, checks passing) holds. If a condition fails, don't act; say so.",
           "Never claim an action you didn't complete with a successful tool call.",
           `When done, write the deliverable for "${item.label}" (${item.type}): ${item.description}. For a link, put the exact URL alone on the first line, then 2 to 4 lines on what you did and what you checked.`,

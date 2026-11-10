@@ -3,7 +3,7 @@ import { action, internalMutation, internalQuery, mutation, query, type Mutation
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { getActor, requireActor } from "./lib/actor";
-import { GITHUB_MCP_URL, safeMcpUrl } from "./lib/connect";
+import { GITHUB_MCP_URL, reposIn, safeMcpUrl } from "./lib/connect";
 import { seal, secretsConfigured } from "./lib/secrets";
 
 /**
@@ -29,6 +29,9 @@ export const list = query({
     return {
       canEdit: actor.user._id === task.posterId && OPEN.includes(task.status),
       ready: secretsConfigured(),
+      githubOAuth: Boolean(process.env.GITHUB_OAUTH_CLIENT_ID && process.env.GITHUB_OAUTH_CLIENT_SECRET),
+      // The repo lock: the only repositories a GitHub connection may touch for this task.
+      repos: reposIn(`${task.title}\n${task.description}\n${task.brief}`),
       rows: rows.map((r) => ({
         _id: r._id,
         kind: r.kind,
