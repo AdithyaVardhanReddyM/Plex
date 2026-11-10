@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { ConvexProvider, ConvexReactClient, useConvexAuth, useMutation } from "convex/react";
+import { ConvexProviderWithAuth, ConvexReactClient, useConvexAuth, useMutation } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { useAuth } from "@clerk/nextjs";
 import { api } from "@/lib/convex";
@@ -28,7 +28,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
       </ConvexProviderWithClerk>
     );
   }
-  return <ConvexProvider client={client}>{children}</ConvexProvider>;
+  return (
+    <ConvexProviderWithAuth client={client} useAuth={useNoAuth}>
+      {children}
+    </ConvexProviderWithAuth>
+  );
+}
+
+/** No Clerk: nobody is signed in, but auth-aware components still have a provider to ask. */
+const noAuth = { isLoading: false, isAuthenticated: false, fetchAccessToken: async () => null };
+function useNoAuth() {
+  return noAuth;
 }
 
 /** Creates or links the signed-in user's Plex row (`users.ensureViewer`) on any page. */
