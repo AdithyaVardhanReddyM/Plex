@@ -48,7 +48,7 @@ export function Brightline() {
       ) : (
         <main className="mx-auto max-w-[920px] px-6 py-10">
           <div className="text-[13px] text-black/55">Account {ACCOUNT} · Unlimited Plus, 2 lines</div>
-          <div className="mt-1 text-[28px] font-semibold tracking-tight">Hi Adi</div>
+          <div className="mt-1 text-[28px] font-semibold tracking-tight">Hi there</div>
 
           <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
             {step === "done" ? (

@@ -4,6 +4,7 @@ import type { Id, TableNames } from "./_generated/dataModel";
 import { writeReceipt } from "./lib/receipts";
 import { seedLedgerHistory } from "./lib/ledgerSeed";
 import { seedHireWorld } from "./lib/hireSeed";
+import { demoName } from "./lib/viewer";
 import schema from "./schema";
 
 /**
@@ -63,9 +64,10 @@ export const run = internalMutation({
         ...extra,
       });
 
-    const adi = await person("adi", "Adi Reddy", "#1F7A5A", {
+    const me = demoName();
+    const adi = await person("adi", me, "#1F7A5A", {
       area: "Mission, San Francisco",
-      bio: "Lets his agents run errands, within limits.",
+      bio: "Lets their agents run errands, within limits.",
       agentsPaused: false,
       onboarding: { intent: "both", poster: now, doer: now },
     });
@@ -350,7 +352,7 @@ export const run = internalMutation({
     const coffees: Array<[number, number]> = [[0, 650], [1, 575], [2, 650], [4, 720], [6, 575], [8, 650], [11, 690], [13, 575], [15, 650], [18, 720]];
     for (const [d, cents] of coffees) {
       await r({
-        kind: "purchase", amountCents: cents, payerId: adi, payerLabel: "Adi Reddy", payeeLabel: "Kettle Corner",
+        kind: "purchase", amountCents: cents, payerId: adi, payerLabel: me, payeeLabel: "Kettle Corner",
         agentLabel: agent, why: "My usual oat flat white, ready at 8:30", category: "Food",
         rule: { source: "policy", text: "Food: up to $40 a day" }, state: "paid", occurredAt: ago(d, 15),
         paypal: { orderId: `SEED-KC-${d}`, captureId: `SEED-KC-CAP-${d}` },
@@ -364,22 +366,22 @@ export const run = internalMutation({
       [5, 2_380, "Pho Saigon", "Dinner delivery, under $25"],
     ] as const) {
       await r({
-        kind: "purchase", amountCents: cents, payerId: adi, payerLabel: "Adi Reddy", payeeLabel: payee,
+        kind: "purchase", amountCents: cents, payerId: adi, payerLabel: me, payeeLabel: payee,
         agentLabel: agent, why, category: "Food",
         rule: { source: "policy", text: "Food: up to $40 a day" }, state: "paid", occurredAt: ago(d, 19),
       });
     }
     // The negotiated desk lamp (the demo's opening scene)
     await r({
-      kind: "purchase", amountCents: 3_400, payerId: adi, payerLabel: "Adi Reddy", payeeLabel: "Lumen & Oak",
+      kind: "purchase", amountCents: 3_400, payerId: adi, payerLabel: me, payeeLabel: "Lumen & Oak",
       agentLabel: agent, why: "Buy a warm-white desk lamp under $40", category: "Shopping",
       rule: { source: "policy", text: "Shopping: up to $120 per purchase, ask over $50" },
       evidence: {
         savedCents: 600,
         transcript: [
-          { from: "Adi's agent", text: "The Halden lamp is listed at $40. We'd buy today at $32." },
+          { from: "Your agent", text: "The Halden lamp is listed at $40. We'd buy today at $32." },
           { from: "Lumen & Oak's agent", text: "I can do $36, and free shipping." },
-          { from: "Adi's agent", text: "$34 with free shipping and we'll check out now." },
+          { from: "Your agent", text: "$34 with free shipping and we'll check out now." },
           { from: "Lumen & Oak's agent", text: "Deal: $34, free shipping." },
         ],
       },
@@ -388,13 +390,13 @@ export const run = internalMutation({
     });
     // Subscriptions and bills
     await r({
-      kind: "subscription", amountCents: 499, payerId: adi, payerLabel: "Adi Reddy", payeeLabel: "Cloudbox Storage",
+      kind: "subscription", amountCents: 499, payerId: adi, payerLabel: me, payeeLabel: "Cloudbox Storage",
       agentLabel: agent, why: "Storage plan renewal (was $2.99, now $4.99)", category: "Shopping",
       rule: { source: "approval", text: "You approved the new price on Oct 30" }, state: "paid", occurredAt: ago(6, 9),
     });
     // Task money
     await r({
-      kind: "task_funding", amountCents: 1_800, payerId: adi, payerLabel: "Adi Reddy", payeeLabel: "Plex (held)",
+      kind: "task_funding", amountCents: 1_800, payerId: adi, payerLabel: me, payeeLabel: "Plex (held)",
       agentLabel: agent, why: "Find someone to check whether the café on 5th has a quiet corner, and photograph the menu.",
       category: "Errands", taskId: cafeTask,
       rule: { source: "policy", text: "Errands: up to $50 per task, pay only on proof" },
@@ -403,7 +405,7 @@ export const run = internalMutation({
       timelineLabel: "Authorized; you're only charged when proof passes",
     });
     await r({
-      kind: "task_funding", amountCents: 1_200, payerId: adi, payerLabel: "Adi Reddy", payeeLabel: "Plex (held)",
+      kind: "task_funding", amountCents: 1_200, payerId: adi, payerLabel: me, payeeLabel: "Plex (held)",
       why: "Get me current menus for the taquerias on 24th between Mission and Folsom.",
       category: "Errands", taskId: menusTask,
       rule: { source: "policy", text: "Errands: up to $50 per task" },
@@ -420,14 +422,14 @@ export const run = internalMutation({
       paypal: { payoutBatchId: "SEED-BATCH-DRY", payoutItemId: "SEED-ITEM-DRY" },
     });
     await r({
-      kind: "refund", amountCents: 1_400, payerLabel: "Plex", payeeId: adi, payeeLabel: "Adi Reddy",
+      kind: "refund", amountCents: 1_400, payerLabel: "Plex", payeeId: adi, payeeLabel: me,
       why: "Photograph the line at the DMV on Fell St (cancelled: office closed)", category: "Errands",
       rule: { source: "system", text: "Task cancelled before anyone took it" },
       state: "refunded", occurredAt: ago(12, 10), paypal: { captureId: "SEED-CAP-DMV", refundId: "SEED-REF-DMV" },
     });
     // Splits
     await r({
-      kind: "invoice", amountCents: 13_980, payerLabel: "Maya, Jonah and Priya", payeeId: adi, payeeLabel: "Adi Reddy",
+      kind: "invoice", amountCents: 13_980, payerLabel: "Maya, Jonah and Priya", payeeId: adi, payeeLabel: me,
       agentLabel: agent, why: "Split last night's dinner with the people in that chat",
       category: "Food", rule: { source: "system", text: "Split from a photo of the bill, by what each person ordered" },
       state: "pending", occurredAt: ago(1, 3), paypal: { invoiceId: "SEED-INV-NOPA" },
@@ -455,7 +457,7 @@ export const run = internalMutation({
     await seedLedgerHistory(ctx);
     await seedHireWorld(ctx, { adi, now });
 
-    return `Seeded the demo world: Adi, 6 tasks, ${coffees.length + 12} receipts.`;
+    return `Seeded the demo world: ${me}, 6 tasks, ${coffees.length + 12} receipts.`;
   },
 });
 
@@ -480,8 +482,9 @@ export const claimDemo = internalMutation({
     if (!adi) return "Seed the demo world first: pnpm seed.";
     const clerkId = mine.clerkId;
     await ctx.db.delete(mine._id);
-    await ctx.db.patch(adi._id, { clerkId });
-    return `Signed-in user ${handle} now acts as Adi.`;
+    // Keep the signed-in person's own name and avatar on the demo world.
+    await ctx.db.patch(adi._id, { clerkId, name: mine.name, avatarUrl: mine.avatarUrl });
+    return `Signed-in user ${handle} now owns the demo world as ${mine.name}.`;
   },
 });
 
