@@ -64,7 +64,8 @@ function paypal(): PayPalClient {
 /** The amount the worker is paid: the accepted ask, never more than what's held. */
 async function payoutCentsFor(ctx: MutationCtx, task: Doc<"tasks">) {
   const held = fundingCents(task.payout);
-  if (!task.assigneeId) return held;
+  // A backed task pays its whole goal: every donor's hold is captured in full.
+  if (!task.assigneeId || task.backing) return held;
   const apps = await ctx.db
     .query("applications")
     .withIndex("by_task", (q) => q.eq("taskId", task._id))
@@ -95,6 +96,7 @@ export const beginFunding = internalMutation({
     const t = task!;
     if (t.funding.state !== "unfunded") fail("This task is already funded.");
     if (t.status !== "draft") fail("Only drafts can be funded.");
+    if (t.backing) fail("This task is funded by its backers.");
 
     // The kill switch: while agents are paused, an API key can't fund anything.
     if (posterId && user.agentsPaused) fail(`${user.name} has paused their agents.`);
@@ -247,6 +249,8 @@ export const markAuthorized = internalMutation({
       funding: { state: "authorized", orderId, authorizationId, via: via ?? "checkout" },
     });
     if (!isSeedId(orderId)) await ctx.scheduler.runAfter(3_000, internal.paypalDesk.checkInternal, { taskId });
+    // A crew step approved at PayPal: the crew carries on by itself.
+    if (task.crew) await ctx.scheduler.runAfter(1_000, internal.crews.advance, { taskId });
     const receipt = await fundingReceipt(ctx, task);
     if (receipt) {
       if (via === "autopay" && limitText)
@@ -407,6 +411,8 @@ export const beginRelease = internalMutation({
       amountCents,
       currency: t.currency,
       authorizationId: t.funding.state === "authorized" ? t.funding.authorizationId : undefined,
+      backed: t.funding.via === "backers",
+      workerName: worker!.name,
       payout: sent
         ? {
             receiver: worker!.paypalEmail!,
@@ -500,6 +506,8 @@ async function finishRelease(ctx: MutationCtx, task: Doc<"tasks">, payoutReceipt
   await ctx.scheduler.runAfter(20_000, internal.paypalDesk.checkInternal, { taskId });
   // The job is done: any account tokens the poster lent it are deleted.
   await ctx.scheduler.runAfter(0, internal.connections.wipe, { taskId });
+  // One step of a crew: the steps after it can start now.
+  if (task.crew) await ctx.scheduler.runAfter(1_000, internal.crews.advance, { taskId });
   const receipt = await fundingReceipt(ctx, task);
   if (receipt && receipt.state !== "released")
     await advanceReceipt(ctx, receipt._id, "released", `Released to ${worker?.name ?? "the worker"}`);
@@ -521,6 +529,9 @@ type ReleasePlan = {
   amountCents: number;
   currency: string;
   authorizationId?: string;
+  /** Funded by many donors' holds (Back a task): capture each of them. */
+  backed: boolean;
+  workerName: string;
   /** The earner's or the agent creator's share. null: a Plex house agent, so Plex keeps it all. */
   payout: { receiver: string; cents: number; name: string; note: string } | null;
   keptNote?: string;
@@ -533,7 +544,11 @@ async function runRelease(ctx: ActionCtx, taskId: Id<"tasks">, as: string | unde
 
   // 1. Capture what we owe (partial capture releases the rest of the hold).
   try {
-    if (r.authorizationId && !isSeedId(r.authorizationId)) {
+    if (r.backed) {
+      // Back a task: every donor's hold is captured together, now that the proof passed.
+      const total: number = await ctx.runAction(internal.backing.captureAll, { taskId, workerName: r.workerName });
+      await ctx.runMutation(internal.taskMoney.recordCapture, { taskId, amountCents: total, seeded: false });
+    } else if (r.authorizationId && !isSeedId(r.authorizationId)) {
       const cap = await captureAuthorization(pp, r.authorizationId, {
         amountCents: r.amountCents,
         currency: r.currency,
@@ -678,8 +693,8 @@ export const beginRefund = internalMutation({
     const t = task!;
     if (t.status === "paid" || t.funding.state === "released") fail("This task was already paid out.");
     if (t.funding.state === "refunded") fail("Already refunded.");
-    if (t.funding.state === "unfunded") fail("Nothing was charged.");
-    return { funding: t.funding, amountCents: fundingCents(t.payout), currency: t.currency };
+    if (t.funding.state === "unfunded" && !t.backing) fail("Nothing was charged.");
+    return { funding: t.funding, amountCents: fundingCents(t.payout), currency: t.currency, backed: Boolean(t.backing) };
   },
 });
 
@@ -706,6 +721,7 @@ export const recordRefund = internalMutation({
     await ctx.db.patch(taskId, { status: "refunded", funding: { ...task.funding, state: "refunded" } });
     if (mode !== "seeded") await ctx.scheduler.runAfter(5_000, internal.paypalDesk.checkInternal, { taskId });
     await ctx.scheduler.runAfter(0, internal.connections.wipe, { taskId });
+    if (task.crew) await ctx.scheduler.runAfter(1_000, internal.crews.advance, { taskId });
     const receipt = await fundingReceipt(ctx, task);
     const label =
       mode === "void"
@@ -742,10 +758,14 @@ export const recordRefund = internalMutation({
 export const refund = action({
   args: { taskId: v.id("tasks"), as: v.optional(v.string()) },
   handler: async (ctx, { taskId, as }) => {
-    const { funding, amountCents, currency } = await ctx.runMutation(internal.taskMoney.beginRefund, { taskId, as });
+    const { funding, amountCents, currency, backed } = await ctx.runMutation(internal.taskMoney.beginRefund, { taskId, as });
     const pp = paypal();
     try {
-      if (funding.state === "authorized" && funding.authorizationId && !isSeedId(funding.authorizationId)) {
+      if (backed) {
+        // Back a task: every donor's hold is voided. Nobody is charged.
+        await ctx.runAction(internal.backing.voidAll, { taskId, reason: "The task was cancelled" });
+        await ctx.runMutation(internal.taskMoney.recordRefund, { taskId, mode: "void" });
+      } else if (funding.state === "authorized" && funding.authorizationId && !isSeedId(funding.authorizationId)) {
         await voidAuthorization(pp, funding.authorizationId);
         await ctx.runMutation(internal.taskMoney.recordRefund, { taskId, mode: "void" });
       } else if (funding.state === "captured" && funding.captureId && !isSeedId(funding.captureId)) {
