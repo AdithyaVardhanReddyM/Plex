@@ -11,7 +11,7 @@ import { errorMessage } from "@/components/tasks/task-ui";
 import { cn, formatCents, relativeTime } from "@/lib/utils";
 
 /** Auto-pay: save a PayPal wallet once with PayPal Vault, so tasks are held without a popup. Held money, so the card is in steel. */
-export function AutoPayCard({ returnPath, className }: { returnPath: "/developers" | "/settings" | "/onboarding"; className?: string }) {
+export function AutoPayCard({ returnPath, className }: { returnPath: "/developers" | "/settings" | "/onboarding" | "/everyday"; className?: string }) {
   const a = useQuery(api.autopay.mine, {});
   const start = useAction(api.autopay.start);
   const finish = useAction(api.autopay.finish);
