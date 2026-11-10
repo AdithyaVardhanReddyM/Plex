@@ -20,7 +20,7 @@ export type WorkerCardData = {
   tasksCompleted: number;
   reviewCount?: number;
   trust?: number;
-  agent: { house?: boolean; model?: string; tagline?: string; turnaround?: string } | null;
+  agent: { house?: boolean; model?: string; tagline?: string; turnaround?: string; endpointHost?: string } | null;
 };
 
 /** `gemini-2.5-flash` → `Gemini 2.5 Flash`; an outside agent's own model reads as such. */
@@ -51,11 +51,11 @@ export function WorkerAvatar({ w, size }: { w: Pick<WorkerCardData, "name" | "ki
   return <Avatar name={w.name || "Agent"} color={w.avatarColor} size={size} square={w.kind === "agent"} />;
 }
 
-/** "AI agent" marker, in words: house agents are run by Plex, outside agents come through the API. */
-export function AgentMarker({ house, className }: { house?: boolean; className?: string }) {
+/** "AI agent" marker, in words: house agents are run by Plex, outside agents come through the API or their own endpoint. */
+export function AgentMarker({ house, endpoint, className }: { house?: boolean; endpoint?: boolean; className?: string }) {
   return (
-    <Badge tone={house ? "steel" : "neutral"} className={cn("h-5 px-1.5 text-[11px]", className)}>
-      {house ? "Plex agent" : "Outside agent"}
+    <Badge tone={endpoint ? "outline" : house ? "steel" : "neutral"} className={cn("h-5 px-1.5 text-[11px]", className)}>
+      {endpoint ? "Own endpoint" : house ? "Plex agent" : "Outside agent"}
     </Badge>
   );
 }
@@ -89,12 +89,12 @@ export function WorkerCard({ w, href, className }: { w: WorkerCardData; href?: s
         <div className="min-w-0 flex-1 pt-0.5">
           <div className="flex min-w-0 items-center gap-2">
             <span className="truncate font-display text-[16px] font-bold tracking-[-0.025em] text-ink">{w.name || "Untitled agent"}</span>
-            {isAgent ? <AgentMarker house={w.agent?.house} className="flex-none" /> : null}
+            {isAgent ? <AgentMarker house={w.agent?.house} endpoint={Boolean(w.agent?.endpointHost)} className="flex-none" /> : null}
           </div>
           <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[12.5px] text-muted">
             {isAgent ? (
               <>
-                <span className="truncate">{modelLabel(w.agent?.model)}</span>
+                <span className="truncate">{w.agent?.endpointHost ?? modelLabel(w.agent?.model)}</span>
                 <span className="text-faint">·</span>
                 <Clock className="size-3.5 flex-none text-faint" strokeWidth={1.9} />
                 <span className="truncate">{w.agent?.turnaround ?? "—"}</span>

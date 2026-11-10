@@ -309,7 +309,7 @@ export interface ImageInput {
 /** An image from Gemini's image model (Vertex AI or AI Studio), with a labeled fallback. */
 export async function generateImage(input: ImageInput): Promise<{ data: Uint8Array; mediaType: string; model: string }> {
   const provider = geminiProvider();
-  const modelId = process.env.GEMINI_IMAGE_MODEL ?? "gemini-2.5-flash-image";
+  const modelId = process.env.GEMINI_IMAGE_MODEL ?? "gemini-3.1-flash-image";
   if (!provider) return { ...input.fallback(), model: HEURISTIC };
   try {
     const result = await generateText({
@@ -325,6 +325,66 @@ export async function generateImage(input: ImageInput): Promise<{ data: Uint8Arr
   } catch (err) {
     console.warn(`[ai] ${input.name ?? "generateImage"} fell back to heuristic:`, err);
     return { ...input.fallback(), model: HEURISTIC };
+  }
+}
+
+export interface VideoInput {
+  prompt: string;
+  aspectRatio: "9:16" | "16:9";
+  /** Veo makes 4, 6 or 8 second clips. */
+  seconds: 4 | 6 | 8;
+  name?: string;
+}
+
+/**
+ * A video clip from Veo on Vertex AI (with sound). Veo works as a long-running
+ * operation: start it, then poll until the clip is ready (about a minute).
+ * There is no honest fallback for a video, so this returns null when Veo isn't
+ * reachable and the caller says so instead of handing in a placeholder.
+ */
+export async function generateVideo(input: VideoInput): Promise<{ data: Uint8Array<ArrayBuffer>; mediaType: string; model: string } | null> {
+  const project = vertexProject();
+  const login = gcloudLogin();
+  const apiKey = process.env.GOOGLE_VERTEX_API_KEY;
+  if (!project || (!login && !apiKey)) return null;
+  const modelId = process.env.VEO_MODEL ?? "veo-3.1-fast-generate-001";
+  const location = process.env.VEO_LOCATION ?? "us-central1";
+  const base = `https://${vertexHost(location)}/v1/projects/${project}/locations/${location}/publishers/google/models/${modelId}`;
+  const call = async (method: string, body: unknown) => {
+    const headers: Record<string, string> = { "content-type": "application/json", "x-goog-user-project": project };
+    if (login) headers.authorization = `Bearer ${await gcloudAccessToken(login)}`;
+    const res = await fetch(`${base}:${method}${login ? "" : `?key=${encodeURIComponent(apiKey!)}`}`, { method: "POST", headers, body: JSON.stringify(body) });
+    if (!res.ok) throw new Error(`Veo ${method} ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    return res.json();
+  };
+  try {
+    const op = (await call("predictLongRunning", {
+      instances: [{ prompt: input.prompt.slice(0, 2000) }],
+      parameters: { aspectRatio: input.aspectRatio, durationSeconds: input.seconds, sampleCount: 1, generateAudio: true, personGeneration: "allow_adult" },
+    })) as { name?: string };
+    if (!op.name) throw new Error("Veo started no operation");
+    const started = Date.now();
+    while (Date.now() - started < 300_000) {
+      await new Promise((r) => setTimeout(r, 8000));
+      const p = (await call("fetchPredictOperation", { operationName: op.name })) as {
+        done?: boolean;
+        error?: { message?: string };
+        response?: { videos?: { bytesBase64Encoded?: string; mimeType?: string }[]; raiMediaFilteredCount?: number; raiMediaFilteredReasons?: string[] };
+      };
+      if (p.error) throw new Error(`Veo: ${p.error.message ?? "failed"}`);
+      if (!p.done) continue;
+      const clip = p.response?.videos?.[0];
+      if (!clip?.bytesBase64Encoded)
+        throw new Error(p.response?.raiMediaFilteredCount ? `Veo filtered the clip: ${(p.response.raiMediaFilteredReasons ?? []).join("; ")}` : "Veo returned no clip");
+      const bin = atob(clip.bytesBase64Encoded);
+      const data = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) data[i] = bin.charCodeAt(i);
+      return { data, mediaType: clip.mimeType ?? "video/mp4", model: modelId };
+    }
+    throw new Error("Veo took over 5 minutes");
+  } catch (err) {
+    console.warn(`[ai] ${input.name ?? "generateVideo"} failed:`, err instanceof Error ? err.message : err);
+    return null;
   }
 }
 

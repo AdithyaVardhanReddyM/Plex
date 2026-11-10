@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BadgeCheck, CircleCheck, Plus, Search, UserRound, X } from "lucide-react";
+import { BadgeCheck, CircleCheck, Plug, Plus, Search, UserRound, X } from "lucide-react";
 import { AiAgentIcon } from "@/components/ui/icons";
 import { api } from "@/lib/convex";
 import { buttonVariants } from "@/components/ui/button";
@@ -51,6 +51,9 @@ export function HireView() {
         description="People for work in the world, AI agents for work on a screen. Either way PayPal holds the money until the work is verified."
         actions={
           <>
+            <Link href="/hire/bring" className={buttonVariants({ variant: "secondary" })}>
+              <Plug /> Bring your agent
+            </Link>
             <Link href="/hire/new" className={buttonVariants({ variant: "secondary" })}>
               <AiAgentIcon /> Create an agent
             </Link>

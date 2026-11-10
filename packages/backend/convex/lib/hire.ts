@@ -60,8 +60,13 @@ export function linkGoesWhereAsked(s: Spec, url: string): { ok: boolean; host: s
 type Spec = Doc<"tasks">["proofSpec"][number];
 export type Criterion = NonNullable<Doc<"tasks">["criteria"]>[number];
 
+/** A file deliverable that is a video clip (a reel, a short, a promo). */
+export const isVideoSpec = (s: Spec) => s.type === "file" && /video|reel|clip|mp4|tiktok|youtube short|animation|motion/i.test(`${s.label} ${s.description}`);
 /** A file deliverable that is an image (a logo, an icon, a banner). */
-export const isImageSpec = (s: Spec) => s.type === "file" && /logo|icon|image|banner|illustration|design|png|graphic/i.test(`${s.label} ${s.description}`);
+export const isImageSpec = (s: Spec) =>
+  s.type === "file" && !isVideoSpec(s) && /logo|icon|image|banner|illustration|design|png|graphic/i.test(`${s.label} ${s.description}`);
+/** Vertical (9:16) for phone-first places; wide otherwise. */
+export const wantsVertical = (text: string) => /instagram|reel|story|stories|tiktok|short|vertical|9:16|phone/i.test(text);
 /** A text deliverable that lists sources. */
 export const isSourcesSpec = (s: Spec) => /source|reference|citation/i.test(`${s.label} ${s.description}`);
 
@@ -95,7 +100,8 @@ const LONG_FORM = /finding|draft|summary|report|blurb|comparison|notes|descripti
 export function defaultCriteria(spec: Spec[]): Criterion[] {
   const out: Criterion[] = [];
   spec.forEach((s, i) => {
-    if (isImageSpec(s)) out.push({ kind: "image", specIndex: i, minPx: 512 });
+    if (isVideoSpec(s)) out.push({ kind: "video", specIndex: i, minSeconds: 4, vertical: wantsVertical(`${s.label} ${s.description}`) || undefined });
+    else if (isImageSpec(s)) out.push({ kind: "image", specIndex: i, minPx: 512 });
     else if (s.type === "text" && !isSourcesSpec(s)) {
       const b = wordBounds(s);
       if (b.min !== undefined || b.max !== undefined) out.push({ kind: "min_words", specIndex: i, words: b.min ?? 1, max: b.max });
@@ -122,7 +128,53 @@ export function criterionLabel(c: Criterion, spec: Spec[]): string {
       return `Mentions ${c.terms.join(", ")}`;
     case "image":
       return `${spec[c.specIndex]?.label ?? "Image"}: an image at least ${c.minPx} px`;
+    case "video":
+      return `${spec[c.specIndex]?.label ?? "Video"}: an MP4 of at least ${c.minSeconds} s${c.vertical ? ", vertical" : ""}`;
   }
+}
+
+/**
+ * Reads an MP4's length and frame size from its boxes (moov → mvhd, trak → tkhd).
+ * Null when the bytes aren't an MP4.
+ */
+export function videoInfo(bytes: Uint8Array): { seconds: number; width: number; height: number } | null {
+  const u32 = (o: number) => ((bytes[o]! << 24) | (bytes[o + 1]! << 16) | (bytes[o + 2]! << 8) | bytes[o + 3]!) >>> 0;
+  const type = (o: number) => String.fromCharCode(bytes[o + 4]!, bytes[o + 5]!, bytes[o + 6]!, bytes[o + 7]!);
+  if (bytes.length < 16 || type(0) !== "ftyp") return null;
+  /** The boxes between two offsets: [type, start, end]. */
+  const boxes = (from: number, to: number) => {
+    const out: [string, number, number][] = [];
+    for (let o = from; o + 8 <= to; ) {
+      let size = u32(o);
+      if (size === 1) size = u32(o + 8) * 2 ** 32 + u32(o + 12); // 64-bit size
+      else if (size === 0) size = to - o; // runs to the end
+      if (size < 8) break;
+      out.push([type(o), o, Math.min(o + size, to)]);
+      o += size;
+    }
+    return out;
+  };
+  const moov = boxes(0, bytes.length).find(([t]) => t === "moov");
+  if (!moov) return null;
+  let seconds = 0;
+  let width = 0;
+  let height = 0;
+  for (const [t, start, end] of boxes(moov[1] + 8, moov[2])) {
+    if (t === "mvhd") {
+      const v1 = bytes[start + 8] === 1;
+      const scale = u32(start + (v1 ? 28 : 20));
+      const length = v1 ? u32(start + 32) * 2 ** 32 + u32(start + 36) : u32(start + 24);
+      if (scale) seconds = length / scale;
+    } else if (t === "trak" && !width) {
+      const tkhd = boxes(start + 8, end).find(([x]) => x === "tkhd");
+      if (tkhd) {
+        const at = tkhd[1] + (bytes[tkhd[1] + 8] === 1 ? 96 : 84);
+        width = u32(at) >>> 16;
+        height = u32(at + 4) >>> 16;
+      }
+    }
+  }
+  return { seconds: Math.round(seconds * 10) / 10, width, height };
 }
 
 /** Width and height from PNG, JPEG, WebP or SVG bytes. Null when it isn't an image we can read. */
@@ -194,6 +246,10 @@ type AgentLike = Pick<Doc<"users">, "kind"> & { agentProfile?: Pick<NonNullable<
 export const makesImages = (a: AgentLike) =>
   a.agentProfile?.tools ? a.agentProfile.tools.includes("image") : (a.agentProfile?.specialties ?? []).some((s) => /logo|icon|banner|design|illustration/.test(s));
 
+/** Can this agent make videos? Builder agents say so with a tool; Plex's own by their specialties. */
+export const makesVideos = (a: AgentLike) =>
+  a.agentProfile?.tools ? a.agentProfile.tools.includes("video") : (a.agentProfile?.specialties ?? []).some((s) => /video|reel/.test(s));
+
 /**
  * Whether an agent can do this task: allowed to take it, at least one of its
  * specialties fits, and it has the tools the deliverable needs (an image needs
@@ -204,6 +260,7 @@ export function agentFit(task: Task, agent: AgentLike): { ok: boolean; hits: str
   const hits = specialtyHits(task, agent.agentProfile?.specialties ?? []);
   if (!hits.length) return { ok: false, hits, reason: "None of its skills fit" };
   if (task.proofSpec.some(isImageSpec) && !makesImages(agent)) return { ok: false, hits, reason: "Can't make images" };
+  if (task.proofSpec.some(isVideoSpec) && !makesVideos(agent)) return { ok: false, hits, reason: "Can't make videos" };
   // Acting in the poster's connected account takes an agent built to use connected tools.
   if (needsAccountAction(task) && !agent.agentProfile?.tools?.includes("mcp")) return { ok: false, hits, reason: "Can't use connected accounts" };
   return { ok: true, hits };
