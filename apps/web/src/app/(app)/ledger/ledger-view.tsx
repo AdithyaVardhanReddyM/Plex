@@ -8,6 +8,7 @@ import { ROLE_LABEL, type LedgerRole, type WidgetSpec } from "@plex/backend/lib/
 import { api } from "@/lib/convex";
 import type { Receipt } from "@/components/receipt/receipt";
 import { PageHeader, SectionHeading, Segmented } from "@/components/ui/primitives";
+import { ReconcileCard } from "@/components/ledger/reconcile";
 import { cn, formatCents } from "@/lib/utils";
 import { Analyst, PinnedWidgets, Watchdog, WidgetCard, type WidgetHost } from "@/components/ledger/analyst";
 import { DashboardSkeleton, DisplayMoney, Figure, StatStrip } from "@/components/ledger/kit";
@@ -72,6 +73,9 @@ export function LedgerView() {
       />
       {/* Keyed by role, so the open receipt and the Analyst's canvas reset on switch */}
       <RoleLedger key={role} role={role} />
+      <div className="mt-10">
+        <ReconcileCard />
+      </div>
     </div>
   );
 }

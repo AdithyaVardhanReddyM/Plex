@@ -24,6 +24,7 @@ import { Avatar, Badge, Card, CardHeader, EmptyState, Skeleton } from "@/compone
 import { DisplayMoney } from "@/components/ledger/kit";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ReceiptCard, StatePill, receiptKindLabel, type Receipt } from "@/components/receipt/receipt";
+import { MoneyFlow } from "@/components/receipt/money-flow";
 import { cn, formatCents, relativeTime, shortDate } from "@/lib/utils";
 
 export function ReceiptDetail({ id }: { id: string }) {
@@ -72,6 +73,13 @@ export function ReceiptDetail({ id }: { id: string }) {
           </Stage>
           <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-8">
             <AtAGlance receipt={receipt} />
+            <Card className="p-5">
+              <div className="mb-3 flex items-baseline justify-between">
+                <span className="text-[14.5px] font-semibold text-ink">Where the money went</span>
+                <span className="text-[11.5px] text-faint">from PayPal&apos;s own records</span>
+              </div>
+              <MoneyFlow receipt={receipt} />
+            </Card>
             <BelongsTo receipt={receipt} />
           </div>
         </div>
